@@ -67,7 +67,7 @@ func (a AnyNonceMessage) GetBytes() []byte {
 func (a *AnyNonceMessage) GetFromBytes(b []byte) error {
 	tb := [2]byte{}
 
-	a.BaseMessage.GetFromBytes(b[:6])
+	a.BaseMessage.GetFromBytes(b[:5])
 	for _, t := range validHeadNonce {
 		copy(tb[:], t)
 		a.NonceBytes[tb] = [][]byte{}
@@ -77,23 +77,3 @@ func (a *AnyNonceMessage) GetFromBytes(b []byte) error {
 	}
 	return nil
 }
-
-//func (m *AnyNonceMessage) Marshal() ([]byte, error) {
-//	//log.Println("JSON input:", string(*m)) // Add this line to print the JSON input
-//	mb, err := json.Marshal(m)
-//	if err != nil {
-//		log.Println("error unmarshalling message (nonceMsg)", err)
-//		return nil, err
-//	}
-//	return mb, nil
-//}
-//
-//func (m *AnyNonceMessage) Unmarshal(b []byte) (AnyMessage, error) {
-//	log.Println("JSON input:", string(b)) // Add this line to print the JSON input
-//	err := json.Unmarshal(b, m)
-//	if err != nil {
-//		log.Println("error unmarshalling message (nonceMsg)", err)
-//		return nil, err
-//	}
-//	return AnyMessage(m), nil
-//}

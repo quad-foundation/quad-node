@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/chainpqc/chainpqc-node/common"
 	"github.com/chainpqc/chainpqc-node/transactionType"
+	"log"
 )
 
 type BaseMessage struct {
@@ -20,8 +21,6 @@ type AnyMessage interface {
 	GetChain() uint8
 	GetBytes() []byte
 	GetFromBytes([]byte) error
-	//Marshal() ([]byte, error)
-	//Unmarshal(b []byte) (AnyMessage, error)
 }
 
 func (m BaseMessage) GetBytes() []byte {
@@ -32,7 +31,8 @@ func (m BaseMessage) GetBytes() []byte {
 }
 
 func (m *BaseMessage) GetFromBytes(b []byte) {
-	if len(b) < 6 {
+	if len(b) == 5 {
+		log.Println("bytes length should be 5")
 		return
 	}
 	m.Head = b[:2]

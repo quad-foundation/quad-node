@@ -50,15 +50,31 @@ Copy env file and change accordingly.
 
 In the case you are the first who run blockchain and generate genesis block you need to set in .env: DELEGATED_ACCOUNT=1. In other case if you join to other node which is running you can choose unique DELEGATED_ACCOUNT > 1 and < 255.
 
-Ports needed to be opened:
+Ports TCP needed to be opened:
 
-    TCP/9009 - wallet - node communication
-    TCP/9091 - transaction main chain
-    TCP/9081 - nonce messages
-    TCP/9071 - self nonce messages
-    TCP/9061 - syncing
-    TCP/9051 - staking/DEX transaction
-    TCP/9092 - side chain transactions
+    TransactionTopic[0]: 9091,
+    TransactionTopic[1]: 9092,
+    TransactionTopic[2]: 9093,
+    TransactionTopic[3]: 9094,
+    TransactionTopic[4]: 9095,
+    NonceTopic[0]:       8091,
+    NonceTopic[1]:       8092,
+    NonceTopic[2]:       8093,
+    NonceTopic[3]:       8094,
+    NonceTopic[4]:       8095,
+    SelfNonceTopic[0]:   7091,
+    SelfNonceTopic[1]:   7092,
+    SelfNonceTopic[2]:   7093,
+    SelfNonceTopic[3]:   7094,
+    SelfNonceTopic[4]:   7095,
+    SyncTopic[0]:        6091,
+    SyncTopic[1]:        6092,
+    SyncTopic[2]:        6093,
+    SyncTopic[3]:        6094,
+    SyncTopic[4]:        6095,
+
+    9009 - wallet - node communication
+
 
 Copy genesis wallet if you are DELEGATED_ACCOUNT=1. Different DELEGATED_ACCOUNT must have different wallets:
 
