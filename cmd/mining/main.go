@@ -6,8 +6,6 @@ import (
 	"github.com/chainpqc/chainpqc-node/tcpip"
 	"github.com/chainpqc/chainpqc-node/wallet"
 	"log"
-	"os"
-	"time"
 )
 
 func main() {
@@ -34,23 +32,23 @@ func main() {
 	//broadcastStaking.InitStakeService()
 
 	//go serverrpc.ListenRPC()
-
-	for i := uint8(0); i < 5; i++ {
-		go nonceService.StartSubscribingNonceMsgSelf(i)
-		go nonceService.StartSubscribingNonceMsg(tcpip.MyIP, i)
-	}
-	time.Sleep(time.Second)
-	if len(os.Args) > 1 {
-		ip := os.Args[1]
-		for i := uint8(0); i < 5; i++ {
-			//go broadcast.StartSubscribingTransaction(ip, 0)
-			//go broadcast.StartSubscribingTransaction(ip, 1)
-			go nonceService.StartSubscribingNonceMsg(ip, i)
-			//go nonceMsg.StartSubscribingSync(ip)
-			//go broadcastStaking.StartSubscribingStakingTransaction(ip)
-		}
-	}
-	time.Sleep(time.Second)
+	//
+	//for i := uint8(0); i < 5; i++ {
+	//	go nonceService.StartSubscribingNonceMsgSelf(i)
+	//	go nonceService.StartSubscribingNonceMsg(tcpip.MyIP, i)
+	//}
+	//time.Sleep(time.Second)
+	//if len(os.Args) > 1 {
+	//	ip := os.Args[1]
+	//	for i := uint8(0); i < 5; i++ {
+	//		//go broadcast.StartSubscribingTransaction(ip, 0)
+	//		//go broadcast.StartSubscribingTransaction(ip, 1)
+	//		go nonceService.StartSubscribingNonceMsg(ip, i)
+	//		//go nonceMsg.StartSubscribingSync(ip)
+	//		//go broadcastStaking.StartSubscribingStakingTransaction(ip)
+	//	}
+	//}
+	//time.Sleep(time.Second)
 
 	chanPeer := make(chan string)
 	go tcpip.LookUpForNewPeersToConnect(chanPeer)
