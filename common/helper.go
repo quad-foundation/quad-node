@@ -77,7 +77,7 @@ func ExtractKeys(m map[string]any) []string {
 	return keys
 }
 
-func ContainsKey(keys []string, searchKey string) bool {
+func ContainsKey(keys [][2]byte, searchKey [2]byte) bool {
 	for _, key := range keys {
 		if key == searchKey {
 			return true
@@ -86,20 +86,15 @@ func ContainsKey(keys []string, searchKey string) bool {
 	return false
 }
 
-func IsInKeys(m map[string]any, searchKey string) bool {
-	keys := ExtractKeys(m)
-	return ContainsKey(keys, searchKey)
-}
-
-func ExtractKeysOfList(m map[string][][]byte) []string {
-	keys := make([]string, 0, len(m))
+func ExtractKeysOfList(m map[[2]byte][][]byte) [][2]byte {
+	keys := [][2]byte{}
 	for k := range m {
 		keys = append(keys, k)
 	}
 	return keys
 }
 
-func IsInKeysOfList(m map[string][][]byte, searchKey string) bool {
+func IsInKeysOfList(m map[[2]byte][][]byte, searchKey [2]byte) bool {
 	keys := ExtractKeysOfList(m)
 	return ContainsKey(keys, searchKey)
 }

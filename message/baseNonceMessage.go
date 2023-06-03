@@ -1,24 +1,25 @@
 package message
 
 import (
-	"encoding/json"
 	"github.com/chainpqc/chainpqc-node/common"
 	"github.com/chainpqc/chainpqc-node/transactionType"
 	"log"
 )
 
 // nn - nounce, bl - block, rb - reject block
-var validHeadNonce = []string{"nn", "bl", "rb"}
+var validHeadNonce = [][]byte{[]byte("nn"), []byte("bl"), []byte("rb")}
 
 type AnyNonceMessage struct {
-	BaseMessage BaseMessage         `json:"base_message"`
-	NonceBytes  map[string][][]byte `json:"nonce_bytes"`
+	BaseMessage BaseMessage          `json:"base_message"`
+	NonceBytes  map[[2]byte][][]byte `json:"nonce_bytes"`
 }
 
 func (a AnyNonceMessage) GetTransactions() []transactionType.AnyTransaction {
 	txn := []transactionType.AnyTransaction{}
 
-	ret := a.NonceBytes["nn"]
+	nnb := [2]byte{}
+	copy(nnb[:], "nn")
+	ret := a.NonceBytes[nnb]
 
 	var t *transactionType.AnyTransaction
 	for _, b := range ret {
@@ -36,7 +37,7 @@ func (b AnyNonceMessage) GetChain() uint8 {
 	return b.BaseMessage.Chain
 }
 
-func (b AnyNonceMessage) GetHead() string {
+func (b AnyNonceMessage) GetHead() []byte {
 	return b.BaseMessage.Head
 }
 
@@ -44,15 +45,18 @@ func (b AnyNonceMessage) GetChainID() int16 {
 	return b.BaseMessage.ChainID
 }
 
-func (b AnyNonceMessage) GetValidHead() []string {
+func (b AnyNonceMessage) GetValidHead() [][]byte {
 	return validHeadNonce
 }
 
 func (a AnyNonceMessage) GetBytes() []byte {
+	tb := [2]byte{}
+
 	b := a.BaseMessage.GetBytes()
 	for _, t := range validHeadNonce {
-		if common.IsInKeysOfList(a.NonceBytes, t) {
-			for _, sb := range a.NonceBytes[t] {
+		copy(tb[:], t)
+		if common.IsInKeysOfList(a.NonceBytes, tb) {
+			for _, sb := range a.NonceBytes[tb] {
 				b = append(b, sb...)
 			}
 		}
@@ -60,20 +64,36 @@ func (a AnyNonceMessage) GetBytes() []byte {
 	return b
 }
 
-func (m AnyNonceMessage) Marshal() ([]byte, error) {
-	mb, err := json.Marshal(m)
-	if err != nil {
-		log.Println("error unmarshalling message (nonceMsg)", err)
-		return nil, err
+func (a *AnyNonceMessage) GetFromBytes(b []byte) error {
+	tb := [2]byte{}
+
+	a.BaseMessage.GetFromBytes(b[:6])
+	for _, t := range validHeadNonce {
+		copy(tb[:], t)
+		a.NonceBytes[tb] = [][]byte{}
+		for _, sb := range a.NonceBytes[tb] {
+			a.NonceBytes[tb] = append(a.NonceBytes[tb], sb)
+		}
 	}
-	return mb, nil
+	return nil
 }
 
-func (m AnyNonceMessage) Unmarshal(b []byte) (AnyMessage, error) {
-	err := json.Unmarshal(b, &m)
-	if err != nil {
-		log.Println("error unmarshalling message (nonceMsg)", err)
-		return nil, err
-	}
-	return AnyMessage(m), nil
-}
+//func (m *AnyNonceMessage) Marshal() ([]byte, error) {
+//	//log.Println("JSON input:", string(*m)) // Add this line to print the JSON input
+//	mb, err := json.Marshal(m)
+//	if err != nil {
+//		log.Println("error unmarshalling message (nonceMsg)", err)
+//		return nil, err
+//	}
+//	return mb, nil
+//}
+//
+//func (m *AnyNonceMessage) Unmarshal(b []byte) (AnyMessage, error) {
+//	log.Println("JSON input:", string(b)) // Add this line to print the JSON input
+//	err := json.Unmarshal(b, m)
+//	if err != nil {
+//		log.Println("error unmarshalling message (nonceMsg)", err)
+//		return nil, err
+//	}
+//	return AnyMessage(m), nil
+//}

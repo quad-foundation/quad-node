@@ -8,17 +8,19 @@ import (
 )
 
 // tx - transaction, gt - get transaction, st - sync transaction
-var validHeadTx = []string{"tx", "gt", "st"}
+var validHeadTx = [][]byte{[]byte("tx"), []byte("gt"), []byte("st")}
 
 type AnyTransactionsMessage struct {
-	BaseMessage       BaseMessage         `json:"base_message"`
-	TransactionsBytes map[string][][]byte `json:"transactions_bytes"`
+	BaseMessage       BaseMessage          `json:"base_message"`
+	TransactionsBytes map[[2]byte][][]byte `json:"transactions_bytes"`
 }
 
 func (a AnyTransactionsMessage) GetTransactions() []transactionType.AnyTransaction {
 	txn := []transactionType.AnyTransaction{}
 
-	ret := a.TransactionsBytes["tx"]
+	tb := [2]byte{}
+	copy(tb[:], "tx")
+	ret := a.TransactionsBytes[tb]
 
 	var t *transactionType.AnyTransaction
 	for _, b := range ret {
@@ -33,10 +35,13 @@ func (a AnyTransactionsMessage) GetTransactions() []transactionType.AnyTransacti
 }
 
 func (a AnyTransactionsMessage) GetBytes() []byte {
+	tb := [2]byte{}
+
 	b := a.BaseMessage.GetBytes()
 	for _, t := range validHeadTx {
-		if common.IsInKeysOfList(a.TransactionsBytes, t) {
-			for _, sb := range a.TransactionsBytes[t] {
+		copy(tb[:], t)
+		if common.IsInKeysOfList(a.TransactionsBytes, tb) {
+			for _, sb := range a.TransactionsBytes[tb] {
 				b = append(b, sb...)
 			}
 		}
@@ -44,11 +49,25 @@ func (a AnyTransactionsMessage) GetBytes() []byte {
 	return b
 }
 
+func (a *AnyTransactionsMessage) GetFromBytes(b []byte) error {
+	tb := [2]byte{}
+
+	a.BaseMessage.GetFromBytes(b[:6])
+	for _, t := range validHeadTx {
+		copy(tb[:], t)
+		a.TransactionsBytes[tb] = [][]byte{}
+		for _, sb := range a.TransactionsBytes[tb] {
+			a.TransactionsBytes[tb] = append(a.TransactionsBytes[tb], sb)
+		}
+	}
+	return nil
+}
+
 func (b AnyTransactionsMessage) GetChain() uint8 {
 	return b.BaseMessage.Chain
 }
 
-func (b AnyTransactionsMessage) GetHead() string {
+func (b AnyTransactionsMessage) GetHead() []byte {
 	return b.BaseMessage.Head
 }
 
@@ -56,7 +75,7 @@ func (b AnyTransactionsMessage) GetChainID() int16 {
 	return b.BaseMessage.ChainID
 }
 
-func (b AnyTransactionsMessage) GetValidHead() []string {
+func (b AnyTransactionsMessage) GetValidHead() [][]byte {
 	return validHeadTx
 }
 

@@ -1,6 +1,7 @@
 package nonceMsg
 
 import (
+	"fmt"
 	"github.com/chainpqc/chainpqc-node/common"
 	"github.com/chainpqc/chainpqc-node/message"
 	"github.com/chainpqc/chainpqc-node/transactionType"
@@ -24,17 +25,17 @@ func OnMessage(addr string, m []byte) {
 
 	}()
 
-	an, err := msg.Unmarshal(m)
+	err := msg.GetFromBytes(m)
 	if err != nil {
 		panic(err)
 	}
 
-	isValid := message.CheckMessage(an)
+	isValid := message.CheckMessage(&msg)
 	if isValid == false {
 		log.Println("message is invalid")
 		panic("message is invalid")
 	}
-	msg = an.(message.AnyNonceMessage)
+
 	var nonceTransaction transactionType.AnyTransaction
 	switch msg.GetChain() {
 	case 0:
@@ -57,9 +58,9 @@ func OnMessage(addr string, m []byte) {
 
 	}
 
-	switch msg.GetHead() {
+	switch string(msg.GetHead()) {
 	case "nn": // nonce
-
+		fmt.Printf("%v", nonceTransaction)
 		nonceHeight := nonceTransaction.GetHeight()
 		chain := nonceTransaction.GetChain()
 		if common.CheckHeight(chain, nonceHeight) == false {

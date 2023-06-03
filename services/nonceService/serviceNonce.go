@@ -100,19 +100,21 @@ func generateNonceMsg(chain uint8) (message.AnyNonceMessage, error) {
 	default:
 		return message.AnyNonceMessage{}, fmt.Errorf("chain is not correct")
 	}
-	bm := message.BaseMessage{Head: "nn",
+	bm := message.BaseMessage{Head: []byte("nn"),
 		ChainID: common.GetChainID(),
 		Chain:   chain}
 
 	bb, err := transactionType.SignTransactionAllToBytes(nonceTransaction)
 	if err != nil {
-
+		return message.AnyNonceMessage{}, fmt.Errorf("error signing transaction: %v", err)
 	}
+	hb := [2]byte{}
+	copy(hb[:], "nn")
 	n := message.AnyNonceMessage{
 		BaseMessage: bm,
-		NonceBytes:  map[string][][]byte{"nn": {bb}},
+		NonceBytes:  map[[2]byte][][]byte{hb: {bb}},
 	}
-
+	//fmt.Printf("%v", n)
 	return n, nil
 }
 
