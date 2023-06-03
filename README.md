@@ -1,4 +1,4 @@
-# Node go galaxy
+# Node go chainpqc
 
 Works for Ubuntu 20.04+ and go1.19+
 
@@ -40,7 +40,7 @@ install go modules
 
     cp -r config ~/.chainpqc/
 
-You need to choose proper genesis file (you need to change name of chosen file to `genesis.json` in catalog `.galaxy/config`)
+You need to choose proper genesis file (you need to change name of chosen file to `genesis.json` in catalog `.chainpqc/config`)
 
     mv ~/.chaipqc/config/genesis_ami_falcon20.json ~/.chainpqc/config/genesis.json
 
@@ -105,7 +105,7 @@ In wallet management just set password 'a' and push button `Generate new wallet`
 
 In the case of all servers/nodes you need to go through the flow in this README up to line 61. Only on first node you should copy wallet from repo, so exec line 65 in this README. The rest nodes must have other public/private keys.
 
-Edit ~/.galaxy/.env and set DELEGATED_ACCOUNT to unique number between 2 and 255. IMPORTANT each node has to have unique number.
+Edit ~/.chainpqc/.env and set DELEGATED_ACCOUNT to unique number between 2 and 255. IMPORTANT each node has to have unique number.
 
 Now run node by:
 
