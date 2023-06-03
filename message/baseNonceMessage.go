@@ -1,6 +1,7 @@
 package message
 
 import (
+	"encoding/json"
 	"github.com/chainpqc/chainpqc-node/common"
 	"github.com/chainpqc/chainpqc-node/transactionType"
 	"log"
@@ -31,16 +32,6 @@ func (a AnyNonceMessage) GetTransactions() []transactionType.AnyTransaction {
 	return txn
 }
 
-func (a AnyNonceMessage) GetBytes() []byte {
-	b := a.BaseMessage.GetBytes()
-	for _, t := range validHeadTx {
-		for _, sb := range a.NonceBytes[t] {
-			b = append(b, sb...)
-		}
-	}
-	return b
-}
-
 func (b AnyNonceMessage) GetChain() uint8 {
 	return b.BaseMessage.Chain
 }
@@ -55,4 +46,25 @@ func (b AnyNonceMessage) GetChainID() int16 {
 
 func (b AnyNonceMessage) GetValidHead() []string {
 	return validHeadNonce
+}
+
+func (a AnyNonceMessage) GetBytes() []byte {
+	b := a.BaseMessage.GetBytes()
+	for _, t := range validHeadNonce {
+		if common.IsInKeysOfList(a.NonceBytes, t) {
+			for _, sb := range a.NonceBytes[t] {
+				b = append(b, sb...)
+			}
+		}
+	}
+	return b
+}
+
+func (m *AnyNonceMessage) UnMarshal(b []byte) error {
+	err := json.Unmarshal(b, m)
+	if err != nil {
+		log.Println("error unmarshalling message (nonceMsg)", err)
+		return err
+	}
+	return nil
 }

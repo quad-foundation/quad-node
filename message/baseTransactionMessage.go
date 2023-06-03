@@ -34,8 +34,10 @@ func (a AnyTransactionsMessage) GetTransactions() []transactionType.AnyTransacti
 func (a AnyTransactionsMessage) GetBytes() []byte {
 	b := a.BaseMessage.GetBytes()
 	for _, t := range validHeadTx {
-		for _, sb := range a.TransactionsBytes[t] {
-			b = append(b, sb...)
+		if common.IsInKeysOfList(a.TransactionsBytes, t) {
+			for _, sb := range a.TransactionsBytes[t] {
+				b = append(b, sb...)
+			}
 		}
 	}
 	return b

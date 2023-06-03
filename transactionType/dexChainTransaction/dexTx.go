@@ -29,7 +29,7 @@ func (mt DexChainTransaction) GetChain() uint8 {
 	return mt.TxParam.Chain
 }
 
-func (mt DexChainTransaction) GetData() DexChainTxData {
+func (mt DexChainTransaction) GetData() transactionType.AnyDataTransaction {
 	return mt.TxData
 }
 
@@ -43,18 +43,6 @@ func (mt DexChainTransaction) GasUsageEstimate() int64 {
 
 func (mt DexChainTransaction) GetGasUsage() int64 {
 	return 2100
-}
-
-func (tx DexChainTransaction) GetBytesWithoutSignature() []byte {
-
-	b := tx.TxParam.GetBytes()
-	b = append(b, common.GetByteInt64(tx.Height)...)
-	b = append(b, common.GetByteInt64(tx.GasPrice)...)
-	b = append(b, common.GetByteInt64(tx.GasUsage)...)
-	b = append(b, tx.TxData.Recipient.GetBytes()...)
-	b = append(b, common.GetByteInt64(tx.TxData.Amount)...)
-	b = append(b, tx.TxData.OptData...)
-	return b
 }
 
 func (td DexChainTxData) GetString() string {
@@ -89,4 +77,26 @@ func (mt DexChainTransaction) GetHeight() int64 {
 
 func (mt DexChainTransaction) GetHash() common.Hash {
 	return mt.Hash
+}
+
+func (md DexChainTxData) GetBytes() []byte {
+	b := md.Recipient.GetBytes()
+	b = append(b, common.GetByteInt64(md.Amount)...)
+	b = append(b, md.OptData...)
+	return b
+}
+
+func (mt DexChainTransaction) GetPrice() int64 {
+	return mt.GasPrice
+}
+
+func (tx DexChainTransaction) GetBytesWithoutSignature() []byte {
+
+	b := tx.TxParam.GetBytes()
+	b = append(b, tx.TxData.GetBytes()...)
+	b = append(b, common.GetByteInt64(tx.Height)...)
+	b = append(b, common.GetByteInt64(tx.GasPrice)...)
+	b = append(b, common.GetByteInt64(tx.GasUsage)...)
+	b = append(b, tx.GetHash().GetBytes()...)
+	return b
 }

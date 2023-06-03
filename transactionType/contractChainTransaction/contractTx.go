@@ -29,7 +29,7 @@ func (mt ContractChainTransaction) GetChain() uint8 {
 	return mt.TxParam.Chain
 }
 
-func (mt ContractChainTransaction) GetData() ContractChainTxData {
+func (mt ContractChainTransaction) GetData() transactionType.AnyDataTransaction {
 	return mt.TxData
 }
 
@@ -43,18 +43,6 @@ func (mt ContractChainTransaction) GasUsageEstimate() int64 {
 
 func (mt ContractChainTransaction) GetGasUsage() int64 {
 	return 2100
-}
-
-func (tx ContractChainTransaction) GetBytesWithoutSignature() []byte {
-
-	b := tx.TxParam.GetBytes()
-	b = append(b, common.GetByteInt64(tx.Height)...)
-	b = append(b, common.GetByteInt64(tx.GasPrice)...)
-	b = append(b, common.GetByteInt64(tx.GasUsage)...)
-	b = append(b, tx.TxData.Recipient.GetBytes()...)
-	b = append(b, common.GetByteInt64(tx.TxData.Amount)...)
-	b = append(b, tx.TxData.OptData...)
-	return b
 }
 
 func (td ContractChainTxData) GetString() string {
@@ -89,4 +77,26 @@ func (mt ContractChainTransaction) GetHeight() int64 {
 
 func (mt ContractChainTransaction) GetHash() common.Hash {
 	return mt.Hash
+}
+
+func (md ContractChainTxData) GetBytes() []byte {
+	b := md.Recipient.GetBytes()
+	b = append(b, common.GetByteInt64(md.Amount)...)
+	b = append(b, md.OptData...)
+	return b
+}
+
+func (mt ContractChainTransaction) GetPrice() int64 {
+	return mt.GasPrice
+}
+
+func (tx ContractChainTransaction) GetBytesWithoutSignature() []byte {
+
+	b := tx.TxParam.GetBytes()
+	b = append(b, tx.TxData.GetBytes()...)
+	b = append(b, common.GetByteInt64(tx.Height)...)
+	b = append(b, common.GetByteInt64(tx.GasPrice)...)
+	b = append(b, common.GetByteInt64(tx.GasUsage)...)
+	b = append(b, tx.GetHash().GetBytes()...)
+	return b
 }

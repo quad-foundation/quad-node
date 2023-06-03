@@ -1,13 +1,15 @@
 package message
 
 import (
-	"github.com/chainpqc/chainpqc-node/message"
+	transactionType "github.com/chainpqc/chainpqc-node/transactionType/stakeChainTransaction"
 )
 
 var chain uint8 = 2
 
-type StakeChainTransactionsMessage message.AnyTransactionsMessage
+type StakeChainTransactionsMessage struct {
+	Transaction transactionType.StakeChainTransaction `json:"transaction"`
+}
 
-func (c StakeChainTransactionsMessage) GetProperChain() uint8 {
-	return chain
+func (c StakeChainTransactionsMessage) GetHeight() int64 {
+	return c.Transaction.Height
 }

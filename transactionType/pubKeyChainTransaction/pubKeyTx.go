@@ -29,7 +29,7 @@ func (mt PubKeyChainTransaction) GetChain() uint8 {
 	return mt.TxParam.Chain
 }
 
-func (mt PubKeyChainTransaction) GetData() PubKeyChainTxData {
+func (mt PubKeyChainTransaction) GetData() transactionType.AnyDataTransaction {
 	return mt.TxData
 }
 
@@ -57,17 +57,6 @@ func (mt PubKeyChainTransaction) GetHash() common.Hash {
 	return mt.Hash
 }
 
-func (tx PubKeyChainTransaction) GetBytesWithoutSignature() []byte {
-
-	b := tx.TxParam.GetBytes()
-	b = append(b, common.GetByteInt64(tx.Height)...)
-	b = append(b, common.GetByteInt64(tx.GasPrice)...)
-	b = append(b, common.GetByteInt64(tx.GasUsage)...)
-	b = append(b, tx.TxData.Recipient.GetBytes()...)
-	b = append(b, tx.TxData.OptData...)
-	return b
-}
-
 func (td PubKeyChainTxData) GetString() string {
 	t := "Recipient: " + td.Recipient.GetHex()[:100] + "...\n"
 	t += "Amount PQC: " + fmt.Sprintln(account.Int64toFloat64(td.Amount)) + "\n"
@@ -88,4 +77,26 @@ func (tx PubKeyChainTransaction) GetString() string {
 
 func (tx PubKeyChainTransaction) GetSenderAddress() common.Address {
 	return tx.TxParam.Sender
+}
+
+func (md PubKeyChainTxData) GetBytes() []byte {
+	b := md.Recipient.GetBytes()
+	b = append(b, common.GetByteInt64(md.Amount)...)
+	b = append(b, md.OptData...)
+	return b
+}
+
+func (mt PubKeyChainTransaction) GetPrice() int64 {
+	return mt.GasPrice
+}
+
+func (tx PubKeyChainTransaction) GetBytesWithoutSignature() []byte {
+
+	b := tx.TxParam.GetBytes()
+	b = append(b, tx.TxData.GetBytes()...)
+	b = append(b, common.GetByteInt64(tx.Height)...)
+	b = append(b, common.GetByteInt64(tx.GasPrice)...)
+	b = append(b, common.GetByteInt64(tx.GasUsage)...)
+	b = append(b, tx.GetHash().GetBytes()...)
+	return b
 }

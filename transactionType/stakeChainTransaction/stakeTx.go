@@ -29,10 +29,6 @@ func (mt StakeChainTransaction) GetChain() uint8 {
 	return mt.TxParam.Chain
 }
 
-func (mt StakeChainTransaction) GetData() StakeChainTxData {
-	return mt.TxData
-}
-
 func (mt StakeChainTransaction) GetHeight() int64 {
 	return mt.Height
 }
@@ -57,18 +53,6 @@ func (mt StakeChainTransaction) GetGasUsage() int64 {
 	return 2100
 }
 
-func (tx StakeChainTransaction) GetBytesWithoutSignature() []byte {
-
-	b := tx.TxParam.GetBytes()
-	b = append(b, common.GetByteInt64(tx.Height)...)
-	b = append(b, common.GetByteInt64(tx.GasPrice)...)
-	b = append(b, common.GetByteInt64(tx.GasUsage)...)
-	b = append(b, tx.TxData.Recipient.GetBytes()...)
-	b = append(b, common.GetByteInt64(tx.TxData.Amount)...)
-	b = append(b, tx.TxData.OptData...)
-	return b
-}
-
 func (td StakeChainTxData) GetString() string {
 	t := "Delegated Account: " + td.Recipient.GetHex() + "\n"
 	t += "Amount PQC: " + fmt.Sprintln(account.Int64toFloat64(td.Amount)) + "\n"
@@ -89,4 +73,30 @@ func (tx StakeChainTransaction) GetString() string {
 
 func (tx StakeChainTransaction) GetSenderAddress() common.Address {
 	return tx.TxParam.Sender
+}
+
+func (md StakeChainTxData) GetBytes() []byte {
+	b := md.Recipient.GetBytes()
+	b = append(b, common.GetByteInt64(md.Amount)...)
+	b = append(b, md.OptData...)
+	return b
+}
+
+func (mt StakeChainTransaction) GetPrice() int64 {
+	return mt.GasPrice
+}
+
+func (tx StakeChainTransaction) GetBytesWithoutSignature() []byte {
+
+	b := tx.TxParam.GetBytes()
+	b = append(b, tx.TxData.GetBytes()...)
+	b = append(b, common.GetByteInt64(tx.Height)...)
+	b = append(b, common.GetByteInt64(tx.GasPrice)...)
+	b = append(b, common.GetByteInt64(tx.GasUsage)...)
+	b = append(b, tx.GetHash().GetBytes()...)
+	return b
+}
+
+func (mt StakeChainTransaction) GetData() transactionType.AnyDataTransaction {
+	return mt.TxData
 }

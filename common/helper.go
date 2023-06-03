@@ -68,3 +68,38 @@ func GetHashFromBytes(b []byte) (Hash, error) {
 	}
 	return h, nil
 }
+
+func ExtractKeys(m map[string]any) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func ContainsKey(keys []string, searchKey string) bool {
+	for _, key := range keys {
+		if key == searchKey {
+			return true
+		}
+	}
+	return false
+}
+
+func IsInKeys(m map[string]any, searchKey string) bool {
+	keys := ExtractKeys(m)
+	return ContainsKey(keys, searchKey)
+}
+
+func ExtractKeysOfList(m map[string][][]byte) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func IsInKeysOfList(m map[string][][]byte, searchKey string) bool {
+	keys := ExtractKeysOfList(m)
+	return ContainsKey(keys, searchKey)
+}
