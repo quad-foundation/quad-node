@@ -46,7 +46,7 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	HomePath += "/.chainpqc/db/blockchain"
+	HomePath += "/.chainpqc/db/wallet"
 	//MainWallet.SetPassword("a")
 	//MainWallet.Load()
 }
