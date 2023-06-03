@@ -40,13 +40,22 @@ type AnyWallet interface {
 }
 
 func init() {
-	mainWallet = EmptyWallet()
 	var err error
+	err = os.MkdirAll("/.chainpqc/db/wallet/"+common.GetSigName(), 0755)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = os.MkdirAll("/.chainpqc/db/blockchain/", 0755)
+	if err != nil {
+		log.Fatal(err)
+	}
+	mainWallet = EmptyWallet()
+
 	HomePath, err = os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)
 	}
-	HomePath += "/.chainpqc/db/wallet"
+	HomePath += "/.chainpqc/db/wallet/"
 	mainWallet.SetPassword("a")
 	err = mainWallet.Load()
 	if err != nil {

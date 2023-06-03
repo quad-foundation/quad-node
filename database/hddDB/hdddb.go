@@ -49,13 +49,12 @@ func Store(k []byte, v any) error {
 	return nil
 }
 
-func LoadAllKeys(k []byte) ([][]byte, error) {
-	prefix := k[:2]
+func LoadAllKeys(prefix []byte) ([][]byte, error) {
+	if len(prefix) == 0 {
+		return nil, errors.New("prefix cannot be empty")
+	}
 	// Create a key range with the specified prefix
-	rangeLimit := make([]byte, len(prefix))
-	copy(rangeLimit, prefix)
-	rangeLimit[len(rangeLimit)-1]++
-	keyRange := &util.Range{Start: prefix, Limit: rangeLimit}
+	keyRange := util.BytesPrefix(prefix)
 	// Create an iterator with the key range
 	iter := blockchainDB.NewIterator(keyRange, nil)
 	defer iter.Release()
@@ -69,8 +68,7 @@ func LoadAllKeys(k []byte) ([][]byte, error) {
 	return keys, iter.Error()
 }
 
-func LoadAll(k []byte) ([]interface{}, error) {
-	prefix := k[:2]
+func LoadAll(prefix []byte) ([]interface{}, error) {
 	iter := blockchainDB.NewIterator(util.BytesPrefix(prefix), nil)
 	defer iter.Release()
 	values := []interface{}{}
@@ -118,6 +116,22 @@ func IsKey(key []byte) (bool, error) {
 func Delete(key []byte) error {
 	return blockchainDB.Delete(key, nil)
 }
+
+func clearLevelDB() error {
+	iter := blockchainDB.NewIterator(util.BytesPrefix([]byte("")), nil)
+	defer iter.Release()
+	batch := new(leveldb.Batch)
+	for iter.Next() {
+		key := iter.Key()
+		batch.Delete(key)
+	}
+	err := blockchainDB.Write(batch, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func LoadBytes(k []byte) ([]byte, error) {
 	value, err := blockchainDB.Get(k, nil)
 	if err != nil {
