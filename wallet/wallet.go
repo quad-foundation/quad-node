@@ -341,7 +341,7 @@ func Verify(msg []byte, sig common.Signature, pubkey common.PubKey) bool {
 }
 
 func LoadPubKey(addr common.Address) (pk common.PubKey, err error) {
-	val, err := database.LoadBytes(append([]byte(common.PubKeyDBPrefix), addr.GetBytes()...))
+	val, err := memDatabase.LoadBytes(append([]byte(common.PubKeyDBPrefix), addr.GetBytes()...))
 	if err != nil {
 		return pk, err
 	}

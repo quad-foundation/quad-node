@@ -5,8 +5,24 @@ import (
 	"github.com/chainpqc/chainpqc-node/crypto/oqs"
 	"github.com/stretchr/testify/assert"
 	"log"
+	"os"
 	"testing"
 )
+
+func init() {
+	mainWallet = EmptyWallet()
+	var err error
+	HomePath, err = os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+	HomePath += "db/wallet"
+	mainWallet.SetPassword("a")
+	err = mainWallet.Load()
+	if err != nil {
+		return
+	}
+}
 
 func TestEmptyWallet(t *testing.T) {
 	w := EmptyWallet()

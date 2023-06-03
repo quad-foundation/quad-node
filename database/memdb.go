@@ -1,4 +1,4 @@
-package database
+package memDatabase
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/chainpqc/chainpqc-node/common"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"log"
 	"os"
@@ -19,8 +20,10 @@ func Init() error {
 		log.Fatal(err)
 	}
 	homePath += "/.chainpqc/db/blockchain"
-	// Open or create a new LevelDB database
-	blockchainDB, err = leveldb.OpenFile(homePath, nil)
+
+	// in memery DB only
+	memStorage := storage.NewMemStorage()
+	blockchainDB, err = leveldb.Open(memStorage, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

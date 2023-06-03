@@ -9,8 +9,8 @@ import (
 )
 
 func main() {
-	database.Init()
-	defer database.CloseDB()
+	memDatabase.Init()
+	defer memDatabase.CloseDB()
 	mainWallet := wallet.EmptyWallet().GetWallet()
 	mainWallet.SetPassword("a")
 	err := mainWallet.Load()
