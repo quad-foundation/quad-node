@@ -1,13 +1,17 @@
 package database
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/chainpqc/chainpqc-node/common"
-	"github.com/tecbot/gorocksdb"
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/util"
 	"log"
 	"os"
 )
 
-var blockchainDB *gorocksdb.DB
+var blockchainDB *leveldb.DB
 
 func Init() error {
 	homePath, err := os.UserHomeDir()
@@ -15,14 +19,10 @@ func Init() error {
 		log.Fatal(err)
 	}
 	homePath += "/.chainpqc/db/blockchain"
-
-	// Create a new RocksDB options object
-	opts := gorocksdb.NewDefaultOptions()
-	opts.SetCreateIfMissing(true)
-	// Open the database with the provided options
-	blockchainDB, err = gorocksdb.OpenDb(opts, homePath)
+	// Open or create a new LevelDB database
+	blockchainDB, err = leveldb.OpenFile(homePath, nil)
 	if err != nil {
-		log.Fatalf("Error opening database: %v", err)
+		log.Fatal(err)
 	}
 	return nil
 }
@@ -39,74 +39,64 @@ func Store(k []byte, v any) error {
 		return err
 	}
 
-	// Create a new write options object
-	wo := gorocksdb.NewDefaultWriteOptions()
-	defer wo.Destroy()
 	// Put a key-value pair into the database
-	err = blockchainDB.Put(wo, k, wm)
+	err = blockchainDB.Put(k, wm, nil)
 	if err != nil {
-		log.Fatalf("Error putting key-value pair: %v", err)
-		return err
+		log.Fatal(err)
 	}
 
 	return nil
 }
 
-func LoadAllKeys(k []byte) [][]byte {
+func LoadAllKeys(k []byte) ([][]byte, error) {
 	prefix := k[:2]
-
-	// Create a read options with a custom prefix extractor
-	ro := gorocksdb.NewDefaultReadOptions()
-	ro.SetIterateUpperBound(prefix)
-	// Create an iterator with the read options
-	iter := blockchainDB.NewIterator(ro)
-	defer iter.Close()
-
+	// Create a key range with the specified prefix
+	rangeLimit := make([]byte, len(prefix))
+	copy(rangeLimit, prefix)
+	rangeLimit[len(rangeLimit)-1]++
+	keyRange := &util.Range{Start: prefix, Limit: rangeLimit}
+	// Create an iterator with the key range
+	iter := blockchainDB.NewIterator(keyRange, nil)
+	defer iter.Release()
 	keys := [][]byte{}
 	// Iterate over the keys with the specified prefix
-	for iter.Seek(prefix); iter.ValidForPrefix(prefix); iter.Next() {
-		keys = append(keys, iter.Key().Data())
+	for iter.Next() {
+		key := make([]byte, len(iter.Key()))
+		copy(key, iter.Key())
+		keys = append(keys, key)
 	}
-	return keys
+	return keys, iter.Error()
 }
 
-func LoadAll(k []byte) ([]any, error) {
-
+func LoadAll(k []byte) ([]interface{}, error) {
 	prefix := k[:2]
-
-	// Create a read options with a custom prefix extractor
-	ro := gorocksdb.NewDefaultReadOptions()
-	ro.SetIterateUpperBound(prefix)
-	// Create an iterator with the read options
-	iter := blockchainDB.NewIterator(ro)
-	defer iter.Close()
-
+	iter := blockchainDB.NewIterator(util.BytesPrefix(prefix), nil)
+	defer iter.Release()
 	values := []interface{}{}
-	// Iterate over the keys with the specified prefix
-	for iter.Seek(prefix); iter.ValidForPrefix(prefix); iter.Next() {
-		//keys = append(keys, iter.Key().Data())
+	for iter.Next() {
 		v := interface{}(nil)
-		err := common.Unmarshal(iter.Value().Data(), string(prefix), v)
+		err := common.Unmarshal(iter.Value(), string(prefix), &v)
 		if err != nil {
 			return nil, err
 		}
 		values = append(values, v)
 	}
+	err := iter.Error()
+	if err != nil {
+		return nil, err
+	}
 	return values, nil
 }
 
-func Load(k []byte, v any) error {
-
-	ro := gorocksdb.NewDefaultReadOptions()
-	defer ro.Destroy()
-	// Get the value for the given key
-	value, err := blockchainDB.Get(ro, k)
+func Load(k []byte, v interface{}) error {
+	value, err := blockchainDB.Get(k, nil)
 	if err != nil {
+		if err == leveldb.ErrNotFound {
+			return fmt.Errorf("key not found")
+		}
 		log.Fatalf("Error getting value for key: %v", err)
 	}
-	defer value.Free()
-
-	err = common.Unmarshal(value.Data(), string(k[:2]), v)
+	err = json.Unmarshal(value, v)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -115,32 +105,22 @@ func Load(k []byte, v any) error {
 }
 
 func IsKey(key []byte) (bool, error) {
-	ro := gorocksdb.NewDefaultReadOptions()
-	defer ro.Destroy()
-	value, err := blockchainDB.Get(ro, key)
+	_, err := blockchainDB.Get(key, nil)
 	if err != nil {
+		if errors.Is(err, leveldb.ErrNotFound) {
+			return false, nil
+		}
 		return false, err
 	}
-	defer value.Free()
-	return value.Exists(), nil
+	return true, nil
 }
-
 func Delete(key []byte) error {
-	wo := gorocksdb.NewDefaultWriteOptions()
-	defer wo.Destroy()
-	return blockchainDB.Delete(wo, key)
+	return blockchainDB.Delete(key, nil)
 }
-
 func LoadBytes(k []byte) ([]byte, error) {
-
-	ro := gorocksdb.NewDefaultReadOptions()
-	defer ro.Destroy()
-	// Get the value for the given key
-	value, err := blockchainDB.Get(ro, k)
+	value, err := blockchainDB.Get(k, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer value.Free()
-
-	return value.Data(), nil
+	return value, nil
 }

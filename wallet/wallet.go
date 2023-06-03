@@ -7,7 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/tecbot/gorocksdb"
+	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/wonabru/bip39"
 
 	"github.com/chainpqc/chainpqc-node/common"
@@ -47,8 +47,11 @@ func init() {
 		log.Fatal(err)
 	}
 	HomePath += "/.chainpqc/db/wallet"
-	//MainWallet.SetPassword("a")
-	//MainWallet.Load()
+	mainWallet.SetPassword("a")
+	err = mainWallet.Load()
+	if err != nil {
+		return
+	}
 }
 
 func (w *Wallet) SetPassword(password string) {
@@ -194,13 +197,9 @@ func (w Wallet) Store() error {
 	}
 
 	mutexDb.Lock()
-	opts := gorocksdb.NewDefaultOptions()
-	opts.SetCreateIfMissing(true)
-
-	// Open the database with the provided options
-	walletDB, err := gorocksdb.OpenDb(opts, HomePath)
+	walletDB, err := leveldb.OpenFile(HomePath+common.GetSigName(), nil)
 	if err != nil {
-		log.Fatalf("Error opening database: %v", err)
+		return err
 	}
 	defer walletDB.Close()
 	defer mutexDb.Unlock()
@@ -224,12 +223,9 @@ func (w Wallet) Store() error {
 		return err
 	}
 
-	wo := gorocksdb.NewDefaultWriteOptions()
-	defer wo.Destroy()
 	// Put a key-value pair into the database
-	err = walletDB.Put(wo, []byte("main_account"), wm)
+	err = walletDB.Put([]byte("main_account"), wm, nil)
 	if err != nil {
-		log.Fatalf("Error putting key-value pair: %v", err)
 		return err
 	}
 
@@ -265,26 +261,22 @@ func (w Wallet) Check() bool {
 
 func (w *Wallet) Load() error {
 
-	opts := gorocksdb.NewDefaultOptions()
-	opts.SetCreateIfMissing(true)
 	// Open the database with the provided options
 	mutexDb.Lock()
-	walletDB, err := gorocksdb.OpenDb(opts, HomePath+common.GetSigName())
+	walletDB, err := leveldb.OpenFile(HomePath+common.GetSigName(), nil)
 	if err != nil {
-		log.Fatalf("Error opening database: %v", err)
+		return err
 	}
 	defer walletDB.Close()
-	defer mutexDb.Unlock()
-	ro := gorocksdb.NewDefaultReadOptions()
-	defer ro.Destroy()
-	// Get the value for the given key
-	value, err := walletDB.Get(ro, []byte("main_account"))
-	if err != nil {
-		log.Fatalf("Error getting value for key: %v", err)
-	}
-	defer value.Free()
 
-	err = json.Unmarshal(value.Data(), w)
+	defer mutexDb.Unlock()
+
+	value, err := walletDB.Get([]byte("main_account"), nil)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(value, w)
 	if err != nil {
 		log.Println(err)
 		return err

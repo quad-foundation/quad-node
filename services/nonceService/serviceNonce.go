@@ -33,7 +33,7 @@ func InitNonceService() {
 }
 
 func generateNonceMsg(chain uint8) (message.AnyNonceMessage, error) {
-	common.HeightMutex.Lock()
+	common.HeightMutex.RLock()
 	h := common.GetHeight()
 	common.HeightMutex.RUnlock()
 

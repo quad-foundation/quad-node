@@ -24,16 +24,17 @@ func OnMessage(addr string, m []byte) {
 
 	}()
 
-	err := msg.UnMarshal(m)
+	an, err := msg.Unmarshal(m)
 	if err != nil {
 		panic(err)
 	}
 
-	isValid := message.CheckMessage(msg)
+	isValid := message.CheckMessage(an)
 	if isValid == false {
 		log.Println("message is invalid")
 		panic("message is invalid")
 	}
+	msg = an.(message.AnyNonceMessage)
 	var nonceTransaction transactionType.AnyTransaction
 	switch msg.GetChain() {
 	case 0:

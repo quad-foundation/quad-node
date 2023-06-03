@@ -83,7 +83,7 @@ Run GUI (default password "a" - please do not change):
 
 IP_MINER - in most cases it is 127.0.0.1
 
-Running galaxy blockchain on more than 1 server:
+Running ChainPQC blockchain on more than 1 server:
 
 First server is configured as above.
 

@@ -18,6 +18,8 @@ type AnyMessage interface {
 	GetTransactions() []transactionType.AnyTransaction
 	GetChain() uint8
 	GetBytes() []byte
+	Marshal() ([]byte, error)
+	Unmarshal(b []byte) (AnyMessage, error)
 }
 
 func (m BaseMessage) GetBytes() []byte {

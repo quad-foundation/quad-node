@@ -1,6 +1,7 @@
 package message
 
 import (
+	"encoding/json"
 	"github.com/chainpqc/chainpqc-node/common"
 	"github.com/chainpqc/chainpqc-node/transactionType"
 	"log"
@@ -57,4 +58,22 @@ func (b AnyTransactionsMessage) GetChainID() int16 {
 
 func (b AnyTransactionsMessage) GetValidHead() []string {
 	return validHeadTx
+}
+
+func (m AnyTransactionsMessage) Marshal() ([]byte, error) {
+	mb, err := json.Marshal(m)
+	if err != nil {
+		log.Println("error unmarshalling message (nonceMsg)", err)
+		return nil, err
+	}
+	return mb, nil
+}
+
+func (m AnyTransactionsMessage) Unmarshal(b []byte) (AnyTransactionsMessage, error) {
+	err := json.Unmarshal(b, &m)
+	if err != nil {
+		log.Println("error unmarshalling message (nonceMsg)", err)
+		return AnyTransactionsMessage{}, err
+	}
+	return m, nil
 }

@@ -15,7 +15,7 @@ const (
 	HashLength       int    = 32
 	ShortHashLength  int    = 8
 	SignatureLength  int    = 164
-	sigName          string = "Falcon-512" //"Rainbow-III-Compressed" //
+	sigName          string = "Rainbow-III-Compressed" //"Falcon-512" //
 )
 
 func GetSigName() string {

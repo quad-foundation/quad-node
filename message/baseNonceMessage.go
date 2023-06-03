@@ -60,11 +60,20 @@ func (a AnyNonceMessage) GetBytes() []byte {
 	return b
 }
 
-func (m *AnyNonceMessage) UnMarshal(b []byte) error {
-	err := json.Unmarshal(b, m)
+func (m AnyNonceMessage) Marshal() ([]byte, error) {
+	mb, err := json.Marshal(m)
 	if err != nil {
 		log.Println("error unmarshalling message (nonceMsg)", err)
-		return err
+		return nil, err
 	}
-	return nil
+	return mb, nil
+}
+
+func (m AnyNonceMessage) Unmarshal(b []byte) (AnyMessage, error) {
+	err := json.Unmarshal(b, &m)
+	if err != nil {
+		log.Println("error unmarshalling message (nonceMsg)", err)
+		return nil, err
+	}
+	return AnyMessage(m), nil
 }
