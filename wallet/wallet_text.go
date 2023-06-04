@@ -109,6 +109,6 @@ func TestSignAndVerify(t *testing.T) {
 		log.Fatal(err)
 	}
 	// Verify the signature using the wallet's public key
-	isVerified := Verify(message, signature, wallet.PublicKey)
+	isVerified := Verify(message, signature.GetBytes(), wallet.PublicKey.GetBytes())
 	assert.Equal(t, isVerified, true)
 }

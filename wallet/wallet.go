@@ -12,7 +12,6 @@ import (
 
 	"github.com/chainpqc/chainpqc-node/common"
 	"github.com/chainpqc/chainpqc-node/crypto/oqs"
-	"github.com/chainpqc/chainpqc-node/database"
 	"golang.org/x/crypto/sha3"
 	"io"
 	"log"
@@ -336,29 +335,17 @@ func (w *Wallet) ChangePassword(password, newPassword string) error {
 	return nil
 }
 
-func Verify(msg []byte, sig common.Signature, pubkey common.PubKey) bool {
+func Verify(msg []byte, sig []byte, pubkey []byte) bool {
 	var verifier oqs.Signature
 	err := verifier.Init(common.GetSigName(), nil)
 	if err != nil {
 		return false
 	}
 
-	isVerified, err := verifier.Verify(msg, sig.GetBytes(), pubkey.GetBytes())
+	isVerified, err := verifier.Verify(msg, sig, pubkey)
 	if err != nil {
 		return false
 	}
 	return isVerified
 	//return true
-}
-
-func LoadPubKey(addr common.Address) (pk common.PubKey, err error) {
-	val, err := memDatabase.LoadBytes(append([]byte(common.PubKeyDBPrefix), addr.GetBytes()...))
-	if err != nil {
-		return pk, err
-	}
-	err = pk.Init(val)
-	if err != nil {
-		return pk, err
-	}
-	return pk, nil
 }

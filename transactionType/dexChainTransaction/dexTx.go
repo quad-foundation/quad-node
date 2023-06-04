@@ -79,11 +79,67 @@ func (mt DexChainTransaction) GetHash() common.Hash {
 	return mt.Hash
 }
 
-func (md DexChainTxData) GetBytes() []byte {
+func (md DexChainTxData) GetBytes() ([]byte, error) {
 	b := md.Recipient.GetBytes()
 	b = append(b, common.GetByteInt64(md.Amount)...)
-	b = append(b, md.OptData...)
-	return b
+	opt := common.BytesToLenAndBytes(md.OptData)
+	b = append(b, opt...)
+	return b, nil
+}
+
+func (tx DexChainTransaction) GetFromBytes(b []byte) (transactionType.AnyTransaction, []byte, error) {
+
+	if len(b) < 56+common.SignatureLength {
+		return nil, nil, fmt.Errorf("Not enough bytes for transaction unmarshal")
+	}
+	tp := transactionType.TxParam{}
+	tp, b, err := tp.GetFromBytes(b)
+	if err != nil {
+		return nil, nil, err
+	}
+	td := DexChainTxData{}
+	adata, b, err := td.GetFromBytes(b)
+	if err != nil {
+		return nil, nil, err
+	}
+	at := DexChainTransaction{
+		TxData:    adata.(DexChainTxData),
+		TxParam:   tp,
+		Hash:      common.Hash{},
+		Signature: common.Signature{},
+		Height:    common.GetInt64FromByte(b[:8]),
+		GasPrice:  common.GetInt64FromByte(b[8:16]),
+		GasUsage:  common.GetInt64FromByte(b[16:24]),
+	}
+	hash, err := common.GetHashFromBytes(b[24:56])
+	if err != nil {
+		return nil, nil, err
+	}
+	at.Hash = hash
+
+	signature, err := common.GetSignatureFromBytes(b[56:], tp.Sender)
+	if err != nil {
+		return nil, nil, err
+	}
+	at.Signature = signature
+	return transactionType.AnyTransaction(&at), b[56+common.SignatureLength:], nil
+}
+
+func (DexChainTxData) GetFromBytes(data []byte) (transactionType.AnyDataTransaction, []byte, error) {
+	md := DexChainTxData{}
+	address, err := common.BytesToAddress(data[:common.AddressLength])
+	if err != nil {
+		return nil, []byte{}, err
+	}
+	md.Recipient = address
+	amountBytes := data[common.AddressLength : common.AddressLength+8]
+	md.Amount = common.GetInt64FromByte(amountBytes)
+	opt, left, err := common.BytesWithLenToBytes(data[common.AddressLength+8:])
+	if err != nil {
+		return nil, []byte{}, err
+	}
+	md.OptData = opt
+	return transactionType.AnyDataTransaction(md), left, nil
 }
 
 func (mt DexChainTransaction) GetPrice() int64 {
@@ -93,7 +149,11 @@ func (mt DexChainTransaction) GetPrice() int64 {
 func (tx DexChainTransaction) GetBytesWithoutSignature(withHash bool) []byte {
 
 	b := tx.TxParam.GetBytes()
-	b = append(b, tx.TxData.GetBytes()...)
+	bd, err := tx.TxData.GetBytes()
+	if err != nil {
+		return nil
+	}
+	b = append(b, bd...)
 	b = append(b, common.GetByteInt64(tx.Height)...)
 	b = append(b, common.GetByteInt64(tx.GasPrice)...)
 	b = append(b, common.GetByteInt64(tx.GasUsage)...)
@@ -105,7 +165,7 @@ func (tx DexChainTransaction) GetBytesWithoutSignature(withHash bool) []byte {
 
 func (mt DexChainTransaction) CalcHash() (common.Hash, error) {
 	b := mt.GetBytesWithoutSignature(false)
-	hash, err := common.GetHashFromBytes(b)
+	hash, err := common.CalcHashFromBytes(b)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -114,4 +174,14 @@ func (mt DexChainTransaction) CalcHash() (common.Hash, error) {
 
 func (mt *DexChainTransaction) SetHash(h common.Hash) {
 	mt.Hash = h
+}
+
+func (md DexChainTxData) GetOptData() []byte {
+	return md.OptData
+}
+func (md DexChainTxData) GetAmount() int64 {
+	return md.Amount
+}
+func (md DexChainTxData) GetRecipient() common.Address {
+	return md.Recipient
 }

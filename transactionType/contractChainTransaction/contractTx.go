@@ -79,11 +79,67 @@ func (mt ContractChainTransaction) GetHash() common.Hash {
 	return mt.Hash
 }
 
-func (md ContractChainTxData) GetBytes() []byte {
+func (md ContractChainTxData) GetBytes() ([]byte, error) {
 	b := md.Recipient.GetBytes()
 	b = append(b, common.GetByteInt64(md.Amount)...)
-	b = append(b, md.OptData...)
-	return b
+	opt := common.BytesToLenAndBytes(md.OptData)
+	b = append(b, opt...)
+	return b, nil
+}
+
+func (ContractChainTxData) GetFromBytes(data []byte) (transactionType.AnyDataTransaction, []byte, error) {
+	md := ContractChainTxData{}
+	address, err := common.BytesToAddress(data[:common.AddressLength])
+	if err != nil {
+		return nil, []byte{}, err
+	}
+	md.Recipient = address
+	amountBytes := data[common.AddressLength : common.AddressLength+8]
+	md.Amount = common.GetInt64FromByte(amountBytes)
+	opt, left, err := common.BytesWithLenToBytes(data[common.AddressLength+8:])
+	if err != nil {
+		return nil, []byte{}, err
+	}
+	md.OptData = opt
+	return transactionType.AnyDataTransaction(md), left, nil
+}
+
+func (tx ContractChainTransaction) GetFromBytes(b []byte) (transactionType.AnyTransaction, []byte, error) {
+
+	if len(b) < 56+common.SignatureLength {
+		return nil, nil, fmt.Errorf("Not enough bytes for transaction unmarshal")
+	}
+	tp := transactionType.TxParam{}
+	tp, b, err := tp.GetFromBytes(b)
+	if err != nil {
+		return nil, nil, err
+	}
+	td := ContractChainTxData{}
+	adata, b, err := td.GetFromBytes(b)
+	if err != nil {
+		return nil, nil, err
+	}
+	at := ContractChainTransaction{
+		TxData:    adata.(ContractChainTxData),
+		TxParam:   tp,
+		Hash:      common.Hash{},
+		Signature: common.Signature{},
+		Height:    common.GetInt64FromByte(b[:8]),
+		GasPrice:  common.GetInt64FromByte(b[8:16]),
+		GasUsage:  common.GetInt64FromByte(b[16:24]),
+	}
+	hash, err := common.GetHashFromBytes(b[24:56])
+	if err != nil {
+		return nil, nil, err
+	}
+	at.Hash = hash
+
+	signature, err := common.GetSignatureFromBytes(b[56:], tp.Sender)
+	if err != nil {
+		return nil, nil, err
+	}
+	at.Signature = signature
+	return transactionType.AnyTransaction(&at), b[56+common.SignatureLength:], nil
 }
 
 func (mt ContractChainTransaction) GetPrice() int64 {
@@ -93,7 +149,11 @@ func (mt ContractChainTransaction) GetPrice() int64 {
 func (tx ContractChainTransaction) GetBytesWithoutSignature(withHash bool) []byte {
 
 	b := tx.TxParam.GetBytes()
-	b = append(b, tx.TxData.GetBytes()...)
+	bd, err := tx.TxData.GetBytes()
+	if err != nil {
+		return nil
+	}
+	b = append(b, bd...)
 	b = append(b, common.GetByteInt64(tx.Height)...)
 	b = append(b, common.GetByteInt64(tx.GasPrice)...)
 	b = append(b, common.GetByteInt64(tx.GasUsage)...)
@@ -105,7 +165,7 @@ func (tx ContractChainTransaction) GetBytesWithoutSignature(withHash bool) []byt
 
 func (mt ContractChainTransaction) CalcHash() (common.Hash, error) {
 	b := mt.GetBytesWithoutSignature(false)
-	hash, err := common.GetHashFromBytes(b)
+	hash, err := common.CalcHashFromBytes(b)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -114,4 +174,14 @@ func (mt ContractChainTransaction) CalcHash() (common.Hash, error) {
 
 func (mt *ContractChainTransaction) SetHash(h common.Hash) {
 	mt.Hash = h
+}
+
+func (md ContractChainTxData) GetOptData() []byte {
+	return md.OptData
+}
+func (md ContractChainTxData) GetAmount() int64 {
+	return md.Amount
+}
+func (md ContractChainTxData) GetRecipient() common.Address {
+	return md.Recipient
 }

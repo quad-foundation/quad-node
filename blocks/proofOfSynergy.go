@@ -6,7 +6,7 @@ import (
 	"math/big"
 )
 
-func CheckProofOfWork(block BaseBlock) bool {
+func CheckProofOfSynergy(block BaseBlock) bool {
 	head := block.BaseHeader
 	h := block.BlockHeaderHash
 	return validProof(h, head.Difficulty)

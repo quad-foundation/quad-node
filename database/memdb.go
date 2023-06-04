@@ -1,10 +1,10 @@
 package memDatabase
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/chainpqc/chainpqc-node/common"
+	"github.com/chainpqc/chainpqc-node/wallet"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -27,6 +27,9 @@ func Init() error {
 	if err != nil {
 		log.Fatal(err)
 	}
+	w := wallet.EmptyWallet().GetWallet()
+	err = Store(append([]byte(common.PubKeyDBPrefix), w.Address.GetBytes()...),
+		w.PublicKey.GetBytes())
 	return nil
 }
 
@@ -34,16 +37,18 @@ func CloseDB() {
 	blockchainDB.Close()
 }
 
-func Store(k []byte, v any) error {
+func Store(k []byte, v []byte) error {
 
-	wm, err := common.Marshal(v, string(k[:2]))
-	if err != nil {
-		log.Println(err)
-		return err
-	}
+	//prefix := [2]byte{}
+	//copy(prefix[:], k[:2])
+	//wm, err := common.Marshal(v, prefix)
+	//if err != nil {
+	//	log.Println(err)
+	//	return err
+	//}
 
 	// Put a key-value pair into the database
-	err = blockchainDB.Put(k, wm, nil)
+	err := blockchainDB.Put(k, v, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -70,17 +75,19 @@ func LoadAllKeys(prefix []byte) ([][]byte, error) {
 	return keys, iter.Error()
 }
 
-func LoadAll(prefix []byte) ([]interface{}, error) {
+func LoadAll(prefix []byte) ([][]byte, error) {
 	iter := blockchainDB.NewIterator(util.BytesPrefix(prefix), nil)
 	defer iter.Release()
-	values := []interface{}{}
+	prefix2 := [2]byte{}
+	copy(prefix2[:], prefix[:2])
+	values := [][]byte{}
 	for iter.Next() {
-		v := interface{}(nil)
-		err := common.Unmarshal(iter.Value(), string(prefix), &v)
-		if err != nil {
-			return nil, err
-		}
-		values = append(values, v)
+		//v := interface{}(nil)
+		//err := common.Unmarshal(iter.Value(), prefix2, &v)
+		//if err != nil {
+		//	return nil, err
+		//}
+		values = append(values, iter.Value())
 	}
 	err := iter.Error()
 	if err != nil {
@@ -89,20 +96,20 @@ func LoadAll(prefix []byte) ([]interface{}, error) {
 	return values, nil
 }
 
-func Load(k []byte, v interface{}) error {
+func Load(k []byte) ([]byte, error) {
 	value, err := blockchainDB.Get(k, nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
-			return fmt.Errorf("key not found")
+			return []byte{}, fmt.Errorf("key not found")
 		}
 		log.Fatalf("Error getting value for key: %v", err)
 	}
-	err = json.Unmarshal(value, v)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
+	//err = json.Unmarshal(value, v)
+	//if err != nil {
+	//	log.Println(err)
+	//	return err
+	//}
+	return value, nil
 }
 
 func IsKey(key []byte) (bool, error) {
@@ -118,10 +125,23 @@ func IsKey(key []byte) (bool, error) {
 func Delete(key []byte) error {
 	return blockchainDB.Delete(key, nil)
 }
-func LoadBytes(k []byte) ([]byte, error) {
-	value, err := blockchainDB.Get(k, nil)
-	if err != nil {
-		return nil, err
-	}
-	return value, nil
-}
+
+//func LoadBytes(k []byte) ([]byte, error) {
+//	value, err := blockchainDB.Get(k, nil)
+//	if err != nil {
+//		return nil, err
+//	}
+//	return value, nil
+//}
+//
+//func LoadPubKey(addr common.Address) (pk common.PubKey, err error) {
+//	val, err := LoadBytes(append([]byte(common.PubKeyDBPrefix), addr.GetBytes()...))
+//	if err != nil {
+//		return pk, err
+//	}
+//	err = pk.Init(val)
+//	if err != nil {
+//		return pk, err
+//	}
+//	return pk, nil
+//}

@@ -208,40 +208,48 @@ func (h ShortHash) GetHex() string {
 	return hex.EncodeToString(h.GetBytes())
 }
 
+// GetByteInt32 converts an int32 value to a byte slice.
 func GetByteInt32(u int32) []byte {
 	tmp := make([]byte, 4)
 	binary.BigEndian.PutUint32(tmp, uint32(u))
 	return tmp
 }
 
+// GetByteInt16 converts an int16 value to a byte slice.
 func GetByteInt16(u int16) []byte {
 	tmp := make([]byte, 2)
 	binary.BigEndian.PutUint16(tmp, uint16(u))
 	return tmp
 }
 
+// GetByteInt64 converts an int64 value to a byte slice.
 func GetByteInt64(u int64) []byte {
 	tmp := make([]byte, 8)
 	binary.BigEndian.PutUint64(tmp, uint64(u))
 	return tmp
 }
 
+// GetInt64FromByte converts a byte slice to an int64 value.
 func GetInt64FromByte(bs []byte) int64 {
 	return int64(binary.BigEndian.Uint64(bs))
 }
 
+// GetUintFromSCByte converts a byte slice to a uint value.
 func GetUintFromSCByte(bs []byte) uint {
 	return uint(binary.BigEndian.Uint64(bs[3*8:]))
 }
 
+// GetInt64FromSCByte converts a byte slice to an int64 value.
 func GetInt64FromSCByte(bs []byte) int64 {
 	return int64(binary.BigEndian.Uint64(bs[3*8:]))
 }
 
+// GetInt32FromByte converts a byte slice to an int32 value.
 func GetInt32FromByte(bs []byte) int32 {
 	return int32(binary.BigEndian.Uint32(bs))
 }
 
+// GetInt16FromByte converts a byte slice to an int16 value.
 func GetInt16FromByte(bs []byte) int16 {
 	return int16(binary.BigEndian.Uint16(bs))
 }

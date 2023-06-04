@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 )
 
-func Marshal(v any, prefix string) ([]byte, error) {
+func Marshal(v any, prefix [2]byte) ([]byte, error) {
 
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -13,7 +13,7 @@ func Marshal(v any, prefix string) ([]byte, error) {
 	return b, nil
 }
 
-func Unmarshal(b []byte, prefix string, v any) error {
+func Unmarshal(b []byte, prefix [2]byte, v any) error {
 
 	err := json.Unmarshal(b, v)
 	if err != nil {

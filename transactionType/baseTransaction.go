@@ -1,7 +1,9 @@
 package transactionType
 
 import (
+	"fmt"
 	"github.com/chainpqc/chainpqc-node/common"
+	memDatabase "github.com/chainpqc/chainpqc-node/database"
 	"github.com/chainpqc/chainpqc-node/wallet"
 	"strconv"
 	"time"
@@ -16,7 +18,11 @@ type TxParam struct {
 }
 
 type AnyDataTransaction interface {
-	GetBytes() []byte
+	GetBytes() ([]byte, error)
+	GetFromBytes(data []byte) (AnyDataTransaction, []byte, error)
+	GetAmount() int64
+	GetOptData() []byte
+	GetRecipient() common.Address
 }
 
 type AnyTransaction interface {
@@ -24,6 +30,7 @@ type AnyTransaction interface {
 	GetParam() TxParam
 	GetData() AnyDataTransaction
 	GetSenderAddress() common.Address
+	GetFromBytes([]byte) (AnyTransaction, []byte, error)
 	//Store() error
 	//StoreToPool(dbprefix string) error
 	//DeleteFromPool(dbprefix string) error
@@ -42,12 +49,29 @@ type AnyTransaction interface {
 }
 
 func (tp TxParam) GetBytes() []byte {
+
 	b := []byte{tp.Chain}
 	b = append(b, common.GetByteInt16(tp.ChainID)...)
 	b = append(b, tp.Sender.GetBytes()...)
 	b = append(b, common.GetByteInt64(tp.SendingTime)...)
 	b = append(b, common.GetByteInt16(tp.Nonce)...)
 	return b
+}
+
+func (tp TxParam) GetFromBytes(b []byte) (TxParam, []byte, error) {
+	var err error
+	if len(b) < 33 {
+		return TxParam{}, []byte{}, fmt.Errorf("not enough bytes in TxParam unmarshaling")
+	}
+	tp.Chain = b[0]
+	tp.ChainID = common.GetInt16FromByte(b[1:3])
+	tp.Sender, err = common.BytesToAddress(b[3:23])
+	if err != nil {
+		return TxParam{}, []byte{}, err
+	}
+	tp.SendingTime = common.GetInt64FromByte(b[23:31])
+	tp.Nonce = common.GetInt16FromByte(b[31:33])
+	return tp, b[33:], nil
 }
 
 func (tp TxParam) GetString() string {
@@ -61,20 +85,20 @@ func (tp TxParam) GetString() string {
 }
 
 func GetBytes(tx AnyTransaction) []byte {
-	b := tx.GetSignature().GetBytes()
-	b = append(b, tx.GetBytesWithoutSignature(true)...)
+	b := tx.GetBytesWithoutSignature(true)
+	b = append(b, tx.GetSignature().GetBytes()...)
 	return b
 }
 
 func VerifyTransaction(tx AnyTransaction) bool {
 	b := tx.GetHash().GetBytes()
 	a := tx.GetSenderAddress()
-	pk, err := wallet.LoadPubKey(a)
+	pk, err := memDatabase.Load(append([]byte(common.PubKeyDBPrefix), a.GetBytes()...))
 	if err != nil {
 		return false
 	}
-
-	return wallet.Verify(b, tx.GetSignature(), pk)
+	signature := tx.GetSignature()
+	return wallet.Verify(b, signature.GetBytes(), pk)
 }
 
 func SignTransaction(tx AnyTransaction) (common.Signature, error) {
@@ -97,7 +121,11 @@ func SignTransactionAllToBytes(tx AnyTransaction) ([]byte, error) {
 
 func GetBytesWithoutSignature(tx AnyTransaction, withHash bool) []byte {
 	b := tx.GetParam().GetBytes()
-	b = append(b, tx.GetData().GetBytes()...)
+	bd, err := tx.GetData().GetBytes()
+	if err != nil {
+		return nil
+	}
+	b = append(b, bd...)
 	b = append(b, tx.GetHash().GetBytes()...)
 	b = append(b, common.GetByteInt64(tx.GetHeight())...)
 	b = append(b, common.GetByteInt64(tx.GetPrice())...)

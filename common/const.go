@@ -65,6 +65,12 @@ func GetChainID() int16 {
 	return chainID
 }
 
+func GetDelegatedAccount() Address {
+	return delegatedAccount
+}
+func GetRewardPercentage() int16 {
+	return rewardPercentage
+}
 func init() {
 	//log.SetOutput(io.Discard)
 
