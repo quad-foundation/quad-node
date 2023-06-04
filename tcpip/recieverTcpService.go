@@ -14,20 +14,19 @@ import (
 	"time"
 )
 
-var peersConnected = map[string]string{}
-var peersMutex sync.RWMutex
-var oldPeers = map[string]string{}
-var tcpConnections = map[string]map[string]*net.TCPConn{}
-var Quit chan os.Signal
-var CheckCount int64
-
 var (
+	peersConnected   = map[string]string{}
+	oldPeers         = map[string]string{}
+	CheckCount       int64
+	waitChan         = make(chan []byte)
+	tcpConnections   = make(map[string]map[string]*net.TCPConn)
+	peersMutex       sync.RWMutex
+	Quit             chan os.Signal
 	TransactionTopic = [5]string{"T0", "T1", "T2", "T3", "T4"}
 	NonceTopic       = [5]string{"N0", "N1", "N2", "N3", "N4"}
 	SelfNonceTopic   = [5]string{"S0", "S1", "S2", "S3", "S4"}
 	SyncTopic        = [5]string{"B0", "B1", "B2", "B3", "B4"}
 )
-
 var ports = map[string]int{
 	TransactionTopic[0]: 9091,
 	TransactionTopic[1]: 9092,
@@ -50,26 +49,16 @@ var ports = map[string]int{
 	SyncTopic[3]:        6094,
 	SyncTopic[4]:        6095,
 }
-
 var MyIP string
 
 func init() {
 	Quit = make(chan os.Signal)
 	signal.Notify(Quit, syscall.SIGTERM, syscall.SIGINT, os.Interrupt)
-
-	// rather here should be external IP which should be set in .env file
 	MyIP = getInternalIp()
-
-	for k, _ := range ports {
+	for k := range ports {
 		tcpConnections[k] = map[string]*net.TCPConn{}
 	}
 }
-
-type IP struct {
-	Query string
-}
-
-// getInternalIp function to retrieve intranet IP of node
 func getInternalIp() string {
 	ifaces, err := net.Interfaces()
 	if err != nil {
@@ -100,13 +89,9 @@ func getInternalIp() string {
 	}
 	return ""
 }
-
-// Listen internal function which set server for ip and port
 func Listen(ip string, port int) (*net.TCPListener, error) {
 	ipport := fmt.Sprint(ip, ":", port)
 	protocol := "tcp"
-
-	//Build the address
 	addr, err := net.ResolveTCPAddr(protocol, ipport)
 	if err != nil {
 		log.Println("Wrong Address", err)
@@ -117,23 +102,17 @@ func Listen(ip string, port int) (*net.TCPListener, error) {
 		log.Printf("Some error %v\n", err)
 		return nil, err
 	}
-
 	return conn, nil
 }
-
 func Accept(topic string, conn *net.TCPListener) (*net.TCPConn, error) {
 	tcpConn, err := conn.AcceptTCP()
 	if err == nil {
-		//tcpConn.SetWriteBuffer(1024 * 1024)
 		NewConnectionPeer(topic, tcpConn)
 		return tcpConn, nil
-	} else {
-		return nil, fmt.Errorf("no connection available yet")
 	}
+	return nil, fmt.Errorf("no connection available yet")
 }
-
 func NewConnectionPeer(topic string, tcpConn *net.TCPConn) {
-
 	raddr := tcpConn.RemoteAddr().String()
 	ra := strings.Split(raddr, ":")
 	addrRemote := ra[0]
@@ -146,16 +125,13 @@ func NewConnectionPeer(topic string, tcpConn *net.TCPConn) {
 	}
 	peersMutex.Unlock()
 }
-
 func Send(conn *net.TCPConn, message []byte) {
-
 	message = append(message, []byte("<-END->")...)
 	n, err := conn.Write(message)
 	if err != nil {
 		log.Printf("Cann't send response %v", err)
 		if err == io.EOF {
 			log.Println("buffer is full (send)")
-			//CloseAndRemoveConnection(conn)
 			time.Sleep(time.Millisecond * 10)
 		}
 		if errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ECONNABORTED) {
@@ -166,23 +142,18 @@ func Send(conn *net.TCPConn, message []byte) {
 		log.Println("Not whole message was send")
 	}
 }
-
 func Receive(topic string, conn *net.TCPConn) []byte {
-
-	buf := make([]byte, 1024*1024) // big buffer 1 MB - full block
-
+	buf := make([]byte, 1024*1024)
 	n, err := conn.Read(buf[:])
 	if err != nil {
 		if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
 			return nil
 		}
-
 		if errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ECONNABORTED) {
 			log.Print("This is broken pipe error")
 			return []byte("QUITFOR")
 		}
 		if err == io.EOF {
-			//log.Println("buffer is full (receive)")
 			return []byte("WAIT")
 		}
 		return nil
@@ -194,7 +165,6 @@ func Receive(topic string, conn *net.TCPConn) []byte {
 	CheckCount++
 	return buf[:n]
 }
-
 func LookUpForNewPeersToConnect(chanPeer chan string) {
 	for {
 		peersMutex.RLock()
@@ -206,7 +176,7 @@ func LookUpForNewPeersToConnect(chanPeer chan string) {
 				chanPeer <- topicip
 			}
 		}
-		for topicip, _ := range oldPeers {
+		for topicip := range oldPeers {
 			_, ok := peersConnected[topicip]
 			if ok == false {
 				log.Println("New peer is deleted with ip", topicip)

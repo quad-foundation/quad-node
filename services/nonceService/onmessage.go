@@ -15,7 +15,7 @@ import (
 
 func OnMessage(addr string, m []byte) {
 
-	log.Println("New message nonce from:", addr)
+	//log.Println("New message nonce from:", addr)
 	msg := message.AnyNonceMessage{}
 
 	defer func() {
