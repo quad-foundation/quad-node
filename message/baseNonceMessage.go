@@ -1,6 +1,7 @@
 package message
 
 import (
+	"bytes"
 	"github.com/chainpqc/chainpqc-node/common"
 	"github.com/chainpqc/chainpqc-node/transactionType"
 	"log"
@@ -57,7 +58,7 @@ func (a AnyNonceMessage) GetBytes() []byte {
 		copy(tb[:], t)
 		if common.IsInKeysOfList(a.NonceBytes, tb) {
 			for _, sb := range a.NonceBytes[tb] {
-				b = append(b, sb...)
+				b = append(b, common.BytesToLenAndBytes(sb)...)
 			}
 		}
 	}
@@ -66,13 +67,26 @@ func (a AnyNonceMessage) GetBytes() []byte {
 
 func (a *AnyNonceMessage) GetFromBytes(b []byte) error {
 	tb := [2]byte{}
-
+	var err error
+	var sb []byte
 	a.BaseMessage.GetFromBytes(b[:5])
-	for _, t := range validHeadNonce {
-		copy(tb[:], t)
-		a.NonceBytes[tb] = [][]byte{}
-		for _, sb := range a.NonceBytes[tb] {
-			a.NonceBytes[tb] = append(a.NonceBytes[tb], sb)
+	a.NonceBytes = map[[2]byte][][]byte{}
+	if len(b) > 8 {
+		b = b[6:]
+		for _, t := range validHeadNonce {
+			copy(tb[:], b[:2])
+			if bytes.Equal(tb[:], t) {
+				a.NonceBytes[tb] = [][]byte{}
+				b = b[2:]
+				for len(b) > 0 {
+					sb, b, err = common.BytesWithLenToBytes(b)
+					if err != nil {
+						log.Println("unmarshal AnyNonceMessage from bytes fails")
+						return err
+					}
+					a.NonceBytes[tb] = append(a.NonceBytes[tb], sb)
+				}
+			}
 		}
 	}
 	return nil

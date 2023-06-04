@@ -31,13 +31,13 @@ func (m BaseMessage) GetBytes() []byte {
 }
 
 func (m *BaseMessage) GetFromBytes(b []byte) {
-	if len(b) == 5 {
+	if len(b) != 5 {
 		log.Println("bytes length should be 5")
 		return
 	}
 	m.Head = b[:2]
 	m.ChainID = common.GetInt16FromByte(b[2:4])
-	m.Chain = b[5]
+	m.Chain = b[4]
 }
 
 func CheckMessage(a AnyMessage) bool {

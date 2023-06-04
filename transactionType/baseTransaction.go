@@ -36,7 +36,9 @@ type AnyTransaction interface {
 	GetChain() uint8
 	GetString() string
 	GetSignature() common.Signature
-	GetBytesWithoutSignature() []byte
+	GetBytesWithoutSignature(bool) []byte
+	CalcHash() (common.Hash, error)
+	SetHash(hash common.Hash)
 }
 
 func (tp TxParam) GetBytes() []byte {
@@ -60,15 +62,12 @@ func (tp TxParam) GetString() string {
 
 func GetBytes(tx AnyTransaction) []byte {
 	b := tx.GetSignature().GetBytes()
-	b = append(b, tx.GetBytesWithoutSignature()...)
+	b = append(b, tx.GetBytesWithoutSignature(true)...)
 	return b
 }
 
 func VerifyTransaction(tx AnyTransaction) bool {
-	b, err := common.CalcHashToByte(tx.GetBytesWithoutSignature())
-	if err != nil {
-		return false
-	}
+	b := tx.GetHash().GetBytes()
 	a := tx.GetSenderAddress()
 	pk, err := wallet.LoadPubKey(a)
 	if err != nil {
@@ -79,13 +78,11 @@ func VerifyTransaction(tx AnyTransaction) bool {
 }
 
 func SignTransaction(tx AnyTransaction) (common.Signature, error) {
-	b, err := common.CalcHashToByte(tx.GetBytesWithoutSignature())
-	if err != nil {
-		return common.Signature{}, err
-	}
+	b := tx.GetHash()
+
 	w := wallet.EmptyWallet()
 	w = w.GetWallet()
-	return w.Sign(b)
+	return w.Sign(b.GetBytes())
 }
 
 func SignTransactionAllToBytes(tx AnyTransaction) ([]byte, error) {
@@ -93,19 +90,21 @@ func SignTransactionAllToBytes(tx AnyTransaction) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	b := tx.GetBytesWithoutSignature()
+	b := tx.GetBytesWithoutSignature(true)
 	b = append(b, signature.GetBytes()...)
 	return b, nil
 }
 
-func GetBytesWithoutSignature(tx AnyTransaction) []byte {
+func GetBytesWithoutSignature(tx AnyTransaction, withHash bool) []byte {
 	b := tx.GetParam().GetBytes()
 	b = append(b, tx.GetData().GetBytes()...)
 	b = append(b, tx.GetHash().GetBytes()...)
 	b = append(b, common.GetByteInt64(tx.GetHeight())...)
 	b = append(b, common.GetByteInt64(tx.GetPrice())...)
 	b = append(b, common.GetByteInt64(tx.GetGasUsage())...)
-	b = append(b, tx.GetHash().GetBytes()...)
+	if withHash {
+		b = append(b, tx.GetHash().GetBytes()...)
+	}
 	return b
 }
 

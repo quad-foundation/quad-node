@@ -41,14 +41,14 @@ type AnyWallet interface {
 
 func init() {
 	var err error
-	err = os.MkdirAll("/.chainpqc/db/wallet/"+common.GetSigName(), 0755)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = os.MkdirAll("/.chainpqc/db/blockchain/", 0755)
-	if err != nil {
-		log.Fatal(err)
-	}
+	//err = os.MkdirAll("/.chainpqc/db/wallet/"+common.GetSigName(), 0755)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//err = os.MkdirAll("/.chainpqc/db/blockchain/", 0755)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 	mainWallet = EmptyWallet()
 
 	HomePath, err = os.UserHomeDir()
@@ -242,19 +242,21 @@ func (w Wallet) Store() error {
 }
 
 func (w Wallet) Sign(data []byte) (sig common.Signature, err error) {
+	if len(data) > 0 {
+		signature, err := w.signer.Sign(data)
+		if err != nil {
+			return common.Signature{}, err
+		}
 
-	signature, err := w.signer.Sign(data)
-	if err != nil {
-		return common.Signature{}, err
+		//signature := rand2.RandomBytes(common.SignatureLength)
+
+		err = sig.Init(signature, w.Address)
+		if err != nil {
+			return common.Signature{}, err
+		}
+		return sig, nil
 	}
-
-	//signature := rand2.RandomBytes(common.SignatureLength)
-
-	err = sig.Init(signature, w.Address)
-	if err != nil {
-		return common.Signature{}, err
-	}
-	return sig, nil
+	return common.Signature{}, fmt.Errorf("input data are empty")
 }
 
 func (w Wallet) GetSecretKey() common.PrivKey {

@@ -90,13 +90,28 @@ func (mt ContractChainTransaction) GetPrice() int64 {
 	return mt.GasPrice
 }
 
-func (tx ContractChainTransaction) GetBytesWithoutSignature() []byte {
+func (tx ContractChainTransaction) GetBytesWithoutSignature(withHash bool) []byte {
 
 	b := tx.TxParam.GetBytes()
 	b = append(b, tx.TxData.GetBytes()...)
 	b = append(b, common.GetByteInt64(tx.Height)...)
 	b = append(b, common.GetByteInt64(tx.GasPrice)...)
 	b = append(b, common.GetByteInt64(tx.GasUsage)...)
-	b = append(b, tx.GetHash().GetBytes()...)
+	if withHash {
+		b = append(b, tx.GetHash().GetBytes()...)
+	}
 	return b
+}
+
+func (mt ContractChainTransaction) CalcHash() (common.Hash, error) {
+	b := mt.GetBytesWithoutSignature(false)
+	hash, err := common.GetHashFromBytes(b)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return hash, nil
+}
+
+func (mt *ContractChainTransaction) SetHash(h common.Hash) {
+	mt.Hash = h
 }

@@ -52,7 +52,7 @@ func (a AnyTransactionsMessage) GetBytes() []byte {
 func (a *AnyTransactionsMessage) GetFromBytes(b []byte) error {
 	tb := [2]byte{}
 
-	a.BaseMessage.GetFromBytes(b[:6])
+	a.BaseMessage.GetFromBytes(b[:5])
 	for _, t := range validHeadTx {
 		copy(tb[:], t)
 		a.TransactionsBytes[tb] = [][]byte{}

@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/chainpqc/chainpqc-node/crypto/blake2b"
 	"log"
 	"time"
@@ -97,4 +98,25 @@ func ExtractKeysOfList(m map[[2]byte][][]byte) [][2]byte {
 func IsInKeysOfList(m map[[2]byte][][]byte, searchKey [2]byte) bool {
 	keys := ExtractKeysOfList(m)
 	return ContainsKey(keys, searchKey)
+}
+
+func BytesToLenAndBytes(b []byte) []byte {
+	lb := int32(len(b))
+	bret := []byte{}
+
+	bret = GetByteInt32(lb)
+	bret = append(bret, b...)
+
+	return bret
+}
+
+func BytesWithLenToBytes(b []byte) ([]byte, []byte, error) {
+	if len(b) < 4 {
+		return nil, nil, fmt.Errorf("input byte slice is too short")
+	}
+	lb := GetInt32FromByte(b[:4])
+	if int(lb) > len(b)-4 {
+		return nil, nil, fmt.Errorf("length value in byte slice is incorrect")
+	}
+	return b[4 : 4+lb], b[4+lb:], nil
 }

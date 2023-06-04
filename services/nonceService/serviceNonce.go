@@ -48,8 +48,13 @@ func generateNonceMsg(chain uint8) (message.AnyNonceMessage, error) {
 
 	switch chain {
 	case 0:
-		nonceTransaction = transactionType2.MainChainTransaction{
-			TxData:    transactionType2.MainChainTxData{},
+		dataTx := transactionType2.MainChainTxData{
+			Recipient: common.Address{},
+			Amount:    0,
+			OptData:   []byte{},
+		}
+		nonceTransaction = &transactionType2.MainChainTransaction{
+			TxData:    dataTx,
 			TxParam:   tp,
 			Hash:      common.Hash{},
 			Signature: common.Signature{},
@@ -58,8 +63,13 @@ func generateNonceMsg(chain uint8) (message.AnyNonceMessage, error) {
 			GasUsage:  0,
 		}
 	case 1:
-		nonceTransaction = transactionType3.PubKeyChainTransaction{
-			TxData:    transactionType3.PubKeyChainTxData{},
+		dataTx := transactionType3.PubKeyChainTxData{
+			Recipient: common.PubKey{},
+			Amount:    0,
+			OptData:   []byte{},
+		}
+		nonceTransaction = &transactionType3.PubKeyChainTransaction{
+			TxData:    dataTx,
 			TxParam:   tp,
 			Hash:      common.Hash{},
 			Signature: common.Signature{},
@@ -68,8 +78,13 @@ func generateNonceMsg(chain uint8) (message.AnyNonceMessage, error) {
 			GasUsage:  0,
 		}
 	case 2:
-		nonceTransaction = transactionType4.StakeChainTransaction{
-			TxData:    transactionType4.StakeChainTxData{},
+		dataTx := transactionType4.StakeChainTxData{
+			Recipient: common.Address{},
+			Amount:    0,
+			OptData:   []byte{},
+		}
+		nonceTransaction = &transactionType4.StakeChainTransaction{
+			TxData:    dataTx,
 			TxParam:   tp,
 			Hash:      common.Hash{},
 			Signature: common.Signature{},
@@ -78,8 +93,13 @@ func generateNonceMsg(chain uint8) (message.AnyNonceMessage, error) {
 			GasUsage:  0,
 		}
 	case 3:
-		nonceTransaction = transactionType5.DexChainTransaction{
-			TxData:    transactionType5.DexChainTxData{},
+		dataTx := transactionType5.DexChainTxData{
+			Recipient: common.Address{},
+			Amount:    0,
+			OptData:   []byte{},
+		}
+		nonceTransaction = &transactionType5.DexChainTransaction{
+			TxData:    dataTx,
 			TxParam:   tp,
 			Hash:      common.Hash{},
 			Signature: common.Signature{},
@@ -88,8 +108,13 @@ func generateNonceMsg(chain uint8) (message.AnyNonceMessage, error) {
 			GasUsage:  0,
 		}
 	case 4:
-		nonceTransaction = transactionType6.ContractChainTransaction{
-			TxData:    transactionType6.ContractChainTxData{},
+		dataTx := transactionType6.ContractChainTxData{
+			Recipient: common.Address{},
+			Amount:    0,
+			OptData:   []byte{},
+		}
+		nonceTransaction = &transactionType6.ContractChainTransaction{
+			TxData:    dataTx,
 			TxParam:   tp,
 			Hash:      common.Hash{},
 			Signature: common.Signature{},
@@ -100,6 +125,11 @@ func generateNonceMsg(chain uint8) (message.AnyNonceMessage, error) {
 	default:
 		return message.AnyNonceMessage{}, fmt.Errorf("chain is not correct")
 	}
+	hash, err := nonceTransaction.CalcHash()
+	if err != nil {
+		return message.AnyNonceMessage{}, err
+	}
+	nonceTransaction.SetHash(hash)
 	bm := message.BaseMessage{Head: []byte("nn"),
 		ChainID: common.GetChainID(),
 		Chain:   chain}
