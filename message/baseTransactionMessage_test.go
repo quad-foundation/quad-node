@@ -7,20 +7,23 @@ import (
 
 func TestAnyNonceMessage_GetTransactions(t *testing.T) {
 	// Prepare test data
-	nonceBytes := make(map[[2]byte][]byte)
+	nonceBytes := make(map[[2]byte][][]byte)
 	nnb := [2]byte{}
 	copy(nnb[:], "N0")
-	nonceBytes[nnb] = []byte{}
-	anyNonceMessage := AnyNonceMessage{
+	nonceBytes[nnb] = [][]byte{}
+	anyNonceMessage := AnyTransactionsMessage{
 		BaseMessage: BaseMessage{
 			Chain:   1,
 			Head:    []byte("nn"),
 			ChainID: 100,
 		},
-		NonceBytes: nonceBytes,
+		TransactionsBytes: nonceBytes,
 	}
 	// Call GetTransactions method
-	transactions := anyNonceMessage.GetTransactions()
+	transactions, err := anyNonceMessage.GetTransactions()
+	if err != nil {
+		return
+	}
 	// Check if the result is as expected
 	if len(transactions) != 0 {
 		t.Errorf("Expected 0 transactions, got %d", len(transactions))
@@ -28,7 +31,7 @@ func TestAnyNonceMessage_GetTransactions(t *testing.T) {
 }
 func TestAnyNonceMessage_GetChain(t *testing.T) {
 	// Prepare test data
-	anyNonceMessage := AnyNonceMessage{
+	anyNonceMessage := AnyTransactionsMessage{
 		BaseMessage: BaseMessage{
 			Chain: 1,
 		},
@@ -42,7 +45,7 @@ func TestAnyNonceMessage_GetChain(t *testing.T) {
 }
 func TestAnyNonceMessage_GetHead(t *testing.T) {
 	// Prepare test data
-	anyNonceMessage := AnyNonceMessage{
+	anyNonceMessage := AnyTransactionsMessage{
 		BaseMessage: BaseMessage{
 			Head: []byte("nn"),
 		},
@@ -56,7 +59,7 @@ func TestAnyNonceMessage_GetHead(t *testing.T) {
 }
 func TestAnyNonceMessage_GetChainID(t *testing.T) {
 	// Prepare test data
-	anyNonceMessage := AnyNonceMessage{
+	anyNonceMessage := AnyTransactionsMessage{
 		BaseMessage: BaseMessage{
 			ChainID: 100,
 		},
@@ -70,13 +73,13 @@ func TestAnyNonceMessage_GetChainID(t *testing.T) {
 }
 func TestAnyNonceMessage_GetBytes(t *testing.T) {
 	// Prepare test data
-	anyNonceMessage := AnyNonceMessage{
+	anyNonceMessage := AnyTransactionsMessage{
 		BaseMessage: BaseMessage{
 			Chain:   1,
 			Head:    []byte("nn"),
 			ChainID: 100,
 		},
-		NonceBytes: make(map[[2]byte][]byte),
+		TransactionsBytes: make(map[[2]byte][][]byte),
 	}
 	// Call GetBytes method
 	getBytes := anyNonceMessage.GetBytes()
@@ -87,17 +90,20 @@ func TestAnyNonceMessage_GetBytes(t *testing.T) {
 }
 func TestAnyNonceMessage_GetFromBytes(t *testing.T) {
 	// Prepare test data
-	anyNonceMessage := AnyNonceMessage{
+	anyNonceMessage := AnyTransactionsMessage{
 		BaseMessage: BaseMessage{
 			Chain:   1,
 			Head:    []byte("nn"),
 			ChainID: 100,
 		},
-		NonceBytes: make(map[[2]byte][]byte),
+		TransactionsBytes: make(map[[2]byte][][]byte),
 	}
 	inputBytes := anyNonceMessage.GetBytes()
 	// Call GetFromBytes method
-	err := anyNonceMessage.GetFromBytes(inputBytes)
+	_, err := anyNonceMessage.GetFromBytes(inputBytes)
+	if err != nil {
+		return
+	}
 	// Check if there is no error
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)

@@ -1,7 +1,6 @@
 package nonceServices
 
 import (
-	"fmt"
 	"github.com/chainpqc/chainpqc-node/blocks"
 	"github.com/chainpqc/chainpqc-node/common"
 	"github.com/chainpqc/chainpqc-node/message"
@@ -22,6 +21,7 @@ func OnMessage(addr string, m []byte) {
 
 	defer func() {
 		if r := recover(); r != nil {
+			//debug.PrintStack()
 			log.Println("recover (nonce Msg)", r)
 		}
 
@@ -76,7 +76,7 @@ func OnMessage(addr string, m []byte) {
 
 		switch string(msg.GetHead()) {
 		case "nn": // nonce
-			fmt.Printf("%v", nonceTransaction)
+			//fmt.Printf("%v", nonceTransaction)
 			//var topic [2]byte
 			var transaction transactionType.AnyTransaction
 			for _, v := range nonceTransaction {
@@ -95,23 +95,34 @@ func OnMessage(addr string, m []byte) {
 
 			if nonceHeight < 1 || nonceHeight != h+1 {
 				panic("nonce height invalid")
-				return
 			}
 
 			isValid = transactionType.VerifyTransaction(transaction)
 			if isValid == false {
 				panic("nonce signature is invalid")
 			}
-			lastBlock := blocks.AnyBlock(nil)
+			lastBlock, err := blocks.LoadBlock(h)
+			if err != nil {
+				panic(err)
+			}
 			newBlock, err := services.CreateBlockFromNonceMessage(transaction, lastBlock)
 			if err != nil {
-				log.Println("Error in block creation", err)
-				return
+				panic("Error in block creation")
 			}
 
 			if newBlock.CheckProofOfSynergy() {
-				log.Println("New Block success -------------------")
-				services.BroadcastBlock(newBlock)
+				h = common.GetHeight()
+				if newBlock.GetBaseBlock().BaseHeader.Height == h+1 {
+					log.Println("New Block success -------------------------------------", h+1, "-------chain", chain)
+					common.SetHeight(h + 1)
+					err := blocks.StoreBlock(newBlock)
+					if err != nil {
+						return
+					}
+					services.BroadcastBlock(newBlock)
+				} else {
+					log.Println("too late babe")
+				}
 			} else {
 				log.Println("new block is not valid")
 			}

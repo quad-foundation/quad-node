@@ -2,6 +2,7 @@ package nonceServices
 
 import (
 	"fmt"
+	"github.com/chainpqc/chainpqc-node/blocks"
 	"github.com/chainpqc/chainpqc-node/common"
 	"github.com/chainpqc/chainpqc-node/message"
 	"github.com/chainpqc/chainpqc-node/services"
@@ -28,7 +29,7 @@ func InitNonceService() {
 	go sendNonceMsgInLoop()
 }
 
-func generateNonceMsg(chain uint8) (message.AnyTransactionsMessage, error) {
+func generateNonceMsg(chain uint8, topic [2]byte) (message.AnyTransactionsMessage, error) {
 	common.HeightMutex.RLock()
 	h := common.GetHeight()
 	common.HeightMutex.RUnlock()
@@ -41,15 +42,17 @@ func generateNonceMsg(chain uint8) (message.AnyTransactionsMessage, error) {
 		Nonce:       0,
 		Chain:       chain,
 	}
-	lastBlockHash := common.Hash{}.GetBytes() // To change
+	lastBlockHash, err := blocks.LoadHashOfBlock(h)
+	if err != nil {
+		return message.AnyTransactionsMessage{}, err
+	}
 	optData := common.GetByteInt64(h)
-	optData = append(optData, lastBlockHash...)
-	topic := [2]byte{}
+	optData = append(optData, lastBlockHash.GetBytes()...)
 
 	switch chain {
 	case 0:
 		dataTx := transactionType2.MainChainTxData{
-			Recipient: common.Address{},
+			Recipient: common.EmptyAddress(),
 			Amount:    0,
 			OptData:   optData,
 		}
@@ -62,10 +65,10 @@ func generateNonceMsg(chain uint8) (message.AnyTransactionsMessage, error) {
 			GasPrice:  0,
 			GasUsage:  0,
 		}
-		copy(topic[:], "N0")
+		topic[1] = byte('0')
 	case 1:
 		dataTx := transactionType3.PubKeyChainTxData{
-			Recipient: common.Address{},
+			Recipient: common.EmptyAddress(),
 			Amount:    0,
 			OptData:   optData,
 		}
@@ -78,10 +81,10 @@ func generateNonceMsg(chain uint8) (message.AnyTransactionsMessage, error) {
 			GasPrice:  0,
 			GasUsage:  0,
 		}
-		copy(topic[:], "N1")
+		topic[1] = byte('1')
 	case 2:
 		dataTx := transactionType4.StakeChainTxData{
-			Recipient: common.Address{},
+			Recipient: common.EmptyAddress(),
 			Amount:    0,
 			OptData:   optData,
 		}
@@ -94,10 +97,10 @@ func generateNonceMsg(chain uint8) (message.AnyTransactionsMessage, error) {
 			GasPrice:  0,
 			GasUsage:  0,
 		}
-		copy(topic[:], "N2")
+		topic[1] = byte('2')
 	case 3:
 		dataTx := transactionType5.DexChainTxData{
-			Recipient: common.Address{},
+			Recipient: common.EmptyAddress(),
 			Amount:    0,
 			OptData:   optData,
 		}
@@ -110,10 +113,10 @@ func generateNonceMsg(chain uint8) (message.AnyTransactionsMessage, error) {
 			GasPrice:  0,
 			GasUsage:  0,
 		}
-		copy(topic[:], "N3")
+		topic[1] = byte('3')
 	case 4:
 		dataTx := transactionType6.ContractChainTxData{
-			Recipient: common.Address{},
+			Recipient: common.EmptyAddress(),
 			Amount:    0,
 			OptData:   optData,
 		}
@@ -126,7 +129,7 @@ func generateNonceMsg(chain uint8) (message.AnyTransactionsMessage, error) {
 			GasPrice:  0,
 			GasUsage:  0,
 		}
-		copy(topic[:], "N4")
+		topic[1] = byte('4')
 	default:
 		return message.AnyTransactionsMessage{}, fmt.Errorf("chain is not correct")
 	}
@@ -135,12 +138,18 @@ func generateNonceMsg(chain uint8) (message.AnyTransactionsMessage, error) {
 		return message.AnyTransactionsMessage{}, err
 	}
 	nonceTransaction.SetHash(hash)
+
+	signature, err := transactionType.SignTransaction(nonceTransaction)
+	if err != nil {
+		return message.AnyTransactionsMessage{}, err
+	}
+	nonceTransaction.SetSignature(signature)
+
 	bm := message.BaseMessage{
 		Head:    []byte("nn"),
 		ChainID: common.GetChainID(),
 		Chain:   chain,
 	}
-
 	bb, err := transactionType.SignTransactionAllToBytes(nonceTransaction)
 	if err != nil {
 		return message.AnyTransactionsMessage{}, fmt.Errorf("error signing transaction: %v", err)
@@ -154,11 +163,11 @@ func generateNonceMsg(chain uint8) (message.AnyTransactionsMessage, error) {
 }
 
 func sendNonceMsgInLoopSelf(chanRecv chan []byte) {
-
+	var topic = [2]byte{'S', '0'}
 Q:
 	for range time.Tick(time.Second) {
 		chain := common.GetChainForHeight(common.GetHeight() + 1)
-		sendNonceMsg(tcpip.MyIP, chain)
+		sendNonceMsg(tcpip.MyIP, chain, topic)
 		select {
 		case s := <-chanRecv:
 			if len(s) == 4 && string(s) == "EXIT" {
@@ -169,12 +178,12 @@ Q:
 	}
 }
 
-func sendNonceMsg(ip string, chain uint8) {
+func sendNonceMsg(ip string, chain uint8, topic [2]byte) {
 	isync := common.IsSyncing.Load()
 	if isync == true {
 		return
 	}
-	n, err := generateNonceMsg(chain)
+	n, err := generateNonceMsg(chain, topic)
 	if err != nil {
 		log.Println(err)
 		return
@@ -195,7 +204,8 @@ func Send(addr string, nb []byte) {
 func sendNonceMsgInLoop() {
 	for range time.Tick(time.Second * 10) {
 		chain := common.GetChainForHeight(common.GetHeight() + 1)
-		sendNonceMsg("0.0.0.0", chain)
+		var topic = [2]byte{'N', '0'}
+		sendNonceMsg("0.0.0.0", chain, topic)
 	}
 }
 

@@ -185,3 +185,7 @@ func (md MainChainTxData) GetAmount() int64 {
 func (md MainChainTxData) GetRecipient() common.Address {
 	return md.Recipient
 }
+
+func (mt *MainChainTransaction) SetSignature(s common.Signature) {
+	mt.Signature = s
+}

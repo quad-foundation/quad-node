@@ -45,7 +45,8 @@ type AnyTransaction interface {
 	GetSignature() common.Signature
 	GetBytesWithoutSignature(bool) []byte
 	CalcHash() (common.Hash, error)
-	SetHash(hash common.Hash)
+	SetHash(h common.Hash)
+	SetSignature(s common.Signature)
 }
 
 func (tp TxParam) GetBytes() []byte {
@@ -93,7 +94,7 @@ func GetBytes(tx AnyTransaction) []byte {
 func VerifyTransaction(tx AnyTransaction) bool {
 	b := tx.GetHash().GetBytes()
 	a := tx.GetSenderAddress()
-	pk, err := memDatabase.Load(append([]byte(common.PubKeyDBPrefix), a.GetBytes()...))
+	pk, err := memDatabase.Load(append(common.PubKeyDBPrefix[:], a.GetBytes()...))
 	if err != nil {
 		return false
 	}

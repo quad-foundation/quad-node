@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/chainpqc/chainpqc-node/database"
+	"github.com/chainpqc/chainpqc-node/genesis"
 	nonceService "github.com/chainpqc/chainpqc-node/services/nonceService"
 	"github.com/chainpqc/chainpqc-node/tcpip"
 	"github.com/chainpqc/chainpqc-node/wallet"
@@ -20,7 +21,7 @@ func main() {
 		log.Println("Could not load wallet", err)
 		return
 	}
-	//genesis.InitGenesis()
+	genesis.InitGenesis()
 
 	//firstDel := common.GetDelegatedAccountAddress(1)
 	//if firstDel.GetHex() == common.DelegatedAccount.GetHex() {

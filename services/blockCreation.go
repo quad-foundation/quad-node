@@ -4,11 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/chainpqc/chainpqc-node/blocks"
-	blocks6 "github.com/chainpqc/chainpqc-node/blocks/contracts"
-	blocks5 "github.com/chainpqc/chainpqc-node/blocks/dex"
-	blocks3 "github.com/chainpqc/chainpqc-node/blocks/pubKey"
-	blocks4 "github.com/chainpqc/chainpqc-node/blocks/stake"
-	blocks2 "github.com/chainpqc/chainpqc-node/blocks/transactions"
 	"github.com/chainpqc/chainpqc-node/common"
 	"github.com/chainpqc/chainpqc-node/message"
 	"github.com/chainpqc/chainpqc-node/tcpip"
@@ -34,12 +29,11 @@ func CreateBlockFromNonceMessage(at transactionType.AnyTransaction, lastBlock bl
 	sendingTimeTransaction := at.GetParam().SendingTime
 	transactionChain := at.GetChain()
 	heightLastBlocktransaction := common.GetInt64FromByte(at.GetData().GetOptData()[:8])
-	hashLastBlocktransaction := at.GetData().GetOptData()[8:]
-
+	hashLastBlocktransaction := at.GetData().GetOptData()[8:40]
 	if bytes.Equal(hashLastBlocktransaction, lastBlock.GetBlockHash().GetBytes()) {
 		return nil, fmt.Errorf("last block hash and nonce hash do not match")
 	}
-	if heightTransaction != heightLastBlocktransaction {
+	if heightTransaction != heightLastBlocktransaction+1 {
 		return nil, fmt.Errorf("last block height and nonce height do not match")
 	}
 
@@ -79,10 +73,10 @@ func CreateBlockFromNonceMessage(at transactionType.AnyTransaction, lastBlock bl
 	var anyBlock blocks.AnyBlock
 	switch transactionChain {
 	case 0:
-		bl := blocks2.TransactionsBlock{
+		bl := blocks.TransactionsBlock{
 			BaseBlock:        bb,
 			Chain:            transactionChain,
-			TransactionsHash: common.Hash{},
+			TransactionsHash: common.EmptyHash(),
 			BlockHash:        common.Hash{},
 		}
 		hash, err := bl.CalcBlockHash()
@@ -92,10 +86,10 @@ func CreateBlockFromNonceMessage(at transactionType.AnyTransaction, lastBlock bl
 		bl.BlockHash = hash
 		anyBlock = blocks.AnyBlock(bl)
 	case 1:
-		bl := blocks3.PubKeysBlock{
+		bl := blocks.PubKeysBlock{
 			BaseBlock:        bb,
 			Chain:            transactionChain,
-			TransactionsHash: common.Hash{},
+			TransactionsHash: common.EmptyHash(),
 			BlockHash:        common.Hash{},
 		}
 		hash, err := bl.CalcBlockHash()
@@ -105,10 +99,10 @@ func CreateBlockFromNonceMessage(at transactionType.AnyTransaction, lastBlock bl
 		bl.BlockHash = hash
 		anyBlock = blocks.AnyBlock(bl)
 	case 2:
-		bl := blocks4.StakesBlock{
+		bl := blocks.StakesBlock{
 			BaseBlock:        bb,
 			Chain:            transactionChain,
-			TransactionsHash: common.Hash{},
+			TransactionsHash: common.EmptyHash(),
 			BlockHash:        common.Hash{},
 		}
 		hash, err := bl.CalcBlockHash()
@@ -118,10 +112,10 @@ func CreateBlockFromNonceMessage(at transactionType.AnyTransaction, lastBlock bl
 		bl.BlockHash = hash
 		anyBlock = blocks.AnyBlock(bl)
 	case 3:
-		bl := blocks5.DexBlock{
+		bl := blocks.DexBlock{
 			BaseBlock:        bb,
 			Chain:            transactionChain,
-			TransactionsHash: common.Hash{},
+			TransactionsHash: common.EmptyHash(),
 			BlockHash:        common.Hash{},
 		}
 		hash, err := bl.CalcBlockHash()
@@ -131,10 +125,10 @@ func CreateBlockFromNonceMessage(at transactionType.AnyTransaction, lastBlock bl
 		bl.BlockHash = hash
 		anyBlock = blocks.AnyBlock(bl)
 	case 4:
-		bl := blocks6.ContractsBlock{
+		bl := blocks.ContractsBlock{
 			BaseBlock:        bb,
 			Chain:            transactionChain,
-			TransactionsHash: common.Hash{},
+			TransactionsHash: common.EmptyHash(),
 			BlockHash:        common.Hash{},
 		}
 		hash, err := bl.CalcBlockHash()
@@ -144,7 +138,7 @@ func CreateBlockFromNonceMessage(at transactionType.AnyTransaction, lastBlock bl
 		bl.BlockHash = hash
 		anyBlock = blocks.AnyBlock(bl)
 	default:
-		return nil, fmt.Errorf("Chain is not valid")
+		return nil, fmt.Errorf("chain is not valid in block creation")
 	}
 
 	return anyBlock, nil

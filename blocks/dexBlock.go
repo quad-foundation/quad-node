@@ -1,18 +1,17 @@
 package blocks
 
 import (
-	"github.com/chainpqc/chainpqc-node/blocks"
 	"github.com/chainpqc/chainpqc-node/common"
 )
 
 type DexBlock struct {
-	BaseBlock        blocks.BaseBlock `json:"base_block"`
-	Chain            uint8            `json:"chain"`
-	TransactionsHash common.Hash      `json:"dex_hash"`
-	BlockHash        common.Hash      `json:"block_hash"`
+	BaseBlock        BaseBlock   `json:"base_block"`
+	Chain            uint8       `json:"chain"`
+	TransactionsHash common.Hash `json:"dex_hash"`
+	BlockHash        common.Hash `json:"block_hash"`
 }
 
-func (tb DexBlock) GetBaseBlock() blocks.BaseBlock {
+func (tb DexBlock) GetBaseBlock() BaseBlock {
 	return tb.BaseBlock
 }
 func (tb DexBlock) GetBlockHeaderHash() common.Hash {
@@ -33,6 +32,19 @@ func (tb DexBlock) GetTransactionsHash() common.Hash {
 func (tb DexBlock) GetBlockHash() common.Hash {
 	return tb.BlockHash
 }
+func (tb DexBlock) GetFromBytes(b []byte) (AnyBlock, error) {
+	b, err := tb.BaseBlock.GetFromBytes(b)
+	if err != nil {
+		return nil, err
+	}
+	tb.Chain = b[0]
+	hash, err := common.GetHashFromBytes(b[1:33])
+	if err != nil {
+		return nil, err
+	}
+	tb.TransactionsHash = hash
+	return AnyBlock(tb), nil
+}
 func (tb DexBlock) GetBytes() []byte {
 	b := tb.BaseBlock.GetBytes()
 	b = append(b, tb.Chain)
@@ -52,5 +64,5 @@ func (tb DexBlock) CalcBlockHash() (common.Hash, error) {
 	return hash, nil
 }
 func (tb DexBlock) CheckProofOfSynergy() bool {
-	return blocks.CheckProofOfSynergy(tb.BaseBlock)
+	return CheckProofOfSynergy(tb.BaseBlock)
 }

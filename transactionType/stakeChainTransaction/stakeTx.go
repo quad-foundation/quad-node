@@ -185,3 +185,7 @@ func (mt StakeChainTransaction) CalcHash() (common.Hash, error) {
 func (mt *StakeChainTransaction) SetHash(h common.Hash) {
 	mt.Hash = h
 }
+
+func (mt *StakeChainTransaction) SetSignature(s common.Signature) {
+	mt.Signature = s
+}

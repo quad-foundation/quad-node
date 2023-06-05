@@ -185,3 +185,7 @@ func (md DexChainTxData) GetAmount() int64 {
 func (md DexChainTxData) GetRecipient() common.Address {
 	return md.Recipient
 }
+
+func (mt *DexChainTransaction) SetSignature(s common.Signature) {
+	mt.Signature = s
+}

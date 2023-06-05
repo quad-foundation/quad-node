@@ -185,3 +185,7 @@ func (md PubKeyChainTxData) GetAmount() int64 {
 func (md PubKeyChainTxData) GetRecipient() common.Address {
 	return md.Recipient
 }
+
+func (mt *PubKeyChainTransaction) SetSignature(s common.Signature) {
+	mt.Signature = s
+}

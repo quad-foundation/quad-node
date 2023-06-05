@@ -10,6 +10,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"log"
 	"os"
+	"runtime/debug"
 )
 
 var blockchainDB *leveldb.DB
@@ -28,7 +29,7 @@ func Init() error {
 		log.Fatal(err)
 	}
 	w := wallet.EmptyWallet().GetWallet()
-	err = Store(append([]byte(common.PubKeyDBPrefix), w.Address.GetBytes()...),
+	err = Store(append(common.PubKeyDBPrefix[:], w.Address.GetBytes()...),
 		w.PublicKey.GetBytes())
 	return nil
 }
@@ -38,14 +39,6 @@ func CloseDB() {
 }
 
 func Store(k []byte, v []byte) error {
-
-	//prefix := [2]byte{}
-	//copy(prefix[:], k[:2])
-	//wm, err := common.Marshal(v, prefix)
-	//if err != nil {
-	//	log.Println(err)
-	//	return err
-	//}
 
 	// Put a key-value pair into the database
 	err := blockchainDB.Put(k, v, nil)
@@ -100,21 +93,17 @@ func Load(k []byte) ([]byte, error) {
 	value, err := blockchainDB.Get(k, nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
-			return []byte{}, fmt.Errorf("key not found")
+			return []byte{}, fmt.Errorf("key not found %s", k)
 		}
-		log.Fatalf("Error getting value for key: %v", err)
+		log.Fatalf("Error getting value for key: %v, key %s", err, k)
 	}
-	//err = json.Unmarshal(value, v)
-	//if err != nil {
-	//	log.Println(err)
-	//	return err
-	//}
 	return value, nil
 }
 
 func IsKey(key []byte) (bool, error) {
 	_, err := blockchainDB.Get(key, nil)
 	if err != nil {
+		debug.PrintStack()
 		if errors.Is(err, leveldb.ErrNotFound) {
 			return false, nil
 		}

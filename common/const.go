@@ -31,28 +31,15 @@ var (
 
 // DB prefixes
 var (
-	BlocksDBPrefix                          = "B0"
-	BlockHashesDBPrefix                     = "K0"
-	BlockHeaderDBPrefix                     = "H0"
-	PubKeyDBPrefix                          = "PK"
-	StakeTransactionDBPrefix                = "ST"
-	StakingPoolHashesDBPrefix               = "SP"
-	StakingPendingHashesDBPrefix            = "SE"
-	StakingSyncingHashesDBPrefix            = "SD"
-	BlockStakingHashesDBPrefix              = "SB"
-	BlockByHeightDBPrefix                   = "I0"
-	RootHashByHeightDBPrefix                = "R0"
-	BlockTransactionHashesDBPrefix          = "L0"
-	OutputLogsHashesDBPrefix                = "O0"
-	OutputLogDBPrefix                       = "Z0"
-	OutputAddressesHashesDBPrefix           = "C0"
-	StateAccountsHashesDBPrefix             = "A0"
-	StateAccountsHashesForNextBlockDBPrefix = "A1"
-	AccountLogsByHeightDBPrefix             = "AL"
-	TransactionDBPrefix                     = [2]string{"T0", "T1"}
-	TransactionPoolHashesDBPrefix           = [2]string{"P0", "P1"}
-	TransactionPendingHashesDBPrefix        = [2]string{"E0", "E1"}
-	TransactionSyncingHashesDBPrefix        = [2]string{"D0", "D1"}
+	BlocksDBPrefix                   = [2]byte{'B', 'I'}
+	BlockHeaderDBPrefix              = [2]byte{'H', 'B'}
+	PubKeyDBPrefix                   = [2]byte{'P', 'K'}
+	BlockByHeightDBPrefix            = [2]byte{'B', 'H'}
+	RootHashByHeightDBPrefix         = [2]byte{'R', 'H'}
+	TransactionDBPrefix              = [][2]byte{{'T', '0'}}
+	TransactionPoolHashesDBPrefix    = [][2]byte{{'P', '0'}}
+	TransactionPendingHashesDBPrefix = [][2]byte{{'E', '0'}}
+	TransactionSyncingHashesDBPrefix = [][2]byte{{'S', '0'}}
 )
 
 var chainID = int16(23)
@@ -63,6 +50,10 @@ var genesisAccountsStake []Address
 
 func GetChainID() int16 {
 	return chainID
+}
+
+func SetChainID(chainid int16) {
+	chainID = chainid
 }
 
 func GetDelegatedAccount() Address {
