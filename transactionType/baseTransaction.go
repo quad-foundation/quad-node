@@ -123,9 +123,12 @@ func (tp TxParam) GetString() string {
 }
 
 func GetBytes(tx AnyTransaction) []byte {
-	b := tx.GetBytesWithoutSignature(true)
-	b = append(b, tx.GetSignature().GetBytes()...)
-	return b
+	if tx != nil {
+		b := tx.GetBytesWithoutSignature(true)
+		b = append(b, tx.GetSignature().GetBytes()...)
+		return b
+	}
+	return nil
 }
 
 func VerifyTransaction(tx AnyTransaction) bool {

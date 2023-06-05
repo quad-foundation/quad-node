@@ -21,7 +21,7 @@ func InitTransactionService() {
 	go sendTransactionMsgInLoop()
 }
 
-func generateTransactionMsg(chain uint8, topic [2]byte) (message.AnyTransactionsMessage, error) {
+func GenerateTransactionMsg(txs []transactionType.AnyTransaction, chain uint8, topic [2]byte) (message.AnyTransactionsMessage, error) {
 
 	topic[1] = chain
 	bm := message.BaseMessage{
@@ -29,7 +29,6 @@ func generateTransactionMsg(chain uint8, topic [2]byte) (message.AnyTransactions
 		ChainID: common.GetChainID(),
 		Chain:   chain,
 	}
-	txs := transactionType.GetTransactionsFromToSendPool(int(common.MaxTransactionsPerBlock), chain)
 	bb := [][]byte{}
 	for _, tx := range txs {
 		b := transactionType.GetBytes(tx)
@@ -64,7 +63,8 @@ func sendTransactionMsg(ip string, chain uint8, topic [2]byte) {
 	if isync == true {
 		return
 	}
-	n, err := generateTransactionMsg(chain, topic)
+	txs := transactionType.GetTransactionsFromToSendPool(int(common.MaxTransactionsPerBlock), chain)
+	n, err := GenerateTransactionMsg(txs, chain, topic)
 	if err != nil {
 		log.Println(err)
 		return

@@ -3,7 +3,9 @@ package main
 import (
 	"github.com/chainpqc/chainpqc-node/database"
 	"github.com/chainpqc/chainpqc-node/genesis"
+	serverrpc "github.com/chainpqc/chainpqc-node/rpc/server"
 	nonceService "github.com/chainpqc/chainpqc-node/services/nonceService"
+	"github.com/chainpqc/chainpqc-node/services/transactionServices"
 	"github.com/chainpqc/chainpqc-node/tcpip"
 	"github.com/chainpqc/chainpqc-node/wallet"
 	"log"
@@ -28,13 +30,12 @@ func main() {
 	//	common.IsSyncing.Store(false)
 	//}
 
-	//broadcast.InitTxService(0)
-	//broadcast.InitTxService(1)
+	transactionServices.InitTransactionService()
 	nonceService.InitNonceService()
 	//nonceMsg.InitSyncService()
 	//broadcastStaking.InitStakeService()
 
-	//go serverrpc.ListenRPC()
+	go serverrpc.ListenRPC()
 
 	for i := uint8(0); i < 5; i++ {
 		go nonceService.StartSubscribingNonceMsgSelf(i)
