@@ -5,54 +5,65 @@ import (
 	"fmt"
 	"github.com/chainpqc/chainpqc-node/account"
 	"github.com/chainpqc/chainpqc-node/common"
-	"github.com/chainpqc/chainpqc-node/transactionType"
 	"strconv"
 )
 
-type DexChainTxData struct {
+type MainChainTxData struct {
 	Recipient common.Address `json:"recipient"`
 	Amount    int64          `json:"amount"`
 	OptData   []byte         `json:"opt_data,omitempty"`
 }
 
-type DexChainTransaction struct {
-	TxData    DexChainTxData          `json:"tx_data"`
-	TxParam   transactionType.TxParam `json:"tx_param"`
-	Hash      common.Hash             `json:"hash"`
-	Signature common.Signature        `json:"signature"`
-	Height    int64                   `json:"height"`
-	GasPrice  int64                   `json:"gas_price"`
-	GasUsage  int64                   `json:"gas_usage"`
+type MainChainTransaction struct {
+	TxData    MainChainTxData  `json:"tx_data"`
+	TxParam   TxParam          `json:"tx_param"`
+	Hash      common.Hash      `json:"hash"`
+	Signature common.Signature `json:"signature"`
+	Height    int64            `json:"height"`
+	GasPrice  int64            `json:"gas_price"`
+	GasUsage  int64            `json:"gas_usage"`
 }
 
-func (mt DexChainTransaction) GetChain() uint8 {
+func (mt MainChainTransaction) GetChain() uint8 {
 	return mt.TxParam.Chain
 }
 
-func (mt DexChainTransaction) GetData() transactionType.AnyDataTransaction {
+func (mt MainChainTransaction) GetData() AnyDataTransaction {
 	return mt.TxData
 }
 
-func (mt DexChainTransaction) GetParam() transactionType.TxParam {
+func (mt MainChainTransaction) GetParam() TxParam {
 	return mt.TxParam
 }
 
-func (mt DexChainTransaction) GasUsageEstimate() int64 {
+func (mt MainChainTransaction) GasUsageEstimate() int64 {
 	return 2100
 }
 
-func (mt DexChainTransaction) GetGasUsage() int64 {
+func (mt MainChainTransaction) GetGasUsage() int64 {
 	return 2100
 }
 
-func (td DexChainTxData) GetString() string {
+func (mt MainChainTransaction) GetSignature() common.Signature {
+	return mt.Signature
+}
+
+func (mt MainChainTransaction) GetHeight() int64 {
+	return mt.Height
+}
+
+func (mt MainChainTransaction) GetHash() common.Hash {
+	return mt.Hash
+}
+
+func (td MainChainTxData) GetString() string {
 	t := "Recipient: " + td.Recipient.GetHex() + "\n"
 	t += "Amount PQC: " + fmt.Sprintln(account.Int64toFloat64(td.Amount)) + "\n"
 	t += "Opt Data: " + hex.EncodeToString(td.OptData) + "\n"
 	return t
 }
 
-func (tx DexChainTransaction) GetString() string {
+func (tx MainChainTransaction) GetString() string {
 	t := "Common parameters:\n" + tx.TxParam.GetString() + "\n"
 	t += "Data:\n" + tx.TxData.GetString() + "\n"
 	t += "Block Height: " + strconv.FormatInt(tx.Height, 10) + "\n"
@@ -63,23 +74,11 @@ func (tx DexChainTransaction) GetString() string {
 	return t
 }
 
-func (tx DexChainTransaction) GetSenderAddress() common.Address {
+func (tx MainChainTransaction) GetSenderAddress() common.Address {
 	return tx.TxParam.Sender
 }
 
-func (mt DexChainTransaction) GetSignature() common.Signature {
-	return mt.Signature
-}
-
-func (mt DexChainTransaction) GetHeight() int64 {
-	return mt.Height
-}
-
-func (mt DexChainTransaction) GetHash() common.Hash {
-	return mt.Hash
-}
-
-func (md DexChainTxData) GetBytes() ([]byte, error) {
+func (md MainChainTxData) GetBytes() ([]byte, error) {
 	b := md.Recipient.GetBytes()
 	b = append(b, common.GetByteInt64(md.Amount)...)
 	opt := common.BytesToLenAndBytes(md.OptData)
@@ -87,23 +86,23 @@ func (md DexChainTxData) GetBytes() ([]byte, error) {
 	return b, nil
 }
 
-func (tx DexChainTransaction) GetFromBytes(b []byte) (transactionType.AnyTransaction, []byte, error) {
+func (tx MainChainTransaction) GetFromBytes(b []byte) (AnyTransaction, []byte, error) {
 
 	if len(b) < 56+common.SignatureLength {
 		return nil, nil, fmt.Errorf("Not enough bytes for transaction unmarshal")
 	}
-	tp := transactionType.TxParam{}
+	tp := TxParam{}
 	tp, b, err := tp.GetFromBytes(b)
 	if err != nil {
 		return nil, nil, err
 	}
-	td := DexChainTxData{}
+	td := MainChainTxData{}
 	adata, b, err := td.GetFromBytes(b)
 	if err != nil {
 		return nil, nil, err
 	}
-	at := DexChainTransaction{
-		TxData:    adata.(DexChainTxData),
+	at := MainChainTransaction{
+		TxData:    adata.(MainChainTxData),
 		TxParam:   tp,
 		Hash:      common.Hash{},
 		Signature: common.Signature{},
@@ -122,11 +121,11 @@ func (tx DexChainTransaction) GetFromBytes(b []byte) (transactionType.AnyTransac
 		return nil, nil, err
 	}
 	at.Signature = signature
-	return transactionType.AnyTransaction(&at), b[56+common.SignatureLength:], nil
+	return AnyTransaction(&at), b[56+common.SignatureLength:], nil
 }
 
-func (DexChainTxData) GetFromBytes(data []byte) (transactionType.AnyDataTransaction, []byte, error) {
-	md := DexChainTxData{}
+func (MainChainTxData) GetFromBytes(data []byte) (AnyDataTransaction, []byte, error) {
+	md := MainChainTxData{}
 	address, err := common.BytesToAddress(data[:common.AddressLength])
 	if err != nil {
 		return nil, []byte{}, err
@@ -139,14 +138,14 @@ func (DexChainTxData) GetFromBytes(data []byte) (transactionType.AnyDataTransact
 		return nil, []byte{}, err
 	}
 	md.OptData = opt
-	return transactionType.AnyDataTransaction(md), left, nil
+	return AnyDataTransaction(md), left, nil
 }
 
-func (mt DexChainTransaction) GetPrice() int64 {
+func (mt MainChainTransaction) GetGasPrice() int64 {
 	return mt.GasPrice
 }
 
-func (tx DexChainTransaction) GetBytesWithoutSignature(withHash bool) []byte {
+func (tx MainChainTransaction) GetBytesWithoutSignature(withHash bool) []byte {
 
 	b := tx.TxParam.GetBytes()
 	bd, err := tx.TxData.GetBytes()
@@ -163,7 +162,7 @@ func (tx DexChainTransaction) GetBytesWithoutSignature(withHash bool) []byte {
 	return b
 }
 
-func (mt DexChainTransaction) CalcHash() (common.Hash, error) {
+func (mt MainChainTransaction) CalcHash() (common.Hash, error) {
 	b := mt.GetBytesWithoutSignature(false)
 	hash, err := common.CalcHashFromBytes(b)
 	if err != nil {
@@ -172,20 +171,20 @@ func (mt DexChainTransaction) CalcHash() (common.Hash, error) {
 	return hash, nil
 }
 
-func (mt *DexChainTransaction) SetHash(h common.Hash) {
+func (mt *MainChainTransaction) SetHash(h common.Hash) {
 	mt.Hash = h
 }
 
-func (md DexChainTxData) GetOptData() []byte {
+func (md MainChainTxData) GetOptData() []byte {
 	return md.OptData
 }
-func (md DexChainTxData) GetAmount() int64 {
+func (md MainChainTxData) GetAmount() int64 {
 	return md.Amount
 }
-func (md DexChainTxData) GetRecipient() common.Address {
+func (md MainChainTxData) GetRecipient() common.Address {
 	return md.Recipient
 }
 
-func (mt *DexChainTransaction) SetSignature(s common.Signature) {
+func (mt *MainChainTransaction) SetSignature(s common.Signature) {
 	mt.Signature = s
 }

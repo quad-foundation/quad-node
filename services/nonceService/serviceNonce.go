@@ -8,11 +8,6 @@ import (
 	"github.com/chainpqc/chainpqc-node/services"
 	"github.com/chainpqc/chainpqc-node/tcpip"
 	"github.com/chainpqc/chainpqc-node/transactionType"
-	transactionType6 "github.com/chainpqc/chainpqc-node/transactionType/contractChainTransaction"
-	transactionType5 "github.com/chainpqc/chainpqc-node/transactionType/dexChainTransaction"
-	transactionType2 "github.com/chainpqc/chainpqc-node/transactionType/mainChainTransaction"
-	transactionType3 "github.com/chainpqc/chainpqc-node/transactionType/pubKeyChainTransaction"
-	transactionType4 "github.com/chainpqc/chainpqc-node/transactionType/stakeChainTransaction"
 	"github.com/chainpqc/chainpqc-node/wallet"
 	"log"
 	"time"
@@ -51,12 +46,12 @@ func generateNonceMsg(chain uint8, topic [2]byte) (message.AnyTransactionsMessag
 
 	switch chain {
 	case 0:
-		dataTx := transactionType2.MainChainTxData{
+		dataTx := transactionType.MainChainTxData{
 			Recipient: common.EmptyAddress(),
 			Amount:    0,
 			OptData:   optData,
 		}
-		nonceTransaction = &transactionType2.MainChainTransaction{
+		nonceTransaction = &transactionType.MainChainTransaction{
 			TxData:    dataTx,
 			TxParam:   tp,
 			Hash:      common.Hash{},
@@ -67,12 +62,12 @@ func generateNonceMsg(chain uint8, topic [2]byte) (message.AnyTransactionsMessag
 		}
 		topic[1] = byte('0')
 	case 1:
-		dataTx := transactionType3.PubKeyChainTxData{
+		dataTx := transactionType.PubKeyChainTxData{
 			Recipient: common.EmptyAddress(),
 			Amount:    0,
 			OptData:   optData,
 		}
-		nonceTransaction = &transactionType3.PubKeyChainTransaction{
+		nonceTransaction = &transactionType.PubKeyChainTransaction{
 			TxData:    dataTx,
 			TxParam:   tp,
 			Hash:      common.Hash{},
@@ -83,12 +78,12 @@ func generateNonceMsg(chain uint8, topic [2]byte) (message.AnyTransactionsMessag
 		}
 		topic[1] = byte('1')
 	case 2:
-		dataTx := transactionType4.StakeChainTxData{
+		dataTx := transactionType.StakeChainTxData{
 			Recipient: common.EmptyAddress(),
 			Amount:    0,
 			OptData:   optData,
 		}
-		nonceTransaction = &transactionType4.StakeChainTransaction{
+		nonceTransaction = &transactionType.StakeChainTransaction{
 			TxData:    dataTx,
 			TxParam:   tp,
 			Hash:      common.Hash{},
@@ -99,12 +94,12 @@ func generateNonceMsg(chain uint8, topic [2]byte) (message.AnyTransactionsMessag
 		}
 		topic[1] = byte('2')
 	case 3:
-		dataTx := transactionType5.DexChainTxData{
+		dataTx := transactionType.DexChainTxData{
 			Recipient: common.EmptyAddress(),
 			Amount:    0,
 			OptData:   optData,
 		}
-		nonceTransaction = &transactionType5.DexChainTransaction{
+		nonceTransaction = &transactionType.DexChainTransaction{
 			TxData:    dataTx,
 			TxParam:   tp,
 			Hash:      common.Hash{},
@@ -115,12 +110,12 @@ func generateNonceMsg(chain uint8, topic [2]byte) (message.AnyTransactionsMessag
 		}
 		topic[1] = byte('3')
 	case 4:
-		dataTx := transactionType6.ContractChainTxData{
+		dataTx := transactionType.ContractChainTxData{
 			Recipient: common.EmptyAddress(),
 			Amount:    0,
 			OptData:   optData,
 		}
-		nonceTransaction = &transactionType6.ContractChainTransaction{
+		nonceTransaction = &transactionType.ContractChainTransaction{
 			TxData:    dataTx,
 			TxParam:   tp,
 			Hash:      common.Hash{},

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/chainpqc/chainpqc-node/account"
 	"github.com/chainpqc/chainpqc-node/common"
-	"github.com/chainpqc/chainpqc-node/transactionType"
 	"strconv"
 )
 
@@ -16,13 +15,13 @@ type StakeChainTxData struct {
 }
 
 type StakeChainTransaction struct {
-	TxData    StakeChainTxData        `json:"tx_data"`
-	TxParam   transactionType.TxParam `json:"tx_param"`
-	Hash      common.Hash             `json:"hash"`
-	Signature common.Signature        `json:"signature"`
-	Height    int64                   `json:"height"`
-	GasPrice  int64                   `json:"gas_price"`
-	GasUsage  int64                   `json:"gas_usage"`
+	TxData    StakeChainTxData `json:"tx_data"`
+	TxParam   TxParam          `json:"tx_param"`
+	Hash      common.Hash      `json:"hash"`
+	Signature common.Signature `json:"signature"`
+	Height    int64            `json:"height"`
+	GasPrice  int64            `json:"gas_price"`
+	GasUsage  int64            `json:"gas_usage"`
 }
 
 func (mt StakeChainTransaction) GetChain() uint8 {
@@ -37,7 +36,7 @@ func (mt StakeChainTransaction) GetHash() common.Hash {
 	return mt.Hash
 }
 
-func (mt StakeChainTransaction) GetParam() transactionType.TxParam {
+func (mt StakeChainTransaction) GetParam() TxParam {
 	return mt.TxParam
 }
 
@@ -83,7 +82,7 @@ func (md StakeChainTxData) GetBytes() ([]byte, error) {
 	return b, nil
 }
 
-func (StakeChainTxData) GetFromBytes(data []byte) (transactionType.AnyDataTransaction, []byte, error) {
+func (StakeChainTxData) GetFromBytes(data []byte) (AnyDataTransaction, []byte, error) {
 	md := StakeChainTxData{}
 	address, err := common.BytesToAddress(data[:common.AddressLength])
 	if err != nil {
@@ -97,7 +96,7 @@ func (StakeChainTxData) GetFromBytes(data []byte) (transactionType.AnyDataTransa
 		return nil, []byte{}, err
 	}
 	md.OptData = opt
-	return transactionType.AnyDataTransaction(md), left, nil
+	return AnyDataTransaction(md), left, nil
 }
 
 func (md StakeChainTxData) GetOptData() []byte {
@@ -110,7 +109,7 @@ func (md StakeChainTxData) GetAmount() int64 {
 	return md.Amount
 }
 
-func (mt StakeChainTransaction) GetPrice() int64 {
+func (mt StakeChainTransaction) GetGasPrice() int64 {
 	return mt.GasPrice
 }
 
@@ -131,12 +130,12 @@ func (tx StakeChainTransaction) GetBytesWithoutSignature(withHash bool) []byte {
 	return b
 }
 
-func (tx StakeChainTransaction) GetFromBytes(b []byte) (transactionType.AnyTransaction, []byte, error) {
+func (tx StakeChainTransaction) GetFromBytes(b []byte) (AnyTransaction, []byte, error) {
 
 	if len(b) < 56+common.SignatureLength {
 		return nil, nil, fmt.Errorf("Not enough bytes for transaction unmarshal")
 	}
-	tp := transactionType.TxParam{}
+	tp := TxParam{}
 	tp, b, err := tp.GetFromBytes(b)
 	if err != nil {
 		return nil, nil, err
@@ -166,10 +165,10 @@ func (tx StakeChainTransaction) GetFromBytes(b []byte) (transactionType.AnyTrans
 		return nil, nil, err
 	}
 	at.Signature = signature
-	return transactionType.AnyTransaction(&at), b[56+common.SignatureLength:], nil
+	return AnyTransaction(&at), b[56+common.SignatureLength:], nil
 }
 
-func (mt StakeChainTransaction) GetData() transactionType.AnyDataTransaction {
+func (mt StakeChainTransaction) GetData() AnyDataTransaction {
 	return mt.TxData
 }
 

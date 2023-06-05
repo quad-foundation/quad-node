@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/chainpqc/chainpqc-node/account"
 	"github.com/chainpqc/chainpqc-node/common"
-	transactionType "github.com/chainpqc/chainpqc-node/transactionType"
 	"strconv"
 )
 
@@ -16,24 +15,24 @@ type PubKeyChainTxData struct {
 }
 
 type PubKeyChainTransaction struct {
-	TxData    PubKeyChainTxData       `json:"tx_data"`
-	TxParam   transactionType.TxParam `json:"tx_param"`
-	Hash      common.Hash             `json:"hash"`
-	Signature common.Signature        `json:"signature"`
-	Height    int64                   `json:"height"`
-	GasPrice  int64                   `json:"gas_price"`
-	GasUsage  int64                   `json:"gas_usage"`
+	TxData    PubKeyChainTxData `json:"tx_data"`
+	TxParam   TxParam           `json:"tx_param"`
+	Hash      common.Hash       `json:"hash"`
+	Signature common.Signature  `json:"signature"`
+	Height    int64             `json:"height"`
+	GasPrice  int64             `json:"gas_price"`
+	GasUsage  int64             `json:"gas_usage"`
 }
 
 func (mt PubKeyChainTransaction) GetChain() uint8 {
 	return mt.TxParam.Chain
 }
 
-func (mt PubKeyChainTransaction) GetData() transactionType.AnyDataTransaction {
+func (mt PubKeyChainTransaction) GetData() AnyDataTransaction {
 	return mt.TxData
 }
 
-func (mt PubKeyChainTransaction) GetParam() transactionType.TxParam {
+func (mt PubKeyChainTransaction) GetParam() TxParam {
 	return mt.TxParam
 }
 
@@ -87,7 +86,7 @@ func (md PubKeyChainTxData) GetBytes() ([]byte, error) {
 	return b, nil
 }
 
-func (PubKeyChainTxData) GetFromBytes(data []byte) (transactionType.AnyDataTransaction, []byte, error) {
+func (PubKeyChainTxData) GetFromBytes(data []byte) (AnyDataTransaction, []byte, error) {
 	md := PubKeyChainTxData{}
 	address, err := common.BytesToAddress(data[:common.AddressLength])
 	if err != nil {
@@ -101,15 +100,15 @@ func (PubKeyChainTxData) GetFromBytes(data []byte) (transactionType.AnyDataTrans
 		return nil, []byte{}, err
 	}
 	md.OptData = opt
-	return transactionType.AnyDataTransaction(md), left, nil
+	return AnyDataTransaction(md), left, nil
 }
 
-func (tx PubKeyChainTransaction) GetFromBytes(b []byte) (transactionType.AnyTransaction, []byte, error) {
+func (tx PubKeyChainTransaction) GetFromBytes(b []byte) (AnyTransaction, []byte, error) {
 
 	if len(b) < 56 {
 		return nil, nil, fmt.Errorf("Not enough bytes for transaction unmarshal")
 	}
-	tp := transactionType.TxParam{}
+	tp := TxParam{}
 	tp, b, err := tp.GetFromBytes(b)
 	if err != nil {
 		return nil, nil, err
@@ -139,10 +138,10 @@ func (tx PubKeyChainTransaction) GetFromBytes(b []byte) (transactionType.AnyTran
 		return nil, nil, err
 	}
 	at.Signature = signature
-	return transactionType.AnyTransaction(&at), b[common.SignatureLength:], nil
+	return AnyTransaction(&at), b[common.SignatureLength:], nil
 }
 
-func (mt PubKeyChainTransaction) GetPrice() int64 {
+func (mt PubKeyChainTransaction) GetGasPrice() int64 {
 	return mt.GasPrice
 }
 

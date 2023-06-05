@@ -5,6 +5,7 @@ import (
 	"github.com/chainpqc/chainpqc-node/common"
 	memDatabase "github.com/chainpqc/chainpqc-node/database"
 	"github.com/chainpqc/chainpqc-node/wallet"
+	"log"
 	"strconv"
 	"time"
 )
@@ -38,7 +39,7 @@ type AnyTransaction interface {
 	//CheckTransaction(int64) (bool, int64)
 	GetHeight() int64
 	GetGasUsage() int64
-	GetPrice() int64
+	GetGasPrice() int64
 	//FundsUsedForTx() (recipientFunds int64, senderCost int64)
 	GetChain() uint8
 	GetString() string
@@ -47,6 +48,22 @@ type AnyTransaction interface {
 	CalcHash() (common.Hash, error)
 	SetHash(h common.Hash)
 	SetSignature(s common.Signature)
+}
+
+var (
+	poolMainTx     PoolMainTx
+	poolPubKeyTx   PoolPubKeyTx
+	poolStakeTx    PoolStakeTx
+	poolDexTx      PoolDexTx
+	poolContractTx PoolContractTx
+)
+
+func init() {
+	poolMainTx = make(PoolMainTx, 1)
+	poolPubKeyTx = make(PoolPubKeyTx, 1)
+	poolStakeTx = make(PoolStakeTx, 1)
+	poolDexTx = make(PoolDexTx, 1)
+	poolContractTx = make(PoolContractTx, 1)
 }
 
 func (tp TxParam) GetBytes() []byte {
@@ -129,10 +146,45 @@ func GetBytesWithoutSignature(tx AnyTransaction, withHash bool) []byte {
 	b = append(b, bd...)
 	b = append(b, tx.GetHash().GetBytes()...)
 	b = append(b, common.GetByteInt64(tx.GetHeight())...)
-	b = append(b, common.GetByteInt64(tx.GetPrice())...)
+	b = append(b, common.GetByteInt64(tx.GetGasPrice())...)
 	b = append(b, common.GetByteInt64(tx.GetGasUsage())...)
 	if withHash {
 		b = append(b, tx.GetHash().GetBytes()...)
 	}
 	return b
+}
+
+func AddTransactionsToPool(txs []AnyTransaction, chain uint8) {
+	switch chain {
+	case 0:
+		poolMainTx.AddTransactions(txs)
+	case 1:
+		poolPubKeyTx.AddTransactions(txs)
+	case 2:
+		poolStakeTx.AddTransactions(txs)
+	case 3:
+		poolDexTx.AddTransactions(txs)
+	case 4:
+		poolContractTx.AddTransactions(txs)
+	default:
+		log.Println("tx was not added to pool")
+	}
+}
+
+func GetTransactionsFromPool(number int, chain uint8) []AnyTransaction {
+	switch chain {
+	case 0:
+		return poolMainTx.GetTransactionsFromPool(number)
+	case 1:
+		return poolPubKeyTx.GetTransactionsFromPool(number)
+	case 2:
+		return poolStakeTx.GetTransactionsFromPool(number)
+	case 3:
+		return poolDexTx.GetTransactionsFromPool(number)
+	case 4:
+		return poolContractTx.GetTransactionsFromPool(number)
+	default:
+		log.Println("tx was not added to pool")
+	}
+	return nil
 }

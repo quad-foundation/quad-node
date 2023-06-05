@@ -2,7 +2,6 @@ package transactionType
 
 import (
 	"github.com/chainpqc/chainpqc-node/common"
-	"github.com/chainpqc/chainpqc-node/transactionType"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -56,7 +55,7 @@ func TestPubKeyChainTransaction_GetFromBytes(t *testing.T) {
 	}
 	pk := PubKeyChainTransaction{
 		TxData:    md,
-		TxParam:   transactionType.TxParam{},
+		TxParam:   TxParam{},
 		Hash:      common.Hash{},
 		Signature: common.Signature{},
 		Height:    4,
@@ -69,12 +68,12 @@ func TestPubKeyChainTransaction_GetFromBytes(t *testing.T) {
 	address, _ := common.BytesToAddress(zero20)
 	pk.Signature, _ = common.GetSignatureFromBytes(zeroSig, address)
 	pk.Hash, _ = common.GetHashFromBytes(zero32)
-	data := transactionType.GetBytes(transactionType.AnyTransaction(&pk))
+	data := GetBytes(AnyTransaction(&pk))
 	// Call the GetFromBytes method
 	at, left, err := PubKeyChainTransaction{}.GetFromBytes(data)
 	// Check if the returned object and error are correct
 	assert.Equal(t, len(left), 0)
 	assert.NoError(t, err)
 	assert.NotNil(t, at)
-	assert.Equal(t, data, transactionType.GetBytes(at))
+	assert.Equal(t, data, GetBytes(at))
 }

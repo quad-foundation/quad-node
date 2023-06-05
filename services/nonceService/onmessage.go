@@ -6,11 +6,6 @@ import (
 	"github.com/chainpqc/chainpqc-node/message"
 	"github.com/chainpqc/chainpqc-node/services"
 	"github.com/chainpqc/chainpqc-node/transactionType"
-	transactionType6 "github.com/chainpqc/chainpqc-node/transactionType/contractChainTransaction"
-	transactionType5 "github.com/chainpqc/chainpqc-node/transactionType/dexChainTransaction"
-	transactionType2 "github.com/chainpqc/chainpqc-node/transactionType/mainChainTransaction"
-	transactionType3 "github.com/chainpqc/chainpqc-node/transactionType/pubKeyChainTransaction"
-	transactionType4 "github.com/chainpqc/chainpqc-node/transactionType/stakeChainTransaction"
 	"log"
 )
 
@@ -51,23 +46,23 @@ func OnMessage(addr string, m []byte) {
 		switch msg.GetChain() {
 		case 0:
 			for k, v := range txn {
-				nonceTransaction[k] = v[0].(*transactionType2.MainChainTransaction)
+				nonceTransaction[k] = v[0].(*transactionType.MainChainTransaction)
 			}
 		case 1:
 			for k, v := range txn {
-				nonceTransaction[k] = v[0].(*transactionType3.PubKeyChainTransaction)
+				nonceTransaction[k] = v[0].(*transactionType.PubKeyChainTransaction)
 			}
 		case 2:
 			for k, v := range txn {
-				nonceTransaction[k] = v[0].(*transactionType4.StakeChainTransaction)
+				nonceTransaction[k] = v[0].(*transactionType.StakeChainTransaction)
 			}
 		case 3:
 			for k, v := range txn {
-				nonceTransaction[k] = v[0].(*transactionType5.DexChainTransaction)
+				nonceTransaction[k] = v[0].(*transactionType.DexChainTransaction)
 			}
 		case 4:
 			for k, v := range txn {
-				nonceTransaction[k] = v[0].(*transactionType6.ContractChainTransaction)
+				nonceTransaction[k] = v[0].(*transactionType.ContractChainTransaction)
 			}
 		default:
 			panic("wrong chain")

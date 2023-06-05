@@ -1,7 +1,7 @@
 package message
 
 import (
-	transactionType "github.com/chainpqc/chainpqc-node/transactionType/stakeChainTransaction"
+	"github.com/chainpqc/chainpqc-node/transactionType"
 )
 
 var chain uint8 = 2

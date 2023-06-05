@@ -5,11 +5,6 @@ import (
 	"fmt"
 	"github.com/chainpqc/chainpqc-node/common"
 	"github.com/chainpqc/chainpqc-node/transactionType"
-	transactionType6 "github.com/chainpqc/chainpqc-node/transactionType/contractChainTransaction"
-	transactionType5 "github.com/chainpqc/chainpqc-node/transactionType/dexChainTransaction"
-	transactionType2 "github.com/chainpqc/chainpqc-node/transactionType/mainChainTransaction"
-	transactionType3 "github.com/chainpqc/chainpqc-node/transactionType/pubKeyChainTransaction"
-	transactionType4 "github.com/chainpqc/chainpqc-node/transactionType/stakeChainTransaction"
 	"log"
 )
 
@@ -40,35 +35,35 @@ func (a AnyTransactionsMessage) GetTransactions() (map[[2]byte][]transactionType
 			//}
 			switch chain {
 			case "0":
-				tx := transactionType2.MainChainTransaction{}
+				tx := transactionType.MainChainTransaction{}
 				at, rest, err := tx.GetFromBytes(b)
 				if err != nil || len(rest) > 0 {
 					return nil, err
 				}
 				t = at
 			case "1":
-				tx := transactionType3.PubKeyChainTransaction{}
+				tx := transactionType.PubKeyChainTransaction{}
 				at, rest, err := tx.GetFromBytes(b)
 				if err != nil || len(rest) > 0 {
 					return nil, err
 				}
 				t = at
 			case "2":
-				tx := transactionType4.StakeChainTransaction{}
+				tx := transactionType.StakeChainTransaction{}
 				at, rest, err := tx.GetFromBytes(b)
 				if err != nil || len(rest) > 0 {
 					return nil, err
 				}
 				t = at
 			case "3":
-				tx := transactionType5.DexChainTransaction{}
+				tx := transactionType.DexChainTransaction{}
 				at, rest, err := tx.GetFromBytes(b)
 				if err != nil || len(rest) > 0 {
 					return nil, err
 				}
 				t = at
 			case "4":
-				tx := transactionType6.ContractChainTransaction{}
+				tx := transactionType.ContractChainTransaction{}
 				at, rest, err := tx.GetFromBytes(b)
 				if err != nil || len(rest) > 0 {
 					return nil, err
