@@ -11,14 +11,12 @@ import (
 )
 
 func InitTransactionService() {
-	services.SendMutex.Lock()
-	services.SendChan = make(chan []byte)
+	services.RecvMutex.Lock()
+	services.RecvChan = make(chan []byte)
 
-	services.SendChanSelf = make(chan []byte)
-	services.SendMutex.Unlock()
+	services.RecvMutex.Unlock()
 	startPublishingTransactionMsg()
-	time.Sleep(time.Second)
-	go sendTransactionMsgInLoop()
+	go broadcastTransactionsMsgInLoop(services.RecvChan)
 }
 
 func GenerateTransactionMsg(txs []transactionType.AnyTransaction, chain uint8, topic [2]byte) (message.AnyTransactionsMessage, error) {
@@ -42,12 +40,14 @@ func GenerateTransactionMsg(txs []transactionType.AnyTransaction, chain uint8, t
 	return n, nil
 }
 
-func sendTransactionMsgInLoopSelf(chanRecv chan []byte) {
-	var topic = [2]byte{'S', '0'}
+func broadcastTransactionsMsgInLoop(chanRecv chan []byte) {
+
 Q:
 	for range time.Tick(time.Second) {
 		chain := common.GetChainForHeight(common.GetHeight() + 1)
-		sendTransactionMsg(tcpip.MyIP, chain, topic)
+		topic := [2]byte{'T', chain}
+
+		SendTransactionMsg(tcpip.MyIP, chain, topic)
 		select {
 		case s := <-chanRecv:
 			if len(s) == 4 && string(s) == "EXIT" {
@@ -58,7 +58,7 @@ Q:
 	}
 }
 
-func sendTransactionMsg(ip string, chain uint8, topic [2]byte) {
+func SendTransactionMsg(ip string, chain uint8, topic [2]byte) {
 	isync := common.IsSyncing.Load()
 	if isync == true {
 		return
@@ -82,19 +82,10 @@ func Send(addr string, nb []byte) {
 	services.SendMutex.Unlock()
 }
 
-func sendTransactionMsgInLoop() {
-	for range time.Tick(time.Second * 10) {
-		chain := common.GetChainForHeight(common.GetHeight() + 1)
-		var topic = [2]byte{'N', '0'}
-		sendTransactionMsg("0.0.0.0", chain, topic)
-	}
-}
-
 func startPublishingTransactionMsg() {
 	services.SendMutex.Lock()
 	for i := 0; i < 5; i++ {
 		go tcpip.StartNewListener(services.SendChan, tcpip.TransactionTopic[i])
-		go tcpip.StartNewListener(services.SendChanSelf, tcpip.TransactionTopic[i])
 	}
 	services.SendMutex.Unlock()
 }
@@ -128,37 +119,4 @@ Q:
 
 	}
 	log.Println("Exit connection receiving loop (nonce msg)", ip)
-}
-
-func StartSubscribingTransactionMsgSelf(chain uint8) {
-	recvChanSelf := make(chan []byte)
-	recvChanExit := make(chan []byte)
-
-	go tcpip.StartNewConnection(tcpip.MyIP, recvChanSelf, tcpip.TransactionTopic[chain])
-	go sendTransactionMsgInLoopSelf(recvChanExit)
-	log.Println("Enter connection receiving loop (nonce msg self)")
-Q:
-
-	for {
-		select {
-		case s := <-recvChanSelf:
-			if len(s) == 4 && string(s) == "EXIT" {
-				recvChanExit <- s
-				break Q
-			}
-			if len(s) > 2 {
-				l := common.GetInt16FromByte(s[:2])
-				if len(s) > 2+int(l) {
-					ipr := string(s[2 : 2+l])
-
-					OnMessage(ipr, s[2+l:])
-				}
-			}
-		case <-tcpip.Quit:
-			break Q
-		default:
-		}
-
-	}
-	log.Println("Exit connection receiving loop (nonce msg self)")
 }

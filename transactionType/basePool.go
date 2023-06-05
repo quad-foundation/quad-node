@@ -18,5 +18,8 @@ func (pq *PriorityQueue) Pop() interface{} {
 	n := len(old)
 	item := old[n-1]
 	*pq = old[0 : n-1]
+	if item == nil {
+		return nil
+	}
 	return *item
 }

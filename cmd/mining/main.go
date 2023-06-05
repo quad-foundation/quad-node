@@ -33,23 +33,21 @@ func main() {
 	transactionServices.InitTransactionService()
 	nonceService.InitNonceService()
 	//nonceMsg.InitSyncService()
-	//broadcastStaking.InitStakeService()
 
 	go serverrpc.ListenRPC()
 
 	for i := uint8(0); i < 5; i++ {
 		go nonceService.StartSubscribingNonceMsgSelf(i)
 		go nonceService.StartSubscribingNonceMsg(tcpip.MyIP, i)
+		go transactionServices.StartSubscribingTransactionMsg(tcpip.MyIP, i)
 	}
 	time.Sleep(time.Second)
 	if len(os.Args) > 1 {
 		ip := os.Args[1]
 		for i := uint8(0); i < 5; i++ {
-			//go broadcast.StartSubscribingTransaction(ip, 0)
-			//go broadcast.StartSubscribingTransaction(ip, 1)
+			go transactionServices.StartSubscribingTransactionMsg(ip, i)
 			go nonceService.StartSubscribingNonceMsg(ip, i)
 			//go nonceMsg.StartSubscribingSync(ip)
-			//go broadcastStaking.StartSubscribingStakingTransaction(ip)
 		}
 	}
 	time.Sleep(time.Second)
@@ -85,12 +83,16 @@ QF:
 				go nonceService.StartSubscribingNonceMsg(ip, 3)
 			case tcpip.NonceTopic[4]:
 				go nonceService.StartSubscribingNonceMsg(ip, 4)
-				//case tcpip.TransactionTopic[0]:
-				//	go broadcast.StartSubscribingTransaction(ip, 0)
-				//case tcpip.TransactionTopic[1]:
-				//	go broadcast.StartSubscribingTransaction(ip, 1)
-				//case tcpip.StakeTopic:
-				//	go broadcastStaking.StartSubscribingStakingTransaction(ip)
+			case tcpip.TransactionTopic[0]:
+				go transactionServices.StartSubscribingTransactionMsg(ip, 0)
+			case tcpip.TransactionTopic[1]:
+				go transactionServices.StartSubscribingTransactionMsg(ip, 1)
+			case tcpip.TransactionTopic[2]:
+				go transactionServices.StartSubscribingTransactionMsg(ip, 2)
+			case tcpip.TransactionTopic[3]:
+				go transactionServices.StartSubscribingTransactionMsg(ip, 3)
+			case tcpip.TransactionTopic[4]:
+				go transactionServices.StartSubscribingTransactionMsg(ip, 4)
 			}
 		case <-tcpip.Quit:
 			break QF
