@@ -8,7 +8,7 @@ import (
 type PubKeysBlock struct {
 	BaseBlock        BaseBlock   `json:"base_block"`
 	Chain            uint8       `json:"chain"`
-	TransactionsHash common.Hash `json:"pub_keys_hash"`
+	TransactionsHash common.Hash `json:"transactions_hash"`
 	BlockHash        common.Hash `json:"block_hash"`
 }
 

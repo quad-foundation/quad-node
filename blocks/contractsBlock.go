@@ -7,7 +7,7 @@ import (
 type ContractsBlock struct {
 	BaseBlock        BaseBlock   `json:"base_block"`
 	Chain            uint8       `json:"chain"`
-	TransactionsHash common.Hash `json:"contracts_hash"`
+	TransactionsHash common.Hash `json:"transactions_hash"`
 	BlockHash        common.Hash `json:"block_hash"`
 }
 
