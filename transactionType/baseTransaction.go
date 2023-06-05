@@ -74,6 +74,16 @@ func init() {
 	toSendPoolStakeTx = make(ToSendPoolStakeTx, 1)
 	toSendPoolDexTx = make(ToSendPoolDexTx, 1)
 	toSendPoolContractTx = make(ToSendPoolContractTx, 1)
+	poolMainTx.Init()
+	poolPubKeyTx.Init()
+	poolStakeTx.Init()
+	poolDexTx.Init()
+	poolContractTx.Init()
+	toSendPoolMainTx.Init()
+	toSendPoolPubKeyTx.Init()
+	toSendPoolStakeTx.Init()
+	toSendPoolDexTx.Init()
+	toSendPoolContractTx.Init()
 }
 
 func (tp TxParam) GetBytes() []byte {
