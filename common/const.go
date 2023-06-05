@@ -36,10 +36,13 @@ var (
 	PubKeyDBPrefix                   = [2]byte{'P', 'K'}
 	BlockByHeightDBPrefix            = [2]byte{'B', 'H'}
 	RootHashByHeightDBPrefix         = [2]byte{'R', 'H'}
-	TransactionDBPrefix              = [][2]byte{{'T', '0'}}
-	TransactionPoolHashesDBPrefix    = [][2]byte{{'P', '0'}}
-	TransactionPendingHashesDBPrefix = [][2]byte{{'E', '0'}}
-	TransactionSyncingHashesDBPrefix = [][2]byte{{'S', '0'}}
+	MerkleTreeDBPrefix               = [2]byte{'M', '0'}
+	MerkleNodeDBPrefix               = [2]byte{'N', '0'}
+	RootHashMerkleTreeDBPrefix       = [2]byte{'R', '0'}
+	TransactionDBPrefix              = [2]byte{'T', '0'}
+	TransactionPoolHashesDBPrefix    = [2]byte{'P', '0'}
+	TransactionPendingHashesDBPrefix = [2]byte{'E', '0'}
+	TransactionSyncingHashesDBPrefix = [2]byte{'S', '0'}
 )
 
 var chainID = int16(23)

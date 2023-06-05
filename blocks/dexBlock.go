@@ -7,7 +7,7 @@ import (
 type DexBlock struct {
 	BaseBlock        BaseBlock   `json:"base_block"`
 	Chain            uint8       `json:"chain"`
-	TransactionsHash common.Hash `json:"dex_hash"`
+	TransactionsHash common.Hash `json:"transactions_hash"`
 	BlockHash        common.Hash `json:"block_hash"`
 }
 

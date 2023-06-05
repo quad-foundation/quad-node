@@ -48,6 +48,7 @@ func CreateBlockFromNonceMessage(at transactionType.AnyTransaction, lastBlock bl
 		Height:           heightTransaction,
 		DelegatedAccount: common.GetDelegatedAccount(),
 		OperatorAccount:  myWallet.Address,
+		RootMerkleTree:   lastBlock.GetBaseBlock().BaseHeader.RootMerkleTree,
 		Signature:        common.Signature{},
 		SignatureMessage: []byte{},
 	}
@@ -70,13 +71,17 @@ func CreateBlockFromNonceMessage(at transactionType.AnyTransaction, lastBlock bl
 		BlockTimeStamp:   common.GetCurrentTimeStampInSecond(),
 		RewardPercentage: common.GetRewardPercentage(),
 	}
+	rmthash, err := blocks.CreateMerkleTreeHash(lastBlock, [][]byte{})
+	if err != nil {
+		return nil, err
+	}
 	var anyBlock blocks.AnyBlock
 	switch transactionChain {
 	case 0:
 		bl := blocks.TransactionsBlock{
 			BaseBlock:        bb,
 			Chain:            transactionChain,
-			TransactionsHash: common.EmptyHash(),
+			TransactionsHash: rmthash,
 			BlockHash:        common.Hash{},
 		}
 		hash, err := bl.CalcBlockHash()
@@ -89,7 +94,7 @@ func CreateBlockFromNonceMessage(at transactionType.AnyTransaction, lastBlock bl
 		bl := blocks.PubKeysBlock{
 			BaseBlock:        bb,
 			Chain:            transactionChain,
-			TransactionsHash: common.EmptyHash(),
+			TransactionsHash: rmthash,
 			BlockHash:        common.Hash{},
 		}
 		hash, err := bl.CalcBlockHash()
@@ -102,7 +107,7 @@ func CreateBlockFromNonceMessage(at transactionType.AnyTransaction, lastBlock bl
 		bl := blocks.StakesBlock{
 			BaseBlock:        bb,
 			Chain:            transactionChain,
-			TransactionsHash: common.EmptyHash(),
+			TransactionsHash: rmthash,
 			BlockHash:        common.Hash{},
 		}
 		hash, err := bl.CalcBlockHash()
@@ -115,7 +120,7 @@ func CreateBlockFromNonceMessage(at transactionType.AnyTransaction, lastBlock bl
 		bl := blocks.DexBlock{
 			BaseBlock:        bb,
 			Chain:            transactionChain,
-			TransactionsHash: common.EmptyHash(),
+			TransactionsHash: rmthash,
 			BlockHash:        common.Hash{},
 		}
 		hash, err := bl.CalcBlockHash()
@@ -128,7 +133,7 @@ func CreateBlockFromNonceMessage(at transactionType.AnyTransaction, lastBlock bl
 		bl := blocks.ContractsBlock{
 			BaseBlock:        bb,
 			Chain:            transactionChain,
-			TransactionsHash: common.EmptyHash(),
+			TransactionsHash: rmthash,
 			BlockHash:        common.Hash{},
 		}
 		hash, err := bl.CalcBlockHash()

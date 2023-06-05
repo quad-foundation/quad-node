@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/chainpqc/chainpqc-node/common"
 	memDatabase "github.com/chainpqc/chainpqc-node/database"
+	"github.com/chainpqc/chainpqc-node/transactionType"
 )
 
 type BaseHeader struct {
@@ -12,6 +13,7 @@ type BaseHeader struct {
 	Height           int64            `json:"height"`
 	DelegatedAccount common.Address   `json:"delegated_account"`
 	OperatorAccount  common.Address   `json:"operator_account"`
+	RootMerkleTree   common.Hash      `json:"root_merkle_tree"`
 	Signature        common.Signature `json:"signature"`
 	SignatureMessage []byte           `json:"signature_message"`
 }
@@ -43,6 +45,7 @@ func (b BaseHeader) GetBytesWithoutSignature() []byte {
 	rb = append(rb, common.GetByteInt64(b.Height)...)
 	rb = append(rb, b.DelegatedAccount.GetBytes()...)
 	rb = append(rb, b.OperatorAccount.GetBytes()...)
+	rb = append(rb, b.RootMerkleTree.GetBytes()...)
 	return rb
 }
 
@@ -52,13 +55,14 @@ func (b BaseHeader) GetBytes() []byte {
 	rb = append(rb, common.GetByteInt64(b.Height)...)
 	rb = append(rb, b.DelegatedAccount.GetBytes()...)
 	rb = append(rb, b.OperatorAccount.GetBytes()...)
+	rb = append(rb, b.RootMerkleTree.GetBytes()...)
 	rb = append(rb, common.BytesToLenAndBytes(b.SignatureMessage)...)
 	rb = append(rb, b.Signature.GetBytes()...)
 	return rb
 }
 
 func (bh *BaseHeader) GetFromBytes(b []byte) ([]byte, error) {
-	if len(b) < 84+common.SignatureLength {
+	if len(b) < 116+common.SignatureLength {
 		return nil, fmt.Errorf("not enough bytes to decode BaseHeader")
 	}
 	hash, err := common.GetHashFromBytes(b[:32])
@@ -78,7 +82,12 @@ func (bh *BaseHeader) GetFromBytes(b []byte) ([]byte, error) {
 		return nil, err
 	}
 	bh.OperatorAccount = opAddress
-	msgb, b, err := common.BytesWithLenToBytes(b[84:])
+	merkleHash, err := common.GetHashFromBytes(b[84:116])
+	if err != nil {
+		return nil, err
+	}
+	bh.RootMerkleTree = merkleHash
+	msgb, b, err := common.BytesWithLenToBytes(b[116:])
 	if err != nil {
 		return nil, err
 	}
@@ -204,4 +213,20 @@ func LoadBlock(height int64) (AnyBlock, error) {
 	}
 
 	return bl, nil
+}
+func CreateMerkleTreeHash(lastBlock AnyBlock, transactionHashes [][]byte) (common.Hash, error) {
+	merkleTreeHash := lastBlock.GetBaseBlock().BaseHeader.RootMerkleTree.GetBytes()
+	height := lastBlock.GetBaseBlock().BaseHeader.Height
+	node, _, err := transactionType.BuildMerkleTree(merkleTreeHash,
+		height,
+		transactionHashes)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	hash := common.Hash{}
+	hash, err = hash.Init(node.Data)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return hash, nil
 }
