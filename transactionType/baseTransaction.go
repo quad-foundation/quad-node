@@ -51,11 +51,16 @@ type AnyTransaction interface {
 }
 
 var (
-	poolMainTx     PoolMainTx
-	poolPubKeyTx   PoolPubKeyTx
-	poolStakeTx    PoolStakeTx
-	poolDexTx      PoolDexTx
-	poolContractTx PoolContractTx
+	poolMainTx           PoolMainTx
+	poolPubKeyTx         PoolPubKeyTx
+	poolStakeTx          PoolStakeTx
+	poolDexTx            PoolDexTx
+	poolContractTx       PoolContractTx
+	toSendPoolMainTx     ToSendPoolMainTx
+	toSendPoolPubKeyTx   ToSendPoolPubKeyTx
+	toSendPoolStakeTx    ToSendPoolStakeTx
+	toSendPoolDexTx      ToSendPoolDexTx
+	toSendPoolContractTx ToSendPoolContractTx
 )
 
 func init() {
@@ -64,6 +69,11 @@ func init() {
 	poolStakeTx = make(PoolStakeTx, 1)
 	poolDexTx = make(PoolDexTx, 1)
 	poolContractTx = make(PoolContractTx, 1)
+	toSendPoolMainTx = make(ToSendPoolMainTx, 1)
+	toSendPoolPubKeyTx = make(ToSendPoolPubKeyTx, 1)
+	toSendPoolStakeTx = make(ToSendPoolStakeTx, 1)
+	toSendPoolDexTx = make(ToSendPoolDexTx, 1)
+	toSendPoolContractTx = make(ToSendPoolContractTx, 1)
 }
 
 func (tp TxParam) GetBytes() []byte {
@@ -183,6 +193,41 @@ func GetTransactionsFromPool(number int, chain uint8) []AnyTransaction {
 		return poolDexTx.GetTransactionsFromPool(number)
 	case 4:
 		return poolContractTx.GetTransactionsFromPool(number)
+	default:
+		log.Println("tx was not added to pool")
+	}
+	return nil
+}
+
+func AddTransactionsToSendPool(txs []AnyTransaction, chain uint8) {
+	switch chain {
+	case 0:
+		toSendPoolMainTx.AddTransactions(txs)
+	case 1:
+		toSendPoolPubKeyTx.AddTransactions(txs)
+	case 2:
+		toSendPoolStakeTx.AddTransactions(txs)
+	case 3:
+		toSendPoolDexTx.AddTransactions(txs)
+	case 4:
+		toSendPoolContractTx.AddTransactions(txs)
+	default:
+		log.Println("tx was not added to pool")
+	}
+}
+
+func GetTransactionsFromToSendPool(number int, chain uint8) []AnyTransaction {
+	switch chain {
+	case 0:
+		return toSendPoolMainTx.GetTransactionsFromPool(number)
+	case 1:
+		return toSendPoolPubKeyTx.GetTransactionsFromPool(number)
+	case 2:
+		return toSendPoolStakeTx.GetTransactionsFromPool(number)
+	case 3:
+		return toSendPoolDexTx.GetTransactionsFromPool(number)
+	case 4:
+		return toSendPoolContractTx.GetTransactionsFromPool(number)
 	default:
 		log.Println("tx was not added to pool")
 	}

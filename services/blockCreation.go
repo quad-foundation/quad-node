@@ -18,24 +18,27 @@ var (
 	SendMutex    sync.RWMutex
 )
 
-func CreateBlockFromNonceMessage(at transactionType.AnyTransaction, lastBlock blocks.AnyBlock) (blocks.AnyBlock, error) {
+func CreateBlockFromNonceMessage(nonceTx []transactionType.AnyTransaction, lastBlock blocks.AnyBlock) (blocks.AnyBlock, error) {
 
 	if lastBlock == nil {
 		return nil, fmt.Errorf("last block is nil")
 	}
 
 	myWallet := wallet.EmptyWallet().GetWallet()
-	heightTransaction := at.GetHeight()
-	sendingTimeTransaction := at.GetParam().SendingTime
-	transactionChain := at.GetChain()
-	heightLastBlocktransaction := common.GetInt64FromByte(at.GetData().GetOptData()[:8])
-	hashLastBlocktransaction := at.GetData().GetOptData()[8:40]
-	if bytes.Equal(hashLastBlocktransaction, lastBlock.GetBlockHash().GetBytes()) {
-		return nil, fmt.Errorf("last block hash and nonce hash do not match")
+	transactionChain := nonceTx[0].GetChain()
+	heightTransaction := nonceTx[0].GetHeight()
+	for _, at := range nonceTx {
+		heightLastBlocktransaction := common.GetInt64FromByte(at.GetData().GetOptData()[:8])
+		hashLastBlocktransaction := at.GetData().GetOptData()[8:40]
+		if bytes.Equal(hashLastBlocktransaction, lastBlock.GetBlockHash().GetBytes()) {
+			return nil, fmt.Errorf("last block hash and nonce hash do not match")
+		}
+		if heightTransaction != heightLastBlocktransaction+1 {
+			return nil, fmt.Errorf("last block height and nonce height do not match")
+		}
 	}
-	if heightTransaction != heightLastBlocktransaction+1 {
-		return nil, fmt.Errorf("last block height and nonce height do not match")
-	}
+
+	sendingTimeTransaction := nonceTx[0].GetParam().SendingTime
 
 	ti := sendingTimeTransaction - lastBlock.GetBlockTimeStamp()
 	bblock := lastBlock.GetBaseBlock()
@@ -71,7 +74,14 @@ func CreateBlockFromNonceMessage(at transactionType.AnyTransaction, lastBlock bl
 		BlockTimeStamp:   common.GetCurrentTimeStampInSecond(),
 		RewardPercentage: common.GetRewardPercentage(),
 	}
-	rmthash, err := blocks.CreateMerkleTreeHash(lastBlock, [][]byte{})
+	txs := transactionType.GetTransactionsFromPool(int(common.MaxTransactionsPerBlock), transactionChain)
+	bt := [][]byte{}
+	for _, tx := range txs {
+		b := transactionType.GetBytes(tx)
+		bt = append(bt, b)
+	}
+
+	rmthash, err := blocks.CreateMerkleTreeHash(lastBlock, bt)
 	if err != nil {
 		return nil, err
 	}
