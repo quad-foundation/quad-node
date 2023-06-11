@@ -33,8 +33,9 @@ func CloseDB() {
 }
 
 func Store(k []byte, v any) error {
-
-	wm, err := common.Marshal(v, string(k[:2]))
+	var prefix2b [2]byte
+	copy(prefix2b[:], k[:2])
+	wm, err := common.Marshal(v, prefix2b)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -71,10 +72,12 @@ func LoadAllKeys(prefix []byte) ([][]byte, error) {
 func LoadAll(prefix []byte) ([]interface{}, error) {
 	iter := blockchainDB.NewIterator(util.BytesPrefix(prefix), nil)
 	defer iter.Release()
+	var prefix2b [2]byte
+	copy(prefix2b[:], prefix)
 	values := []interface{}{}
 	for iter.Next() {
 		v := interface{}(nil)
-		err := common.Unmarshal(iter.Value(), string(prefix), &v)
+		err := common.Unmarshal(iter.Value(), prefix2b, &v)
 		if err != nil {
 			return nil, err
 		}

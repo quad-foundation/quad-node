@@ -8,41 +8,41 @@ import (
 )
 
 var (
-	ValidChains                         = []uint8{0, 1, 2, 3, 4}
-	Decimals                    uint8   = 8
-	MaxTotalSupply              int64   = 230000000000000000
-	RewardChangeInterval        int64   = 8640 * 3
-	InitialReward               int64   = 100000000 // 3993055556
-	ValidationTag                       = "validationTag"
-	DifficultyMultiplier        int32   = 10
-	BlockTimeInterval           float32 = 5 // 5 sec.
-	DifficultyChange            float32 = 5
-	MaxGasUsage                 int64   = 137000000 // circa 65k transactions in block
-	MaxGasPrice                 int64   = 100000
-	MaxTransactionsPerBlock     int32   = 100000
-	MaxTransactionsSidePerBlock int32   = 100
-	ConfirmationsNumber         int64   = 6
-	NumberOfHashesInBucket      int64   = 32
-	NumberOfBlocksInBucket      int64   = 20
-	MinStakingForNode           int64   = 100000000000000
-	MinStakingUser              int64   = 100000000000 // should be 100000000000
-	MinDistributedAmount        int64   = 100000000
+	ValidChains                     = []uint8{0, 1, 2, 3, 4}
+	Decimals                uint8   = 8
+	MaxTotalSupply          int64   = 230000000000000000
+	RewardChangeInterval    int64   = 8640 * 3
+	InitialReward           int64   = 100000000 // 3993055556
+	ValidationTag                   = "validationTag"
+	DifficultyMultiplier    int32   = 10
+	BlockTimeInterval       float32 = 5 // 5 sec.
+	DifficultyChange        float32 = 5
+	MaxGasUsage             int64   = 137000000 // circa 65k transactions in block
+	MaxGasPrice             int64   = 100000
+	MaxTransactionsPerBlock int16   = 32000
+	MaxTransactionInPool            = 1000000
+	ConfirmationsNumber     int64   = 6
+	NumberOfHashesInBucket  int64   = 32
+	NumberOfBlocksInBucket  int64   = 20
+	MinStakingForNode       int64   = 100000000000000
+	MinStakingUser          int64   = 100000000000 // should be 100000000000
+	MinDistributedAmount    int64   = 100000000
 )
 
 // DB prefixes
 var (
-	BlocksDBPrefix                   = [2]byte{'B', 'I'}
-	BlockHeaderDBPrefix              = [2]byte{'H', 'B'}
-	PubKeyDBPrefix                   = [2]byte{'P', 'K'}
-	BlockByHeightDBPrefix            = [2]byte{'B', 'H'}
-	RootHashByHeightDBPrefix         = [2]byte{'R', 'H'}
-	MerkleTreeDBPrefix               = [2]byte{'M', '0'}
-	MerkleNodeDBPrefix               = [2]byte{'N', '0'}
-	RootHashMerkleTreeDBPrefix       = [2]byte{'R', '0'}
-	TransactionDBPrefix              = [2]byte{'T', '0'}
-	TransactionPoolHashesDBPrefix    = [2]byte{'P', '0'}
-	TransactionPendingHashesDBPrefix = [2]byte{'E', '0'}
-	TransactionSyncingHashesDBPrefix = [2]byte{'S', '0'}
+	BlocksDBPrefix                     = [2]byte{'B', 'I'}
+	BlockHeaderDBPrefix                = [2]byte{'H', 'B'}
+	PubKeyDBPrefix                     = [2]byte{'P', 'K'}
+	BlockByHeightDBPrefix              = [2]byte{'B', 'H'}
+	TransactionsHashesByHeightDBPrefix = [2]byte{'R', 'H'}
+	MerkleTreeDBPrefix                 = [2]byte{'M', 'M'}
+	MerkleNodeDBPrefix                 = [2]byte{'N', 'N'}
+	RootHashMerkleTreeDBPrefix         = [2]byte{'R', 'R'}
+	TransactionDBPrefix                = [2]byte{'T', '0'}
+	TransactionPoolHashesDBPrefix      = [2]byte{'D', '0'}
+	TransactionToSendHashesDBPrefix    = [2]byte{'E', '0'}
+	TransactionSyncingHashesDBPrefix   = [2]byte{'S', '0'}
 )
 
 var chainID = int16(23)

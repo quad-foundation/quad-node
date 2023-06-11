@@ -31,7 +31,7 @@ type Wallet struct {
 }
 
 var mainWallet Wallet
-var mutexDb sync.Mutex
+var mutexDb sync.RWMutex
 var HomePath string
 
 type AnyWallet interface {
@@ -48,7 +48,7 @@ func init() {
 	//if err != nil {
 	//	log.Fatal(err)
 	//}
-	mainWallet = EmptyWallet()
+	mainWallet = Wallet{}
 
 	HomePath, err = os.UserHomeDir()
 	if err != nil {
@@ -247,8 +247,6 @@ func (w Wallet) Sign(data []byte) (sig common.Signature, err error) {
 			return common.Signature{}, err
 		}
 
-		//signature := rand2.RandomBytes(common.SignatureLength)
-
 		err = sig.Init(signature, w.Address)
 		if err != nil {
 			return common.Signature{}, err
@@ -272,14 +270,14 @@ func (w Wallet) Check() bool {
 func (w *Wallet) Load() error {
 
 	// Open the database with the provided options
-	mutexDb.Lock()
+	mutexDb.RLock()
 	walletDB, err := leveldb.OpenFile(HomePath+common.GetSigName(), nil)
 	if err != nil {
 		return err
 	}
 	defer walletDB.Close()
 
-	defer mutexDb.Unlock()
+	defer mutexDb.RUnlock()
 
 	value, err := walletDB.Get([]byte("main_account"), nil)
 	if err != nil {

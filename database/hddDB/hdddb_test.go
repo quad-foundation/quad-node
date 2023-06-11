@@ -8,7 +8,7 @@ import (
 func TestInit(t *testing.T) {
 	err := Init()
 	if err != nil {
-		t.Fatalf("Init() failed: %v", err)
+		t.Fatalf("Set() failed: %v", err)
 	}
 	defer CloseDB()
 	if blockchainDB == nil {
@@ -18,19 +18,19 @@ func TestInit(t *testing.T) {
 func TestStoreAndLoad(t *testing.T) {
 	err := Init()
 	if err != nil {
-		t.Fatalf("Init() failed: %v", err)
+		t.Fatalf("Set() failed: %v", err)
 	}
 	defer CloseDB()
 	key := []byte("01testKey")
 	value := "testValue"
 	err = Store(key, value)
 	if err != nil {
-		t.Fatalf("Store() failed: %v", err)
+		t.Fatalf("Put() failed: %v", err)
 	}
 	var loadedValue string
 	err = Load(key, &loadedValue)
 	if err != nil {
-		t.Fatalf("Load() failed: %v", err)
+		t.Fatalf("Get() failed: %v", err)
 	}
 	if loadedValue != value {
 		t.Fatalf("Loaded value does not match stored value: expected %v, got %v", value, loadedValue)
@@ -39,14 +39,14 @@ func TestStoreAndLoad(t *testing.T) {
 func TestIsKey(t *testing.T) {
 	err := Init()
 	if err != nil {
-		t.Fatalf("Init() failed: %v", err)
+		t.Fatalf("Set() failed: %v", err)
 	}
 	defer CloseDB()
 	key := []byte("01testKey")
 	value := "testValue"
 	err = Store(key, value)
 	if err != nil {
-		t.Fatalf("Store() failed: %v", err)
+		t.Fatalf("Put() failed: %v", err)
 	}
 	exists, err := IsKey(key)
 	if err != nil {
@@ -67,14 +67,14 @@ func TestIsKey(t *testing.T) {
 func TestDelete(t *testing.T) {
 	err := Init()
 	if err != nil {
-		t.Fatalf("Init() failed: %v", err)
+		t.Fatalf("Set() failed: %v", err)
 	}
 	defer CloseDB()
 	key := []byte("01testKey")
 	value := "testValue"
 	err = Store(key, value)
 	if err != nil {
-		t.Fatalf("Store() failed: %v", err)
+		t.Fatalf("Put() failed: %v", err)
 	}
 	err = Delete(key)
 	if err != nil {
@@ -104,7 +104,7 @@ func TestLoadAllKeys(t *testing.T) {
 	value1 := "value1"
 	key2 := []byte("k2234")
 	value2 := "value2"
-	// Store test data
+	// Put test data
 	err = Store(key1, value1)
 	if err != nil {
 		t.Fatal(err)
@@ -141,7 +141,7 @@ func TestLoadAll(t *testing.T) {
 	value1 := "value1"
 	key2 := []byte("k2")
 	value2 := "value2"
-	// Store test data
+	// Put test data
 	err = Store(key1, value1)
 	if err != nil {
 		t.Fatal(err)

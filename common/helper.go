@@ -65,28 +65,19 @@ func GetSignatureFromBytes(b []byte, address Address) (Signature, error) {
 	}
 	return s, nil
 }
-func GetHashFromBytes(b []byte) (Hash, error) {
-	h := Hash{}
-	var err error
-	h, err = h.Init(b)
-	if err != nil {
-		log.Println("Get Hash from bytes failed")
-		return Hash{}, err
-	}
-	return h, nil
+
+func GetHashFromBytes(b []byte) Hash {
+	h := EmptyHash()
+	(&h).Set(b)
+	return h
 }
 
 func CalcHashFromBytes(b []byte) (Hash, error) {
-	h := Hash{}
 	hb, err := CalcHashToByte(b)
 	if err != nil {
 		return Hash{}, err
 	}
-	h, err = h.Init(hb)
-	if err != nil {
-		log.Println("Get Hash from bytes failed")
-		return Hash{}, err
-	}
+	h := GetHashFromBytes(hb)
 	return h, nil
 }
 

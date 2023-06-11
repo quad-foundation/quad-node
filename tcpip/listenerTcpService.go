@@ -10,9 +10,9 @@ import (
 	"time"
 )
 
-func StartNewListener(sendChan <-chan []byte, topic string) {
+func StartNewListener(sendChan <-chan []byte, topic [2]byte) {
 
-	conn, err := Listen("0.0.0.0", ports[topic])
+	conn, err := Listen("0.0.0.0", Ports[topic])
 	if err != nil {
 		panic(err)
 	}
@@ -38,7 +38,7 @@ func StartNewListener(sendChan <-chan []byte, topic string) {
 		}
 	}
 }
-func LoopSend(sendChan <-chan []byte, topic string) {
+func LoopSend(sendChan <-chan []byte, topic [2]byte) {
 	for {
 		select {
 		case s := <-sendChan:
@@ -71,8 +71,7 @@ func LoopSend(sendChan <-chan []byte, topic string) {
 				}
 			}
 		case b := <-waitChan:
-			s := string(b)
-			if s == topic {
+			if bytes.Equal(b, topic[:]) {
 				time.Sleep(time.Millisecond * 10)
 			}
 		case <-Quit:
@@ -81,13 +80,13 @@ func LoopSend(sendChan <-chan []byte, topic string) {
 		}
 	}
 }
-func StartNewConnection(ip string, receiveChan chan []byte, topic string) {
+func StartNewConnection(ip string, receiveChan chan []byte, topic [2]byte) {
 	var tcpConn *net.TCPConn
 	a := strings.Split(ip, ":")
 	ip = a[0]
-	ipport := fmt.Sprint(ip, ":", ports[topic])
+	ipport := fmt.Sprint(ip, ":", Ports[topic])
 	if ip == "127.0.0.1" {
-		ipport = fmt.Sprint(":", ports[topic])
+		ipport = fmt.Sprint(":", Ports[topic])
 	}
 	tcpAddr, err := net.ResolveTCPAddr("tcp", ipport)
 	if err != nil {
@@ -126,7 +125,7 @@ func StartNewConnection(ip string, receiveChan chan []byte, topic string) {
 				return
 			}
 			if len(r) == 4 && string(r) == "WAIT" {
-				waitChan <- []byte(topic)
+				waitChan <- topic[:]
 				continue
 			}
 			r = append(lastBytes, r...)
@@ -159,7 +158,7 @@ func CloseAndRemoveConnection(tcpConn *net.TCPConn) {
 				fmt.Println("Closing connection (send)", topic, k)
 				tcpConnections[topic][k].Close()
 				delete(tcpConnections[topic], k)
-				delete(peersConnected, topic+k)
+				delete(peersConnected, string(topic[:])+k)
 			}
 		}
 	}

@@ -19,15 +19,16 @@ var (
 	oldPeers         = map[string]string{}
 	CheckCount       int64
 	waitChan         = make(chan []byte)
-	tcpConnections   = make(map[string]map[string]*net.TCPConn)
+	tcpConnections   = make(map[[2]byte]map[string]*net.TCPConn)
 	peersMutex       sync.RWMutex
 	Quit             chan os.Signal
-	TransactionTopic = [5]string{"T0", "T1", "T2", "T3", "T4"}
-	NonceTopic       = [5]string{"N0", "N1", "N2", "N3", "N4"}
-	SelfNonceTopic   = [5]string{"S0", "S1", "S2", "S3", "S4"}
-	SyncTopic        = [5]string{"B0", "B1", "B2", "B3", "B4"}
+	TransactionTopic = [5][2]byte{{'T', 0}, {'T', 1}, {'T', 2}, {'T', 3}, {'T', 4}}
+	NonceTopic       = [5][2]byte{{'N', 0}, {'N', 1}, {'N', 2}, {'N', 3}, {'N', 4}}
+	SelfNonceTopic   = [5][2]byte{{'S', 0}, {'S', 1}, {'S', 2}, {'S', 3}, {'S', 4}}
+	SyncTopic        = [5][2]byte{{'B', 0}, {'B', 1}, {'B', 2}, {'B', 3}, {'B', 4}}
+	RPCTopic         = [2]byte{'R', 'P'}
 )
-var ports = map[string]int{
+var Ports = map[[2]byte]int{
 	TransactionTopic[0]: 9091,
 	TransactionTopic[1]: 9092,
 	TransactionTopic[2]: 9093,
@@ -48,6 +49,7 @@ var ports = map[string]int{
 	SyncTopic[2]:        6093,
 	SyncTopic[3]:        6094,
 	SyncTopic[4]:        6095,
+	RPCTopic:            9009,
 }
 var MyIP string
 
@@ -55,7 +57,7 @@ func init() {
 	Quit = make(chan os.Signal)
 	signal.Notify(Quit, syscall.SIGTERM, syscall.SIGINT, os.Interrupt)
 	MyIP = getInternalIp()
-	for k := range ports {
+	for k := range Ports {
 		tcpConnections[k] = map[string]*net.TCPConn{}
 	}
 }
@@ -104,7 +106,7 @@ func Listen(ip string, port int) (*net.TCPListener, error) {
 	}
 	return conn, nil
 }
-func Accept(topic string, conn *net.TCPListener) (*net.TCPConn, error) {
+func Accept(topic [2]byte, conn *net.TCPListener) (*net.TCPConn, error) {
 	tcpConn, err := conn.AcceptTCP()
 	if err == nil {
 		NewConnectionPeer(topic, tcpConn)
@@ -112,16 +114,16 @@ func Accept(topic string, conn *net.TCPListener) (*net.TCPConn, error) {
 	}
 	return nil, fmt.Errorf("no connection available yet")
 }
-func NewConnectionPeer(topic string, tcpConn *net.TCPConn) {
+func NewConnectionPeer(topic [2]byte, tcpConn *net.TCPConn) {
 	raddr := tcpConn.RemoteAddr().String()
 	ra := strings.Split(raddr, ":")
 	addrRemote := ra[0]
-	topicip := topic + ra[0]
+	topicip := string(topic[:]) + ra[0]
 	peersMutex.Lock()
-	if t, ok := peersConnected[topicip]; !ok || t != topic {
+	if t, ok := peersConnected[string(topicip)]; !ok || t != string(topic[:]) {
 		log.Println("New connection from address", addrRemote, topic)
 		tcpConnections[topic][addrRemote] = tcpConn
-		peersConnected[topicip] = topic
+		peersConnected[string(topicip)] = string(topic[:])
 	}
 	peersMutex.Unlock()
 }
@@ -142,7 +144,7 @@ func Send(conn *net.TCPConn, message []byte) {
 		log.Println("Not whole message was send")
 	}
 }
-func Receive(topic string, conn *net.TCPConn) []byte {
+func Receive(topic [2]byte, conn *net.TCPConn) []byte {
 	buf := make([]byte, 1024*1024)
 	n, err := conn.Read(buf[:])
 	if err != nil {
