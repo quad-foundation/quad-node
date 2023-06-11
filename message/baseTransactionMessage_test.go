@@ -11,7 +11,7 @@ func TestAnyNonceMessage_GetTransactions(t *testing.T) {
 	nnb := [2]byte{}
 	copy(nnb[:], "N0")
 	nonceBytes[nnb] = [][]byte{}
-	anyNonceMessage := AnyTransactionsMessage{
+	anyNonceMessage := TransactionsMessage{
 		BaseMessage: BaseMessage{
 			Chain:   1,
 			Head:    []byte("nn"),
@@ -31,7 +31,7 @@ func TestAnyNonceMessage_GetTransactions(t *testing.T) {
 }
 func TestAnyNonceMessage_GetChain(t *testing.T) {
 	// Prepare test data
-	anyNonceMessage := AnyTransactionsMessage{
+	anyNonceMessage := TransactionsMessage{
 		BaseMessage: BaseMessage{
 			Chain: 1,
 		},
@@ -45,7 +45,7 @@ func TestAnyNonceMessage_GetChain(t *testing.T) {
 }
 func TestAnyNonceMessage_GetHead(t *testing.T) {
 	// Prepare test data
-	anyNonceMessage := AnyTransactionsMessage{
+	anyNonceMessage := TransactionsMessage{
 		BaseMessage: BaseMessage{
 			Head: []byte("nn"),
 		},
@@ -59,7 +59,7 @@ func TestAnyNonceMessage_GetHead(t *testing.T) {
 }
 func TestAnyNonceMessage_GetChainID(t *testing.T) {
 	// Prepare test data
-	anyNonceMessage := AnyTransactionsMessage{
+	anyNonceMessage := TransactionsMessage{
 		BaseMessage: BaseMessage{
 			ChainID: 100,
 		},
@@ -73,7 +73,7 @@ func TestAnyNonceMessage_GetChainID(t *testing.T) {
 }
 func TestAnyNonceMessage_GetBytes(t *testing.T) {
 	// Prepare test data
-	anyNonceMessage := AnyTransactionsMessage{
+	anyNonceMessage := TransactionsMessage{
 		BaseMessage: BaseMessage{
 			Chain:   1,
 			Head:    []byte("nn"),
@@ -90,7 +90,7 @@ func TestAnyNonceMessage_GetBytes(t *testing.T) {
 }
 func TestAnyNonceMessage_GetFromBytes(t *testing.T) {
 	// Prepare test data
-	anyNonceMessage := AnyTransactionsMessage{
+	anyNonceMessage := TransactionsMessage{
 		BaseMessage: BaseMessage{
 			Chain:   1,
 			Head:    []byte("nn"),

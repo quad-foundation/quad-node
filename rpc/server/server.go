@@ -3,10 +3,12 @@ package serverrpc
 import (
 	"encoding/json"
 	"github.com/chainpqc/chainpqc-node/services/transactionServices"
+	"github.com/chainpqc/chainpqc-node/tcpip"
 	"github.com/chainpqc/chainpqc-node/wallet"
 	"log"
 	"net"
 	"net/rpc"
+	"strconv"
 	"sync"
 )
 
@@ -15,7 +17,7 @@ var listenerMutex sync.Mutex
 type Listener []byte
 
 func ListenRPC() {
-	const address = "0.0.0.0:9009"
+	var address = "0.0.0.0:" + strconv.Itoa(tcpip.Ports[tcpip.RPCTopic])
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("Error resolving TCP address: %v", err)
@@ -90,19 +92,8 @@ func handleWALL(line []byte, reply *[]byte) {
 	*reply = r
 }
 func handleTRAN(byt []byte, reply *[]byte) {
-	//m := message.AnyTransactionsMessage{}
-	//err := json.Unmarshal(byt, &m)
-	//if err != nil {
-	//	*reply = []byte(fmt.Sprint(err))
-	//	return
-	//}
-	//trx, err := m.GetFromBytes(byt)
-	//if err != nil {
-	//	return
-	//}
+
 	*reply = []byte("transaction sent")
-	transactionServices.Send("0.0.0.0", byt)
-	//if err != nil {
-	//	*reply = []byte(fmt.Sprint(err))
-	//}
+	transactionServices.OnMessage("toSend", byt)
+
 }

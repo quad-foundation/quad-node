@@ -25,6 +25,11 @@ func main() {
 	go clientrpc.ConnectRPC(ip)
 
 	mainWallet := wallet.EmptyWallet().GetWallet()
+	mainWallet.SetPassword("a")
+	err := mainWallet.Load()
+	if err != nil {
+		return
+	}
 
 	go sendTransactions(mainWallet)
 	chanPeer := make(chan string)
@@ -32,29 +37,29 @@ func main() {
 	<-chanPeer
 }
 
-func SampleTransaction(w wallet.Wallet) transactionType.AnyTransaction {
+func SampleTransaction(w wallet.Wallet) transactionType.Transaction {
 
 	sender := w.Address
 	recv := common.Address{}
-	br := rand.RandomBytes(32)
+	br := rand.RandomBytes(20)
 	err := recv.Init(br)
 	if err != nil {
-		return nil
+		return transactionType.Transaction{}
 	}
 
-	txdata := transactionType.MainChainTxData{
+	txdata := transactionType.TxData{
 		Recipient: recv,
 		Amount:    int64(rand2.Intn(10000000)),
 		OptData:   nil,
 	}
 	txParam := transactionType.TxParam{
-		ChainID:     23,
+		ChainID:     common.GetChainID(),
 		Sender:      sender,
 		SendingTime: common.GetCurrentTimeStampInSecond(),
 		Nonce:       int16(rand2.Intn(65000)),
 		Chain:       0,
 	}
-	t := transactionType.MainChainTransaction{
+	t := transactionType.Transaction{
 		TxData:    txdata,
 		TxParam:   txParam,
 		Hash:      common.Hash{},
@@ -64,17 +69,15 @@ func SampleTransaction(w wallet.Wallet) transactionType.AnyTransaction {
 		GasUsage:  0,
 	}
 
-	hash, err := t.CalcHash()
+	err = t.CalcHashAndSet()
 	if err != nil {
-		return nil
+		log.Println("calc hash error", err)
 	}
-	(&t).Hash = hash
-	s, err := transactionType.SignTransaction(&t)
+	err = t.Sign()
 	if err != nil {
-		log.Println("Signing error")
+		log.Println("Signing error", err)
 	}
-	(&t).Signature = s
-	return transactionType.AnyTransaction(&t)
+	return t
 }
 
 func sendTransactions(w wallet.Wallet) {
@@ -84,8 +87,8 @@ func sendTransactions(w wallet.Wallet) {
 	count := int64(0)
 	start := common.GetCurrentTimeStampInSecond()
 
-	for range time.Tick(time.Microsecond * 1000000) {
-		var txs []transactionType.AnyTransaction
+	for range time.Tick(time.Microsecond * 10000) {
+		var txs []transactionType.Transaction
 		for i := 0; i < batchSize; i++ {
 			tx := SampleTransaction(w)
 			txs = append(txs, tx)
@@ -97,7 +100,7 @@ func sendTransactions(w wallet.Wallet) {
 		tmm := m.GetBytes()
 		count += int64(batchSize)
 		end := common.GetCurrentTimeStampInSecond()
-		if count%10 == 0 && (end-start) > 0 {
+		if count%2 == 0 && (end-start) > 0 {
 			fmt.Println("tps=", count/(end-start))
 		}
 		clientrpc.InRPC <- append([]byte("TRAN"), tmm...)

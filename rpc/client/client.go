@@ -1,8 +1,10 @@
 package clientrpc
 
 import (
+	"github.com/chainpqc/chainpqc-node/tcpip"
 	"log"
 	"net/rpc"
+	"strconv"
 	"time"
 )
 
@@ -15,7 +17,7 @@ var InRPC = make(chan []byte)
 var OutRPC = make(chan []byte)
 
 func ConnectRPC(ip string) {
-	address := ip + ":9009"
+	address := ip + ":" + strconv.Itoa(tcpip.Ports[tcpip.RPCTopic])
 	var client *rpc.Client
 	var err error
 	for {

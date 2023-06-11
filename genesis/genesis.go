@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/chainpqc/chainpqc-node/blocks"
 	"github.com/chainpqc/chainpqc-node/common"
+	"github.com/chainpqc/chainpqc-node/transactionType"
 	"github.com/chainpqc/chainpqc-node/wallet"
 	"log"
 	"os"
@@ -26,46 +27,42 @@ type Genesis struct {
 	DelegatedAccount     map[string]int   `json:"delegated_account"`
 }
 
-func CreateBlockFromGenesis(genesis Genesis) (blocks.AnyBlock, error) {
+func CreateBlockFromGenesis(genesis Genesis) (blocks.Block, error) {
 
 	myWallet := wallet.EmptyWallet().GetWallet()
 
 	//signature := common.Signature{}
-	//err := signature.Init([]byte(genesis.Signature), myWallet.Address)
+	//err := signature.Set([]byte(genesis.Signature), myWallet.Address)
 	//if err != nil {
 	//	return nil, err
 	//}
 
-	hashZero := common.Hash{}
-	hashZero, err := hashZero.Init(make([]byte, 32))
-	if err != nil {
-		return nil, err
-	}
 	bh := blocks.BaseHeader{
-		PreviousHash:     hashZero,
+		PreviousHash:     common.EmptyHash(),
 		Difficulty:       genesis.Difficulty,
 		Height:           0,
 		DelegatedAccount: common.GetDelegatedAccountAddress(1),
 		OperatorAccount:  myWallet.Address,
+		RootMerkleTree:   common.EmptyHash(),
 		Signature:        common.Signature{},
-		SignatureMessage: make([]byte, 32),
+		SignatureMessage: []byte{},
 	}
 	signatureBlockHeaderMessage := bh.GetBytesWithoutSignature()
+	bh.SignatureMessage = signatureBlockHeaderMessage
 	hashb, err := common.CalcHashToByte(signatureBlockHeaderMessage)
 	if err != nil {
-		return nil, err
+		return blocks.Block{}, err
 	}
 
 	sign, err := myWallet.Sign(hashb)
 	if err != nil {
-		return nil, err
+		return blocks.Block{}, err
 	}
 	bh.Signature = sign
 
-	bh.SignatureMessage = signatureBlockHeaderMessage
 	bhHash, err := bh.CalcHash()
 	if err != nil {
-		return nil, err
+		return blocks.Block{}, err
 	}
 	bb := blocks.BaseBlock{
 		BaseHeader:       bh,
@@ -73,22 +70,30 @@ func CreateBlockFromGenesis(genesis Genesis) (blocks.AnyBlock, error) {
 		BlockTimeStamp:   genesis.Timestamp,
 		RewardPercentage: 0,
 	}
-	var anyBlock blocks.AnyBlock
 
-	bl := blocks.TransactionsBlock{
+	tempInstance, err := transactionType.BuildMerkleTree(0, [][]byte{})
+	if err != nil {
+		return blocks.Block{}, err
+	}
+	defer tempInstance.Destroy()
+	rmthash := common.GetHashFromBytes(tempInstance.GetRootHash())
+	if err != nil {
+		return blocks.Block{}, err
+	}
+
+	bl := blocks.Block{
 		BaseBlock:        bb,
 		Chain:            0,
-		TransactionsHash: hashZero,
-		BlockHash:        common.Hash{},
+		TransactionsHash: rmthash,
+		BlockHash:        common.EmptyHash(),
 	}
 	hash, err := bl.CalcBlockHash()
 	if err != nil {
-		return nil, err
+		return blocks.Block{}, err
 	}
 	bl.BlockHash = hash
-	anyBlock = blocks.AnyBlock(bl)
 
-	return anyBlock, nil
+	return bl, nil
 }
 
 // InitGenesis sets initial values written in genesis conf file
@@ -106,7 +111,7 @@ func InitGenesis() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = blocks.StoreBlock(genesisBlock)
+	err = genesisBlock.StoreBlock()
 	if err != nil {
 		log.Fatal(err)
 	}

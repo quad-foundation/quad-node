@@ -1,7 +1,6 @@
 package nonceServices
 
 import (
-	"fmt"
 	"github.com/chainpqc/chainpqc-node/blocks"
 	"github.com/chainpqc/chainpqc-node/common"
 	"github.com/chainpqc/chainpqc-node/message"
@@ -14,22 +13,20 @@ import (
 )
 
 func InitNonceService() {
-	services.SendMutex.Lock()
-	services.SendChan = make(chan []byte)
+	services.SendMutexNonce.Lock()
+	services.SendChanNonce = make(chan []byte)
 
-	services.SendChanSelf = make(chan []byte)
-	services.SendMutex.Unlock()
+	services.SendChanSelfNonce = make(chan []byte)
+	services.SendMutexNonce.Unlock()
 	startPublishingNonceMsg()
 	time.Sleep(time.Second)
 	go sendNonceMsgInLoop()
 }
 
-func generateNonceMsg(chain uint8, topic [2]byte) (message.AnyTransactionsMessage, error) {
-	common.HeightMutex.RLock()
+func generateNonceMsg(chain uint8, topic [2]byte) (message.TransactionsMessage, error) {
 	h := common.GetHeight()
-	common.HeightMutex.RUnlock()
 
-	var nonceTransaction transactionType.AnyTransaction
+	var nonceTransaction transactionType.Transaction
 	tp := transactionType.TxParam{
 		ChainID:     common.GetChainID(),
 		Sender:      wallet.EmptyWallet().GetWallet().Address,
@@ -39,117 +36,44 @@ func generateNonceMsg(chain uint8, topic [2]byte) (message.AnyTransactionsMessag
 	}
 	lastBlockHash, err := blocks.LoadHashOfBlock(h)
 	if err != nil {
-		return message.AnyTransactionsMessage{}, err
+		lastBlockHash = common.EmptyHash().GetBytes()
 	}
 	optData := common.GetByteInt64(h)
-	optData = append(optData, lastBlockHash.GetBytes()...)
+	optData = append(optData, lastBlockHash...)
 
-	switch chain {
-	case 0:
-		dataTx := transactionType.MainChainTxData{
-			Recipient: common.EmptyAddress(),
-			Amount:    0,
-			OptData:   optData,
-		}
-		nonceTransaction = &transactionType.MainChainTransaction{
-			TxData:    dataTx,
-			TxParam:   tp,
-			Hash:      common.Hash{},
-			Signature: common.Signature{},
-			Height:    h + 1,
-			GasPrice:  0,
-			GasUsage:  0,
-		}
-		topic[1] = byte('0')
-	case 1:
-		dataTx := transactionType.PubKeyChainTxData{
-			Recipient: common.EmptyAddress(),
-			Amount:    0,
-			OptData:   optData,
-		}
-		nonceTransaction = &transactionType.PubKeyChainTransaction{
-			TxData:    dataTx,
-			TxParam:   tp,
-			Hash:      common.Hash{},
-			Signature: common.Signature{},
-			Height:    h + 1,
-			GasPrice:  0,
-			GasUsage:  0,
-		}
-		topic[1] = byte('1')
-	case 2:
-		dataTx := transactionType.StakeChainTxData{
-			Recipient: common.EmptyAddress(),
-			Amount:    0,
-			OptData:   optData,
-		}
-		nonceTransaction = &transactionType.StakeChainTransaction{
-			TxData:    dataTx,
-			TxParam:   tp,
-			Hash:      common.Hash{},
-			Signature: common.Signature{},
-			Height:    h + 1,
-			GasPrice:  0,
-			GasUsage:  0,
-		}
-		topic[1] = byte('2')
-	case 3:
-		dataTx := transactionType.DexChainTxData{
-			Recipient: common.EmptyAddress(),
-			Amount:    0,
-			OptData:   optData,
-		}
-		nonceTransaction = &transactionType.DexChainTransaction{
-			TxData:    dataTx,
-			TxParam:   tp,
-			Hash:      common.Hash{},
-			Signature: common.Signature{},
-			Height:    h + 1,
-			GasPrice:  0,
-			GasUsage:  0,
-		}
-		topic[1] = byte('3')
-	case 4:
-		dataTx := transactionType.ContractChainTxData{
-			Recipient: common.EmptyAddress(),
-			Amount:    0,
-			OptData:   optData,
-		}
-		nonceTransaction = &transactionType.ContractChainTransaction{
-			TxData:    dataTx,
-			TxParam:   tp,
-			Hash:      common.Hash{},
-			Signature: common.Signature{},
-			Height:    h + 1,
-			GasPrice:  0,
-			GasUsage:  0,
-		}
-		topic[1] = byte('4')
-	default:
-		return message.AnyTransactionsMessage{}, fmt.Errorf("chain is not correct")
+	dataTx := transactionType.TxData{
+		Recipient: common.EmptyAddress(),
+		Amount:    0,
+		OptData:   optData[:],
 	}
-	hash, err := nonceTransaction.CalcHash()
-	if err != nil {
-		return message.AnyTransactionsMessage{}, err
+	nonceTransaction = transactionType.Transaction{
+		TxData:    dataTx,
+		TxParam:   tp,
+		Hash:      common.Hash{},
+		Signature: common.Signature{},
+		Height:    h + 1,
+		GasPrice:  0,
+		GasUsage:  0,
 	}
-	nonceTransaction.SetHash(hash)
+	topic[1] = chain
 
-	signature, err := transactionType.SignTransaction(nonceTransaction)
+	err = (&nonceTransaction).CalcHashAndSet()
 	if err != nil {
-		return message.AnyTransactionsMessage{}, err
+		return message.TransactionsMessage{}, err
 	}
-	nonceTransaction.SetSignature(signature)
+
+	err = (&nonceTransaction).Sign()
+	if err != nil {
+		return message.TransactionsMessage{}, err
+	}
 
 	bm := message.BaseMessage{
 		Head:    []byte("nn"),
 		ChainID: common.GetChainID(),
 		Chain:   chain,
 	}
-	bb, err := transactionType.SignTransactionAllToBytes(nonceTransaction)
-	if err != nil {
-		return message.AnyTransactionsMessage{}, fmt.Errorf("error signing transaction: %v", err)
-	}
-	n := message.AnyTransactionsMessage{
+	bb := nonceTransaction.GetBytes()
+	n := message.TransactionsMessage{
 		BaseMessage:       bm,
 		TransactionsBytes: map[[2]byte][][]byte{topic: {bb}},
 	}
@@ -162,6 +86,7 @@ func sendNonceMsgInLoopSelf(chanRecv chan []byte) {
 Q:
 	for range time.Tick(time.Second) {
 		chain := common.GetChainForHeight(common.GetHeight() + 1)
+		topic[1] = chain
 		sendNonceMsg(tcpip.MyIP, chain, topic)
 		select {
 		case s := <-chanRecv:
@@ -191,26 +116,26 @@ func Send(addr string, nb []byte) {
 	lip := common.GetByteInt16(int16(len(bip)))
 	lip = append(lip, bip...)
 	nb = append(lip, nb...)
-	services.SendMutex.Lock()
-	services.SendChan <- nb
-	services.SendMutex.Unlock()
+	services.SendMutexNonce.Lock()
+	services.SendChanNonce <- nb
+	services.SendMutexNonce.Unlock()
 }
 
 func sendNonceMsgInLoop() {
 	for range time.Tick(time.Second * 10) {
 		chain := common.GetChainForHeight(common.GetHeight() + 1)
-		var topic = [2]byte{'N', '0'}
+		var topic = [2]byte{'N', chain}
 		sendNonceMsg("0.0.0.0", chain, topic)
 	}
 }
 
 func startPublishingNonceMsg() {
-	services.SendMutex.Lock()
+	services.SendMutexNonce.Lock()
 	for i := 0; i < 5; i++ {
-		go tcpip.StartNewListener(services.SendChan, tcpip.NonceTopic[i])
-		go tcpip.StartNewListener(services.SendChanSelf, tcpip.SelfNonceTopic[i])
+		go tcpip.StartNewListener(services.SendChanNonce, tcpip.NonceTopic[i])
+		go tcpip.StartNewListener(services.SendChanSelfNonce, tcpip.SelfNonceTopic[i])
 	}
-	services.SendMutex.Unlock()
+	services.SendMutexNonce.Unlock()
 }
 
 func StartSubscribingNonceMsg(ip string, chain uint8) {

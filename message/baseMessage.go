@@ -7,7 +7,8 @@ import (
 	"log"
 )
 
-var validHeadNonce = []string{"nn", "bl", "rb"}
+// tx - transaction, gt - get transaction, st - sync transaction, "nn" - nonce, "bl" - block, "rb" - reject block
+var validHead = []string{"nn", "bl", "rb", "tx", "gt", "st"}
 
 type BaseMessage struct {
 	Head    []byte `json:"head"`
@@ -18,7 +19,7 @@ type BaseMessage struct {
 type AnyMessage interface {
 	GetHead() []byte
 	GetChainID() int16
-	GetTransactions() (map[[2]byte][]transactionType.AnyTransaction, error)
+	GetTransactions() (map[[2]byte][]transactionType.Transaction, error)
 	GetChain() uint8
 	GetBytes() []byte
 	GetFromBytes([]byte) (AnyMessage, error)
@@ -37,7 +38,7 @@ func (m *BaseMessage) GetFromBytes(b []byte) {
 		return
 	}
 	m.Head = b[:2]
-	if !common.ContainsKey(validHeadNonce, string(m.Head)) {
+	if !common.ContainsKey(validHead, string(m.Head)) {
 		log.Println("Head not in valid heads keys")
 		return
 	}
@@ -60,7 +61,7 @@ func CheckMessage(a AnyMessage) bool {
 		}
 	}
 	isValidHead := false
-	for _, key := range validHeadNonce {
+	for _, key := range validHead {
 		if bytes.Compare(a.GetHead(), []byte(key)) == 0 {
 			isValidHead = true
 			break

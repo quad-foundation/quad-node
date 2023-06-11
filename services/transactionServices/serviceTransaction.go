@@ -11,15 +11,15 @@ import (
 )
 
 func InitTransactionService() {
-	services.RecvMutex.Lock()
-	services.RecvChan = make(chan []byte)
+	services.SendMutexTx.Lock()
+	services.SendChanTx = make(chan []byte)
 
-	services.RecvMutex.Unlock()
+	services.SendMutexTx.Unlock()
 	startPublishingTransactionMsg()
-	go broadcastTransactionsMsgInLoop(services.RecvChan)
+	go broadcastTransactionsMsgInLoop(services.SendChanTx)
 }
 
-func GenerateTransactionMsg(txs []transactionType.AnyTransaction, chain uint8, topic [2]byte) (message.AnyTransactionsMessage, error) {
+func GenerateTransactionMsg(txs []transactionType.Transaction, chain uint8, topic [2]byte) (message.TransactionsMessage, error) {
 
 	topic[1] = chain
 	bm := message.BaseMessage{
@@ -29,11 +29,11 @@ func GenerateTransactionMsg(txs []transactionType.AnyTransaction, chain uint8, t
 	}
 	bb := [][]byte{}
 	for _, tx := range txs {
-		b := transactionType.GetBytes(tx)
+		b := tx.GetBytes()
 		bb = append(bb, b)
 	}
 
-	n := message.AnyTransactionsMessage{
+	n := message.TransactionsMessage{
 		BaseMessage:       bm,
 		TransactionsBytes: map[[2]byte][][]byte{topic: bb},
 	}
@@ -44,10 +44,12 @@ func broadcastTransactionsMsgInLoop(chanRecv chan []byte) {
 
 Q:
 	for range time.Tick(time.Second) {
-		chain := common.GetChainForHeight(common.GetHeight() + 1)
-		topic := [2]byte{'T', chain}
+		//chain := common.GetChainForHeight(common.GetHeight() + 1)
+		for chain := uint8(0); chain < 5; chain++ {
+			topic := [2]byte{'T', chain}
 
-		SendTransactionMsg(tcpip.MyIP, chain, topic)
+			SendTransactionMsg(tcpip.MyIP, chain, topic)
+		}
 		select {
 		case s := <-chanRecv:
 			if len(s) == 4 && string(s) == "EXIT" {
@@ -63,7 +65,7 @@ func SendTransactionMsg(ip string, chain uint8, topic [2]byte) {
 	if isync == true {
 		return
 	}
-	txs := transactionType.GetTransactionsFromToSendPool(int(common.MaxTransactionsPerBlock), chain)
+	txs := transactionType.PoolsTx[chain].PeekTransactions(int(common.MaxTransactionsPerBlock))
 	n, err := GenerateTransactionMsg(txs, chain, topic)
 	if err != nil {
 		log.Println(err)
@@ -77,17 +79,17 @@ func Send(addr string, nb []byte) {
 	lip := common.GetByteInt16(int16(len(bip)))
 	lip = append(lip, bip...)
 	nb = append(lip, nb...)
-	services.SendMutex.Lock()
-	services.SendChan <- nb
-	services.SendMutex.Unlock()
+	services.SendMutexTx.Lock()
+	services.SendChanTx <- nb
+	services.SendMutexTx.Unlock()
 }
 
 func startPublishingTransactionMsg() {
-	services.SendMutex.Lock()
+	services.SendMutexTx.Lock()
 	for i := 0; i < 5; i++ {
-		go tcpip.StartNewListener(services.SendChan, tcpip.TransactionTopic[i])
+		go tcpip.StartNewListener(services.SendChanTx, tcpip.TransactionTopic[i])
 	}
-	services.SendMutex.Unlock()
+	services.SendMutexTx.Unlock()
 }
 
 func StartSubscribingTransactionMsg(ip string, chain uint8) {

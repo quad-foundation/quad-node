@@ -13,18 +13,16 @@ import (
 )
 
 var (
-	SendChan     chan []byte
-	SendChanSelf chan []byte
-	SendMutex    sync.RWMutex
-	RecvChan     chan []byte
-	RecvMutex    sync.RWMutex
+	SendChanNonce     chan []byte
+	SendChanSelfNonce chan []byte
+	SendMutexNonce    sync.RWMutex
+	SendChanTx        chan []byte
+	SendMutexTx       sync.RWMutex
 )
 
-func CreateBlockFromNonceMessage(nonceTx []transactionType.AnyTransaction, lastBlock blocks.AnyBlock) (blocks.AnyBlock, error) {
-
-	if lastBlock == nil {
-		return nil, fmt.Errorf("last block is nil")
-	}
+func CreateBlockFromNonceMessage(nonceTx []transactionType.Transaction,
+	lastBlock blocks.Block,
+	merkleTrie *transactionType.MerkleTree) (blocks.Block, error) {
 
 	myWallet := wallet.EmptyWallet().GetWallet()
 	transactionChain := nonceTx[0].GetChain()
@@ -32,43 +30,41 @@ func CreateBlockFromNonceMessage(nonceTx []transactionType.AnyTransaction, lastB
 	for _, at := range nonceTx {
 		heightLastBlocktransaction := common.GetInt64FromByte(at.GetData().GetOptData()[:8])
 		hashLastBlocktransaction := at.GetData().GetOptData()[8:40]
-		if bytes.Equal(hashLastBlocktransaction, lastBlock.GetBlockHash().GetBytes()) {
-			return nil, fmt.Errorf("last block hash and nonce hash do not match")
+		if !bytes.Equal(hashLastBlocktransaction, lastBlock.GetBlockHash().GetBytes()) {
+			ha, err := blocks.LoadHashOfBlock(heightTransaction - 1)
+			if err != nil {
+				return blocks.Block{}, err
+			}
+			return blocks.Block{}, fmt.Errorf("last block hash and nonce hash do not match", ha, " ", lastBlock.GetBlockHash().GetBytes())
 		}
 		if heightTransaction != heightLastBlocktransaction+1 {
-			return nil, fmt.Errorf("last block height and nonce height do not match")
+			return blocks.Block{}, fmt.Errorf("last block height and nonce height do not match")
 		}
 	}
-
 	sendingTimeTransaction := nonceTx[0].GetParam().SendingTime
-
 	ti := sendingTimeTransaction - lastBlock.GetBlockTimeStamp()
 	bblock := lastBlock.GetBaseBlock()
-
 	diff := blocks.AdjustDifficulty(bblock.BaseHeader.Difficulty, ti)
-
+	sendingTimeMessage := common.GetByteInt64(nonceTx[0].GetParam().SendingTime)
 	bh := blocks.BaseHeader{
 		PreviousHash:     lastBlock.GetBlockHash(),
 		Difficulty:       diff,
 		Height:           heightTransaction,
 		DelegatedAccount: common.GetDelegatedAccount(),
 		OperatorAccount:  myWallet.Address,
-		RootMerkleTree:   lastBlock.GetBaseBlock().BaseHeader.RootMerkleTree,
+		RootMerkleTree:   lastBlock.GetTransactionsHash(),
 		Signature:        common.Signature{},
-		SignatureMessage: []byte{},
+		SignatureMessage: sendingTimeMessage,
 	}
-	signatureBlockHeaderMessage := bh.GetBytesWithoutSignature()
-
-	sign, err := myWallet.Sign(signatureBlockHeaderMessage)
+	sign, signatureBlockHeaderMessage, err := bh.Sign()
 	if err != nil {
-		return nil, err
+		return blocks.Block{}, err
 	}
 	bh.Signature = sign
-
 	bh.SignatureMessage = signatureBlockHeaderMessage
 	bhHash, err := bh.CalcHash()
 	if err != nil {
-		return nil, err
+		return blocks.Block{}, err
 	}
 	bb := blocks.BaseBlock{
 		BaseHeader:       bh,
@@ -76,92 +72,27 @@ func CreateBlockFromNonceMessage(nonceTx []transactionType.AnyTransaction, lastB
 		BlockTimeStamp:   common.GetCurrentTimeStampInSecond(),
 		RewardPercentage: common.GetRewardPercentage(),
 	}
-	txs := transactionType.GetTransactionsFromPool(int(common.MaxTransactionsPerBlock), transactionChain)
-	bt := [][]byte{}
-	for _, tx := range txs {
-		b := transactionType.GetBytes(tx)
-		bt = append(bt, b)
-	}
 
-	rmthash, err := blocks.CreateMerkleTreeHash(lastBlock, bt)
+	rmthash := common.GetHashFromBytes(merkleTrie.GetRootHash())
 	if err != nil {
-		return nil, err
+		return blocks.Block{}, err
 	}
-	var anyBlock blocks.AnyBlock
-	switch transactionChain {
-	case 0:
-		bl := blocks.TransactionsBlock{
-			BaseBlock:        bb,
-			Chain:            transactionChain,
-			TransactionsHash: rmthash,
-			BlockHash:        common.Hash{},
-		}
-		hash, err := bl.CalcBlockHash()
-		if err != nil {
-			return nil, err
-		}
-		bl.BlockHash = hash
-		anyBlock = blocks.AnyBlock(bl)
-	case 1:
-		bl := blocks.PubKeysBlock{
-			BaseBlock:        bb,
-			Chain:            transactionChain,
-			TransactionsHash: rmthash,
-			BlockHash:        common.Hash{},
-		}
-		hash, err := bl.CalcBlockHash()
-		if err != nil {
-			return nil, err
-		}
-		bl.BlockHash = hash
-		anyBlock = blocks.AnyBlock(bl)
-	case 2:
-		bl := blocks.StakesBlock{
-			BaseBlock:        bb,
-			Chain:            transactionChain,
-			TransactionsHash: rmthash,
-			BlockHash:        common.Hash{},
-		}
-		hash, err := bl.CalcBlockHash()
-		if err != nil {
-			return nil, err
-		}
-		bl.BlockHash = hash
-		anyBlock = blocks.AnyBlock(bl)
-	case 3:
-		bl := blocks.DexBlock{
-			BaseBlock:        bb,
-			Chain:            transactionChain,
-			TransactionsHash: rmthash,
-			BlockHash:        common.Hash{},
-		}
-		hash, err := bl.CalcBlockHash()
-		if err != nil {
-			return nil, err
-		}
-		bl.BlockHash = hash
-		anyBlock = blocks.AnyBlock(bl)
-	case 4:
-		bl := blocks.ContractsBlock{
-			BaseBlock:        bb,
-			Chain:            transactionChain,
-			TransactionsHash: rmthash,
-			BlockHash:        common.Hash{},
-		}
-		hash, err := bl.CalcBlockHash()
-		if err != nil {
-			return nil, err
-		}
-		bl.BlockHash = hash
-		anyBlock = blocks.AnyBlock(bl)
-	default:
-		return nil, fmt.Errorf("chain is not valid in block creation")
+	bl := blocks.Block{
+		BaseBlock:        bb,
+		Chain:            transactionChain,
+		TransactionsHash: rmthash,
+		BlockHash:        common.Hash{},
 	}
+	hash, err := bl.CalcBlockHash()
+	if err != nil {
+		return blocks.Block{}, err
+	}
+	bl.BlockHash = hash
 
-	return anyBlock, nil
+	return bl, nil
 }
 
-func GenerateBlockMessage(bl blocks.AnyBlock) message.AnyTransactionsMessage {
+func GenerateBlockMessage(bl blocks.Block) message.TransactionsMessage {
 
 	bm := message.BaseMessage{
 		Head:    []byte("bl"),
@@ -170,7 +101,7 @@ func GenerateBlockMessage(bl blocks.AnyBlock) message.AnyTransactionsMessage {
 	}
 	txm := [2]byte{}
 	copy(txm[:], "bs")
-	atm := message.AnyTransactionsMessage{
+	atm := message.TransactionsMessage{
 		BaseMessage:       bm,
 		TransactionsBytes: map[[2]byte][][]byte{},
 	}
@@ -184,12 +115,12 @@ func SendNonce(ip string, nb []byte) {
 	lip := common.GetByteInt16(int16(len(bip)))
 	lip = append(lip, bip...)
 	nb = append(lip, nb...)
-	SendMutex.Lock()
-	SendChan <- nb
-	SendMutex.Unlock()
+	SendMutexNonce.Lock()
+	SendChanNonce <- nb
+	SendMutexNonce.Unlock()
 }
 
-func BroadcastBlock(bl blocks.AnyBlock) {
+func BroadcastBlock(bl blocks.Block) {
 	atm := GenerateBlockMessage(bl)
 	nb := atm.GetBytes()
 	SendNonce("0.0.0.0", nb)

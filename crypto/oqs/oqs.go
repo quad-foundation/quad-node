@@ -212,7 +212,7 @@ func (kem *KeyEncapsulation) DecapSecret(ciphertext []byte) ([]byte, error) {
 
 	if len(kem.secretKey) != kem.algDetails.LengthSecretKey {
 		return nil, errors.New("incorrect secret key length, make sure you " +
-			"specify one in Init() or run GenerateKeyPair()")
+			"specify one in Set() or run GenerateKeyPair()")
 
 	}
 
@@ -403,7 +403,7 @@ func (sig *Signature) ExportSecretKey() []byte {
 func (sig *Signature) Sign(message []byte) ([]byte, error) {
 	if len(sig.secretKey) != sig.algDetails.LengthSecretKey {
 		return nil, errors.New("incorrect secret key length, make sure you " +
-			"specify one in Init() or run GenerateKeyPair()")
+			"specify one in Set() or run GenerateKeyPair()")
 	}
 
 	signature := make([]byte, sig.algDetails.MaxLengthSignature)

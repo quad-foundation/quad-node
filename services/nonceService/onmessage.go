@@ -12,7 +12,7 @@ import (
 func OnMessage(addr string, m []byte) {
 
 	//log.Println("New message nonce from:", addr)
-	msg := message.AnyTransactionsMessage{}
+	msg := message.TransactionsMessage{}
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -35,45 +35,22 @@ func OnMessage(addr string, m []byte) {
 		log.Println("message is invalid")
 		panic("message is invalid")
 	}
-	msg = amsg.(message.AnyTransactionsMessage)
-	txn, err := msg.GetTransactions()
+	txn, err := amsg.GetTransactions()
 	if err != nil {
 		return
 	}
 
-	nonceTransaction := map[[2]byte]transactionType.AnyTransaction{}
+	nonceTransaction := map[[2]byte]transactionType.Transaction{}
+
+	for k, v := range txn {
+		nonceTransaction[k] = v[0]
+	}
 	if len(txn) > 0 {
-		switch msg.GetChain() {
-		case 0:
-			for k, v := range txn {
-				nonceTransaction[k] = v[0].(*transactionType.MainChainTransaction)
-			}
-		case 1:
-			for k, v := range txn {
-				nonceTransaction[k] = v[0].(*transactionType.PubKeyChainTransaction)
-			}
-		case 2:
-			for k, v := range txn {
-				nonceTransaction[k] = v[0].(*transactionType.StakeChainTransaction)
-			}
-		case 3:
-			for k, v := range txn {
-				nonceTransaction[k] = v[0].(*transactionType.DexChainTransaction)
-			}
-		case 4:
-			for k, v := range txn {
-				nonceTransaction[k] = v[0].(*transactionType.ContractChainTransaction)
-			}
-		default:
-			panic("wrong chain")
-
-		}
-
-		switch string(msg.GetHead()) {
+		switch string(amsg.GetHead()) {
 		case "nn": // nonce
 			//fmt.Printf("%v", nonceTransaction)
 			//var topic [2]byte
-			var transaction transactionType.AnyTransaction
+			var transaction transactionType.Transaction
 			for _, v := range nonceTransaction {
 				//topic = k
 				transaction = v
@@ -84,15 +61,13 @@ func OnMessage(addr string, m []byte) {
 			if common.CheckHeight(chain, nonceHeight) == false {
 				panic("Unproper hieght value in nonceTransaction")
 			}
-			common.HeightMutex.RLock()
 			h := common.GetHeight()
-			common.HeightMutex.RUnlock()
 
 			if nonceHeight < 1 || nonceHeight != h+1 {
 				panic("nonce height invalid")
 			}
 
-			isValid = transactionType.VerifyTransaction(transaction)
+			isValid = transaction.Verify()
 			if isValid == false {
 				panic("nonce signature is invalid")
 			}
@@ -100,21 +75,55 @@ func OnMessage(addr string, m []byte) {
 			if err != nil {
 				panic(err)
 			}
-			newBlock, err := services.CreateBlockFromNonceMessage([]transactionType.AnyTransaction{transaction}, lastBlock)
+			txs := transactionType.PoolsTx[transaction.GetChain()].PeekTransactions(int(common.MaxTransactionsPerBlock))
+			txsBytes := make([][]byte, len(txs))
+			for _, tx := range txs {
+				hash := tx.GetHash().GetBytes()
+				txsBytes = append(txsBytes, hash)
+			}
+			merkleTrie, err := transactionType.BuildMerkleTree(h+1, txsBytes)
+			defer merkleTrie.Destroy()
+
+			newBlock, err := services.CreateBlockFromNonceMessage([]transactionType.Transaction{transaction},
+				lastBlock,
+				merkleTrie)
+
 			if err != nil {
 				panic("Error in block creation")
 			}
 
 			if newBlock.CheckProofOfSynergy() {
+				common.BlockMutex.Lock()
+				defer common.BlockMutex.Unlock()
 				h = common.GetHeight()
 				if newBlock.GetBaseBlock().BaseHeader.Height == h+1 {
 					log.Println("New Block success -------------------------------------", h+1, "-------chain", chain)
-					common.SetHeight(h + 1)
-					err := blocks.StoreBlock(newBlock)
+
+					hashes, err := newBlock.GetTransactionsHashes(merkleTrie, h+1)
 					if err != nil {
-						return
+						panic(err)
 					}
-					services.BroadcastBlock(newBlock)
+
+					log.Println("Number of transactions in block: ", len(hashes))
+					txs := [][]byte{}
+					for _, h := range hashes {
+						tx := transactionType.PoolsTx[chain].PopTransactionByHash(h.GetBytes())
+						txs = append(txs, tx.GetBytes())
+						if err != nil {
+							continue
+						}
+					}
+					err = merkleTrie.StoreTree(newBlock.GetBaseBlock().BaseHeader.Height, txs)
+					if err != nil {
+						panic(err)
+					}
+					err = newBlock.StoreBlock()
+					if err != nil {
+						panic(err)
+					}
+					common.SetHeight(newBlock.GetBaseBlock().BaseHeader.Height)
+					//services.BroadcastBlock(newBlock)
+					return
 				} else {
 					log.Println("too late babe")
 				}
@@ -122,6 +131,7 @@ func OnMessage(addr string, m []byte) {
 				log.Println("new block is not valid")
 			}
 
+			return
 		case "rb": //reject block
 
 		case "bl": //block

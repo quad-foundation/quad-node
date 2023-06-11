@@ -5,17 +5,27 @@ import (
 	"fmt"
 	"github.com/chainpqc/chainpqc-node/common"
 	"github.com/chainpqc/chainpqc-node/wallet"
+	commoneth "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/trie"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"log"
 	"os"
 	"runtime/debug"
+	"sync"
 )
 
-var blockchainDB *leveldb.DB
+type BlockchainDB struct {
+	ldb   *leveldb.DB
+	mutex sync.RWMutex
+}
 
-func Init() error {
+func (db *BlockchainDB) GetLdb() *leveldb.DB {
+	return db.ldb
+}
+
+func (db *BlockchainDB) InitPermanent() (*BlockchainDB, error) {
 	homePath, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)
@@ -24,24 +34,57 @@ func Init() error {
 
 	// in memery DB only
 	memStorage := storage.NewMemStorage()
-	blockchainDB, err = leveldb.Open(memStorage, nil)
+	db.ldb, err = leveldb.Open(memStorage, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	w := wallet.EmptyWallet().GetWallet()
-	err = Store(append(common.PubKeyDBPrefix[:], w.Address.GetBytes()...),
+	err = db.Put(append(common.PubKeyDBPrefix[:], w.Address.GetBytes()...),
 		w.PublicKey.GetBytes())
-	return nil
+	return db, nil
 }
 
-func CloseDB() {
-	blockchainDB.Close()
+func (db *BlockchainDB) InitInMemory() (*BlockchainDB, error) {
+	homePath, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+	homePath += "/.chainpqc/db/blockchain"
+
+	// in memery DB only
+	memStorage := storage.NewMemStorage()
+	db.ldb, err = leveldb.Open(memStorage, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	w := wallet.EmptyWallet().GetWallet()
+	err = db.Put(append(common.PubKeyDBPrefix[:], w.Address.GetBytes()...),
+		w.PublicKey.GetBytes())
+	return db, nil
 }
 
-func Store(k []byte, v []byte) error {
+func (db *BlockchainDB) GetNode(hash commoneth.Hash) ([]byte, error) {
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
+	return db.Get(hash[:])
+}
 
+func (d *BlockchainDB) Reader(root commoneth.Hash) trie.Reader {
+	return &InMemoryDBReader{db: d}
+}
+
+func (d *BlockchainDB) Close() {
+	d.ldb.Close()
+}
+
+func (db *BlockchainDB) Put(k []byte, v []byte) error {
+	if len(k) == 0 {
+		return errors.New("key cannot be empty")
+	}
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
 	// Put a key-value pair into the database
-	err := blockchainDB.Put(k, v, nil)
+	err := db.ldb.Put(k, v, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -49,14 +92,16 @@ func Store(k []byte, v []byte) error {
 	return nil
 }
 
-func LoadAllKeys(prefix []byte) ([][]byte, error) {
+func (db *BlockchainDB) LoadAllKeys(prefix []byte) ([][]byte, error) {
 	if len(prefix) == 0 {
 		return nil, errors.New("prefix cannot be empty")
 	}
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
 	// Create a key range with the specified prefix
 	keyRange := util.BytesPrefix(prefix)
 	// Create an iterator with the key range
-	iter := blockchainDB.NewIterator(keyRange, nil)
+	iter := db.ldb.NewIterator(keyRange, nil)
 	defer iter.Release()
 	keys := [][]byte{}
 	// Iterate over the keys with the specified prefix
@@ -68,18 +113,18 @@ func LoadAllKeys(prefix []byte) ([][]byte, error) {
 	return keys, iter.Error()
 }
 
-func LoadAll(prefix []byte) ([][]byte, error) {
-	iter := blockchainDB.NewIterator(util.BytesPrefix(prefix), nil)
+func (db *BlockchainDB) LoadAll(prefix []byte) ([][]byte, error) {
+	if len(prefix) == 0 {
+		return nil, errors.New("prefix cannot be empty")
+	}
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
+	iter := db.ldb.NewIterator(util.BytesPrefix(prefix), nil)
 	defer iter.Release()
 	prefix2 := [2]byte{}
 	copy(prefix2[:], prefix[:2])
 	values := [][]byte{}
 	for iter.Next() {
-		//v := interface{}(nil)
-		//err := common.Unmarshal(iter.Value(), prefix2, &v)
-		//if err != nil {
-		//	return nil, err
-		//}
 		values = append(values, iter.Value())
 	}
 	err := iter.Error()
@@ -89,8 +134,13 @@ func LoadAll(prefix []byte) ([][]byte, error) {
 	return values, nil
 }
 
-func Load(k []byte) ([]byte, error) {
-	value, err := blockchainDB.Get(k, nil)
+func (db *BlockchainDB) Get(k []byte) ([]byte, error) {
+	if len(k) == 0 {
+		return nil, errors.New("key cannot be empty")
+	}
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
+	value, err := db.ldb.Get(k, nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
 			return []byte{}, fmt.Errorf("key not found %s", k)
@@ -100,8 +150,13 @@ func Load(k []byte) ([]byte, error) {
 	return value, nil
 }
 
-func IsKey(key []byte) (bool, error) {
-	_, err := blockchainDB.Get(key, nil)
+func (db *BlockchainDB) IsKey(key []byte) (bool, error) {
+	if len(key) == 0 {
+		return false, errors.New("key cannot be empty")
+	}
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
+	_, err := db.ldb.Get(key, nil)
 	if err != nil {
 		debug.PrintStack()
 		if errors.Is(err, leveldb.ErrNotFound) {
@@ -111,26 +166,11 @@ func IsKey(key []byte) (bool, error) {
 	}
 	return true, nil
 }
-func Delete(key []byte) error {
-	return blockchainDB.Delete(key, nil)
+func (db *BlockchainDB) Delete(key []byte) error {
+	if len(key) == 0 {
+		return errors.New("key cannot be empty")
+	}
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
+	return db.ldb.Delete(key, nil)
 }
-
-//func LoadBytes(k []byte) ([]byte, error) {
-//	value, err := blockchainDB.Get(k, nil)
-//	if err != nil {
-//		return nil, err
-//	}
-//	return value, nil
-//}
-//
-//func LoadPubKey(addr common.Address) (pk common.PubKey, err error) {
-//	val, err := LoadBytes(append([]byte(common.PubKeyDBPrefix), addr.GetBytes()...))
-//	if err != nil {
-//		return pk, err
-//	}
-//	err = pk.Init(val)
-//	if err != nil {
-//		return pk, err
-//	}
-//	return pk, nil
-//}

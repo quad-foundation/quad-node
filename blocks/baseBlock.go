@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"github.com/chainpqc/chainpqc-node/common"
 	memDatabase "github.com/chainpqc/chainpqc-node/database"
-	"github.com/chainpqc/chainpqc-node/transactionType"
+	"github.com/chainpqc/chainpqc-node/wallet"
+	"log"
 )
 
 type BaseHeader struct {
@@ -25,31 +26,34 @@ type BaseBlock struct {
 	RewardPercentage int16       `json:"reward_percentage"`
 }
 
-type AnyBlock interface {
-	GetBaseBlock() BaseBlock
-	GetBlockHeaderHash() common.Hash
-	GetBlockTimeStamp() int64
-	GetRewardPercentage() int16
-	GetChain() uint8
-	GetTransactionsHash() common.Hash
-	GetBlockHash() common.Hash
-	CalcBlockHash() (common.Hash, error)
-	CheckProofOfSynergy() bool
-	GetBytes() []byte
-	GetFromBytes([]byte) (AnyBlock, error)
-}
+//
+//type AnyBlock interface {
+//	GetBaseBlock() BaseBlock
+//	GetBlockHeaderHash() common.Hash
+//	GetBlockTimeStamp() int64
+//	GetRewardPercentage() int16
+//	GetChain() uint8
+//	GetTransactionsHash() common.Hash
+//	GetBlockHash() common.Hash
+//	CalcBlockHash() (common.Hash, error)
+//	CheckProofOfSynergy() bool
+//	GetBytes() []byte
+//	GetFromBytes([]byte) (AnyBlock, error)
+//	GetTransactionsHashes(*transactionType.PatriciaMerkleTree) ([]common.Hash, error)
+//}
 
-func (b BaseHeader) GetBytesWithoutSignature() []byte {
+func (b *BaseHeader) GetBytesWithoutSignature() []byte {
 	rb := b.PreviousHash.GetBytes()
 	rb = append(rb, common.GetByteInt32(b.Difficulty)...)
 	rb = append(rb, common.GetByteInt64(b.Height)...)
 	rb = append(rb, b.DelegatedAccount.GetBytes()...)
 	rb = append(rb, b.OperatorAccount.GetBytes()...)
 	rb = append(rb, b.RootMerkleTree.GetBytes()...)
+	rb = append(rb, b.SignatureMessage...)
 	return rb
 }
 
-func (b BaseHeader) GetBytes() []byte {
+func (b *BaseHeader) GetBytes() []byte {
 	rb := b.PreviousHash.GetBytes()
 	rb = append(rb, common.GetByteInt32(b.Difficulty)...)
 	rb = append(rb, common.GetByteInt64(b.Height)...)
@@ -58,18 +62,46 @@ func (b BaseHeader) GetBytes() []byte {
 	rb = append(rb, b.RootMerkleTree.GetBytes()...)
 	rb = append(rb, common.BytesToLenAndBytes(b.SignatureMessage)...)
 	rb = append(rb, b.Signature.GetBytes()...)
+	log.Println("block ", b.Height, " len bytes ", len(rb))
 	return rb
+}
+
+func (bh *BaseHeader) VerifyTransaction() bool {
+	signatureBlockHeaderMessage := bh.GetBytesWithoutSignature()
+	calcHash, err := common.CalcHashToByte(signatureBlockHeaderMessage)
+	if err != nil {
+		return false
+	}
+	a := bh.OperatorAccount.GetBytes()
+	pk, err := memDatabase.MainDB.Get(append(common.PubKeyDBPrefix[:], a...))
+	if err != nil {
+		return false
+	}
+	return wallet.Verify(calcHash, bh.Signature.GetBytes(), pk)
+}
+
+func (bh *BaseHeader) Sign() (common.Signature, []byte, error) {
+	signatureBlockHeaderMessage := bh.GetBytesWithoutSignature()
+	calcHash, err := common.CalcHashToByte(signatureBlockHeaderMessage)
+	if err != nil {
+		return common.Signature{}, nil, err
+	}
+	w := wallet.EmptyWallet()
+	w = w.GetWallet()
+	sign, err := w.Sign(calcHash)
+	if err != nil {
+		return common.Signature{}, nil, err
+	}
+	return sign, signatureBlockHeaderMessage, nil
 }
 
 func (bh *BaseHeader) GetFromBytes(b []byte) ([]byte, error) {
 	if len(b) < 116+common.SignatureLength {
 		return nil, fmt.Errorf("not enough bytes to decode BaseHeader")
 	}
-	hash, err := common.GetHashFromBytes(b[:32])
-	if err != nil {
-		return nil, err
-	}
-	bh.PreviousHash = hash
+	log.Println("block decompile len bytes ", len(b))
+
+	bh.PreviousHash = common.GetHashFromBytes(b[:32])
 	bh.Difficulty = common.GetInt32FromByte(b[32:36])
 	bh.Height = common.GetInt64FromByte(b[36:44])
 	address, err := common.BytesToAddress(b[44:64])
@@ -82,11 +114,7 @@ func (bh *BaseHeader) GetFromBytes(b []byte) ([]byte, error) {
 		return nil, err
 	}
 	bh.OperatorAccount = opAddress
-	merkleHash, err := common.GetHashFromBytes(b[84:116])
-	if err != nil {
-		return nil, err
-	}
-	bh.RootMerkleTree = merkleHash
+	bh.RootMerkleTree = common.GetHashFromBytes(b[84:116])
 	msgb, b, err := common.BytesWithLenToBytes(b[116:])
 	if err != nil {
 		return nil, err
@@ -100,7 +128,7 @@ func (bh *BaseHeader) GetFromBytes(b []byte) ([]byte, error) {
 	return b[common.SignatureLength:], nil
 }
 
-func (bb BaseBlock) GetBytes() []byte {
+func (bb *BaseBlock) GetBytes() []byte {
 	b := bb.BaseHeader.GetBytes()
 	b = append(b, bb.BlockHeaderHash.GetBytes()...)
 	b = append(b, common.GetByteInt64(bb.BlockTimeStamp)...)
@@ -109,124 +137,24 @@ func (bb BaseBlock) GetBytes() []byte {
 }
 
 func (bb *BaseBlock) GetFromBytes(b []byte) ([]byte, error) {
-	if len(b) < 84+common.SignatureLength+44 {
+	if len(b) < 116+common.SignatureLength+44 {
 		return nil, fmt.Errorf("not enough bytes to decode BaseBlock")
 	}
 	b, err := bb.BaseHeader.GetFromBytes(b)
 	if err != nil {
 		return nil, err
 	}
-	hash, err := common.GetHashFromBytes(b[:32])
-	if err != nil {
-		return nil, err
-	}
-	bb.BlockHeaderHash = hash
+	bb.BlockHeaderHash = common.GetHashFromBytes(b[:32])
 	bb.BlockTimeStamp = common.GetInt64FromByte(b[32:40])
-	bb.RewardPercentage = common.GetInt16FromByte(b[40:44])
-	return b[44:], nil
+	bb.RewardPercentage = common.GetInt16FromByte(b[40:42])
+	return b[42:], nil
 }
 
-func (b BaseHeader) CalcHash() (common.Hash, error) {
+func (b *BaseHeader) CalcHash() (common.Hash, error) {
 	toByte, err := common.CalcHashToByte(b.GetBytes())
 	if err != nil {
 		return common.Hash{}, err
 	}
-	hash := common.Hash{}
-	hash, err = hash.Init(toByte)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	return hash, nil
-}
-
-func StoreBlock(ab AnyBlock) error {
-	err := memDatabase.Store(append(common.BlocksDBPrefix[:], ab.GetBlockHash().GetBytes()...), ab.GetBytes())
-	if err != nil {
-		return err
-	}
-	bh := common.GetByteInt64(ab.GetBaseBlock().BaseHeader.Height)
-	err = memDatabase.Store(append(common.RootHashByHeightDBPrefix[:], bh...), ab.GetBlockHash().GetBytes())
-	if err != nil {
-		return err
-	}
-	return nil
-}
-func LoadHashOfBlock(height int64) (common.Hash, error) {
-	bh := common.GetByteInt64(height)
-	hashb, err := memDatabase.Load(append(common.RootHashByHeightDBPrefix[:], bh...))
-	if err != nil {
-		return common.Hash{}, err
-	}
-	hash, err := common.GetHashFromBytes(hashb)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	return hash, nil
-}
-
-func LoadBlock(height int64) (AnyBlock, error) {
-	bh := common.GetByteInt64(height)
-	hash, err := memDatabase.Load(append(common.RootHashByHeightDBPrefix[:], bh...))
-	if err != nil {
-		return nil, err
-	}
-	abl, err := memDatabase.Load(append(common.BlocksDBPrefix[:], hash...))
-	if err != nil {
-		return nil, err
-	}
-	var bl AnyBlock
-
-	chain := common.GetChainForHeight(height)
-	switch chain {
-	case 0:
-		b, err := TransactionsBlock{}.GetFromBytes(abl)
-		if err != nil {
-			return nil, err
-		}
-		bl = b
-	case 1:
-		b, err := PubKeysBlock{}.GetFromBytes(abl)
-		if err != nil {
-			return nil, err
-		}
-		bl = b
-	case 2:
-		b, err := StakesBlock{}.GetFromBytes(abl)
-		if err != nil {
-			return nil, err
-		}
-		bl = b
-	case 3:
-		b, err := DexBlock{}.GetFromBytes(abl)
-		if err != nil {
-			return nil, err
-		}
-		bl = b
-	case 4:
-		b, err := ContractsBlock{}.GetFromBytes(abl)
-		if err != nil {
-			return nil, err
-		}
-		bl = b
-	default:
-		return nil, fmt.Errorf("no valid chain number")
-	}
-
-	return bl, nil
-}
-func CreateMerkleTreeHash(lastBlock AnyBlock, transactionHashes [][]byte) (common.Hash, error) {
-	merkleTreeHash := lastBlock.GetBaseBlock().BaseHeader.RootMerkleTree.GetBytes()
-	height := lastBlock.GetBaseBlock().BaseHeader.Height
-	node, _, err := transactionType.BuildMerkleTree(merkleTreeHash,
-		height,
-		transactionHashes)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	hash := common.Hash{}
-	hash, err = hash.Init(node.Data)
-	if err != nil {
-		return common.Hash{}, err
-	}
+	hash := common.GetHashFromBytes(toByte)
 	return hash, nil
 }
