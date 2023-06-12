@@ -227,7 +227,7 @@ func (t *MerkleTree) Destroy() {
 //	}
 //	prefix := common.MerkleTreeDBPrefix[:]
 //	key := append(prefix, common.GetByteInt64(height)...)
-//	mt, err := (*tree.DB).Get(key)
+//	mt, err := (*tree.db).Get(key)
 //	if err != nil {
 //		return nil, err
 //	}

@@ -86,13 +86,12 @@ func (bh *BaseHeader) Sign() (common.Signature, []byte, error) {
 	if err != nil {
 		return common.Signature{}, nil, err
 	}
-	w := wallet.EmptyWallet()
-	w = w.GetWallet()
+	w := wallet.GetActiveWallet()
 	sign, err := w.Sign(calcHash)
 	if err != nil {
 		return common.Signature{}, nil, err
 	}
-	return sign, signatureBlockHeaderMessage, nil
+	return *sign, signatureBlockHeaderMessage, nil
 }
 
 func (bh *BaseHeader) GetFromBytes(b []byte) ([]byte, error) {

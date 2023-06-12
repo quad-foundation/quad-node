@@ -1,10 +1,13 @@
 package nonceServices
 
 import (
+	"encoding/binary"
 	"github.com/chainpqc/chainpqc-node/blocks"
 	"github.com/chainpqc/chainpqc-node/common"
+	memDatabase "github.com/chainpqc/chainpqc-node/database"
 	"github.com/chainpqc/chainpqc-node/message"
 	"github.com/chainpqc/chainpqc-node/services"
+	"github.com/chainpqc/chainpqc-node/statistics"
 	"github.com/chainpqc/chainpqc-node/transactionType"
 	"log"
 )
@@ -105,15 +108,18 @@ func OnMessage(addr string, m []byte) {
 					}
 
 					log.Println("Number of transactions in block: ", len(hashes))
-					txs := [][]byte{}
+					txs := []transactionType.Transaction{}
+					txshb := [][]byte{}
 					for _, h := range hashes {
 						tx := transactionType.PoolsTx[chain].PopTransactionByHash(h.GetBytes())
-						txs = append(txs, tx.GetBytes())
+						txs = append(txs, tx)
+						txshb = append(txshb, tx.GetHash().GetBytes())
+						err = memDatabase.MainDB.Put(tx.GetHash().GetBytes(), tx.GetBytes())
 						if err != nil {
-							continue
+							log.Println("Transaction not saved")
 						}
 					}
-					err = merkleTrie.StoreTree(newBlock.GetBaseBlock().BaseHeader.Height, txs)
+					err = merkleTrie.StoreTree(newBlock.GetBaseBlock().BaseHeader.Height, txshb)
 					if err != nil {
 						panic(err)
 					}
@@ -122,6 +128,24 @@ func OnMessage(addr string, m []byte) {
 						panic(err)
 					}
 					common.SetHeight(newBlock.GetBaseBlock().BaseHeader.Height)
+					stats, _ := statistics.LoadStats()
+					stats.Heights = common.GetHeight()
+					stats.Chain = chain
+					stats.Difficulty = newBlock.BaseBlock.BaseHeader.Difficulty
+					stats.Syncing = common.IsSyncing.Load()
+					stats.TimeInterval = newBlock.BaseBlock.BlockTimeStamp - lastBlock.BaseBlock.BlockTimeStamp
+
+					for i := uint8(0); i < 5; i++ {
+						if chain == i {
+							hs, _ := newBlock.GetTransactionsHashes(merkleTrie, h+1)
+							stats.Transactions[i] = len(hs)
+							stats.TransactionsSize[i] = len(hs) * binary.Size(transactionType.EmptyTransaction())
+						}
+					}
+					err = stats.SaveStats()
+					if err != nil {
+						log.Println(err)
+					}
 					//services.BroadcastBlock(newBlock)
 					return
 				} else {

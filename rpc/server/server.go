@@ -2,7 +2,9 @@ package serverrpc
 
 import (
 	"encoding/json"
+	"github.com/chainpqc/chainpqc-node/common"
 	"github.com/chainpqc/chainpqc-node/services/transactionServices"
+	"github.com/chainpqc/chainpqc-node/statistics"
 	"github.com/chainpqc/chainpqc-node/tcpip"
 	"github.com/chainpqc/chainpqc-node/wallet"
 	"log"
@@ -41,10 +43,10 @@ func (l *Listener) Send(line []byte, reply *[]byte) error {
 	operation := string(line[:4])
 	byt := line[4:]
 	switch operation {
-	//case "STAT":
-	//	handleSTAT(reply)
+	case "STAT":
+		handleSTAT(byt, reply)
 	case "WALL":
-		handleWALL(line, reply)
+		handleWALL(byt, reply)
 	case "TRAN":
 		handleTRAN(byt, reply)
 	//case "VIEW":
@@ -83,7 +85,7 @@ func (l *Listener) Send(line []byte, reply *[]byte) error {
 //	}
 func handleWALL(line []byte, reply *[]byte) {
 	log.Println(string(line))
-	w := wallet.EmptyWallet().GetWallet()
+	w := wallet.GetActiveWallet()
 	r, err := json.Marshal(w)
 	if err != nil {
 		log.Println("Cannot marshal stat's struct")
@@ -96,4 +98,17 @@ func handleTRAN(byt []byte, reply *[]byte) {
 	*reply = []byte("transaction sent")
 	transactionServices.OnMessage("toSend", byt)
 
+}
+func handleSTAT(byt []byte, reply *[]byte) {
+	st, err := statistics.LoadStats()
+	if err != nil {
+		log.Println("Can't update stats")
+		return
+	}
+	msb, err := common.Marshal(st, common.StatDBPrefix)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	*reply = msb
 }

@@ -32,13 +32,13 @@ func (db *BlockchainDB) InitPermanent() (*BlockchainDB, error) {
 	}
 	homePath += "/.chainpqc/db/blockchain"
 
-	// in memery DB only
+	// in memery db only
 	memStorage := storage.NewMemStorage()
 	db.ldb, err = leveldb.Open(memStorage, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	w := wallet.EmptyWallet().GetWallet()
+	w := wallet.GetActiveWallet()
 	err = db.Put(append(common.PubKeyDBPrefix[:], w.Address.GetBytes()...),
 		w.PublicKey.GetBytes())
 	return db, nil
@@ -50,16 +50,14 @@ func (db *BlockchainDB) InitInMemory() (*BlockchainDB, error) {
 		log.Fatal(err)
 	}
 	homePath += "/.chainpqc/db/blockchain"
-
-	// in memery DB only
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+	// in memery db only
 	memStorage := storage.NewMemStorage()
 	db.ldb, err = leveldb.Open(memStorage, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	w := wallet.EmptyWallet().GetWallet()
-	err = db.Put(append(common.PubKeyDBPrefix[:], w.Address.GetBytes()...),
-		w.PublicKey.GetBytes())
 	return db, nil
 }
 

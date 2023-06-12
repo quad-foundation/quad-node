@@ -15,7 +15,6 @@ import (
 	"golang.org/x/crypto/sha3"
 	"io"
 	"log"
-	"os"
 	"sync"
 )
 
@@ -28,58 +27,42 @@ type Wallet struct {
 	PublicKey          common.PubKey  `json:"public_key"`
 	Address            common.Address `json:"address"`
 	signer             oqs.Signature
+	mutexDb            sync.RWMutex
+	HomePath           string `json:"home_path"`
+	WalletNumber       uint8  `json:"wallet_number"`
 }
 
-var mainWallet Wallet
-var mutexDb sync.RWMutex
-var HomePath string
+var activeWallet *Wallet
 
 type AnyWallet interface {
 	GetWallet() Wallet
 }
 
-func init() {
+func InitActiveWallet(walletNumber uint8, password string) {
 	var err error
-	//err = os.MkdirAll("/.chainpqc/db/wallet/"+common.GetSigName(), 0755)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//err = os.MkdirAll("/.chainpqc/db/blockchain/", 0755)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	mainWallet = Wallet{}
-
-	HomePath, err = os.UserHomeDir()
+	activeWallet, err = Load(walletNumber, password)
 	if err != nil {
-		log.Fatal(err)
-	}
-	HomePath += "/.chainpqc/db/wallet/"
-	mainWallet.SetPassword("a")
-	err = mainWallet.Load()
-	if err != nil {
-		return
+		log.Fatalf("wrong password")
 	}
 }
 
 func (w *Wallet) SetPassword(password string) {
-	w.password = password
-	w.passwordBytes = passwordToByte(password)
+	(*w).password = password
+	(*w).passwordBytes = passwordToByte(password)
 }
 
-func (w Wallet) GetWallet() Wallet {
-	return mainWallet
+func GetActiveWallet() *Wallet {
+	return activeWallet
 }
 
-func (w Wallet) ShowInfo() string {
+func (w *Wallet) ShowInfo() string {
 
 	s := fmt.Sprintln("Length of public key:", w.PublicKey.GetLength())
 	s += fmt.Sprintln("Beginning of public key:", w.PublicKey.GetHex()[:10])
-
 	s += fmt.Sprintln("Address:", w.Address.GetHex())
 	s += fmt.Sprintln("Length of private key:", w.secretKey.GetLength())
-	s += fmt.Sprintln("Private key:", w.secretKey.GetHex())
-
+	s += fmt.Sprintln("Wallet location", w.HomePath)
+	s += fmt.Sprintln("Wallet Number", w.WalletNumber)
 	fmt.Println(s)
 	return s
 }
@@ -90,8 +73,8 @@ func passwordToByte(password string) []byte {
 	return sh
 }
 
-func EmptyWallet() Wallet {
-	w := Wallet{
+func EmptyWallet(walletNumber uint8) *Wallet {
+	return &Wallet{
 		password:      "",
 		passwordBytes: nil,
 		Iv:            nil,
@@ -99,39 +82,40 @@ func EmptyWallet() Wallet {
 		PublicKey:     common.PubKey{},
 		Address:       common.Address{},
 		signer:        oqs.Signature{},
+		mutexDb:       sync.RWMutex{},
+		HomePath:      common.DefaultWalletHomePath + common.GetSigName() + "/" + string(walletNumber+'0'),
+		WalletNumber:  walletNumber,
 	}
-	return w
 }
-func GenerateNewWallet(password string) (Wallet, error) {
+func GenerateNewWallet(walletNumber uint8, password string) (*Wallet, error) {
 	if len(password) < 1 {
-		return EmptyWallet(), fmt.Errorf("Password cannot be empty")
+		return nil, fmt.Errorf("Password cannot be empty")
 	}
-	w := EmptyWallet()
-	w.password = password
-	w.passwordBytes = passwordToByte(password)
-	w.Iv = generateNewIv()
+	w := EmptyWallet(walletNumber)
+	w.SetPassword(password)
+	(*w).Iv = generateNewIv()
 	var signer oqs.Signature
 	//defer signer.Clean()
 
 	// ignore potential errors everywhere
 	err := signer.Init(common.GetSigName(), nil)
 	if err != nil {
-		return Wallet{}, err
+		return nil, err
 	}
 	pubKey, err := signer.GenerateKeyPair()
 	if err != nil {
-		return Wallet{}, err
+		return nil, err
 	}
 	err = w.PublicKey.Init(pubKey)
 	if err != nil {
-		return Wallet{}, err
+		return nil, err
 	}
-	w.Address = w.PublicKey.GetAddress()
+	(*w).Address = w.PublicKey.GetAddress()
 	err = w.secretKey.Init(signer.ExportSecretKey(), w.Address)
 	if err != nil {
-		return Wallet{}, err
+		return nil, err
 	}
-	w.signer = signer
+	(*w).signer = signer
 	return w, nil
 }
 
@@ -143,7 +127,7 @@ func generateNewIv() []byte {
 	return iv
 }
 
-func (w Wallet) encrypt(v []byte) ([]byte, error) {
+func (w *Wallet) encrypt(v []byte) ([]byte, error) {
 	cb, err := aes.NewCipher(w.passwordBytes)
 	if err != nil {
 		log.Println("Can not create AES function")
@@ -156,7 +140,23 @@ func (w Wallet) encrypt(v []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
-func (w Wallet) GetMnemonicWords() (string, error) {
+func (w *Wallet) decrypt(v []byte) ([]byte, error) {
+	cb, err := aes.NewCipher(w.passwordBytes)
+	if err != nil {
+		log.Println("Can not create AES function")
+		return []byte{}, err
+	}
+
+	plaintext := make([]byte, aes.BlockSize+len(v))
+	stream := cipher.NewCTR(cb, w.Iv)
+	stream.XORKeyStream(plaintext, v[aes.BlockSize:])
+	if !bytes.Equal(plaintext[:len(common.ValidationTag)], []byte(common.ValidationTag)) {
+		return nil, fmt.Errorf("Wrong password")
+	}
+	return plaintext[len(common.ValidationTag):], nil
+}
+
+func (w *Wallet) GetMnemonicWords() (string, error) {
 	if w.secretKey.GetBytes() == nil {
 		return "", fmt.Errorf("You need load wallet first")
 	}
@@ -176,41 +176,31 @@ func (w *Wallet) RestoreSecretKeyFromMnemonic(mnemonic string) error {
 		log.Println("Can not restore secret key")
 		return err
 	}
-	w.secretKey.Init(secretKey[:common.PrivateKeyLength], w.Address)
+	err = w.secretKey.Init(secretKey[:common.PrivateKeyLength], w.Address)
+	if err != nil {
+		return err
+	}
 	var signer oqs.Signature
-	signer.Init(common.GetSigName(), w.secretKey.GetBytes())
-	w.signer = signer
+	err = signer.Init(common.GetSigName(), w.secretKey.GetBytes())
+	if err != nil {
+		return err
+	}
+	(*w).signer = signer
 	return nil
 }
 
-func (w Wallet) decrypt(v []byte) ([]byte, error) {
-	cb, err := aes.NewCipher(w.passwordBytes)
-	if err != nil {
-		log.Println("Can not create AES function")
-		return []byte{}, err
-	}
-
-	plaintext := make([]byte, aes.BlockSize+len(v))
-	stream := cipher.NewCTR(cb, w.Iv)
-	stream.XORKeyStream(plaintext, v[aes.BlockSize:])
-	if bytes.Compare(plaintext[:len(common.ValidationTag)], []byte(common.ValidationTag)) != 0 {
-		return nil, fmt.Errorf("Wrong password")
-	}
-	return plaintext[len(common.ValidationTag):], nil
-}
-
-func (w Wallet) Store() error {
+func (w *Wallet) Store() error {
 	if w.secretKey.GetBytes() == nil {
 		return fmt.Errorf("You need load wallet first")
 	}
 
-	mutexDb.Lock()
-	walletDB, err := leveldb.OpenFile(HomePath+common.GetSigName(), nil)
+	w.mutexDb.Lock()
+	defer w.mutexDb.Unlock()
+	walletDB, err := leveldb.OpenFile(w.HomePath, nil)
 	if err != nil {
 		return err
 	}
 	defer walletDB.Close()
-	defer mutexDb.Unlock()
 
 	se, err := w.encrypt(w.secretKey.GetBytes())
 	if err != nil {
@@ -219,8 +209,8 @@ func (w Wallet) Store() error {
 	}
 
 	w2 := w
-	w2.EncryptedSecretKey = make([]byte, len(se))
-	copy(w2.EncryptedSecretKey, se)
+	(*w2).EncryptedSecretKey = make([]byte, len(se))
+	copy((*w2).EncryptedSecretKey, se)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -230,107 +220,106 @@ func (w Wallet) Store() error {
 		log.Println(err)
 		return err
 	}
-
+	prefix := common.WalletDBPrefix
+	prefix[1] = w.WalletNumber
 	// Put a key-value pair into the database
-	err = walletDB.Put([]byte("main_account"), wm, nil)
+	err = walletDB.Put(prefix[:], wm, nil)
 	if err != nil {
 		return err
 	}
 
 	return nil
 }
+func Load(walletNumber uint8, password string) (*Wallet, error) {
 
-func (w Wallet) Sign(data []byte) (sig common.Signature, err error) {
-	if len(data) > 0 {
-		signature, err := w.signer.Sign(data)
-		if err != nil {
-			return common.Signature{}, err
-		}
-
-		err = sig.Init(signature, w.Address)
-		if err != nil {
-			return common.Signature{}, err
-		}
-		return sig, nil
-	}
-	return common.Signature{}, fmt.Errorf("input data are empty")
-}
-
-func (w Wallet) GetSecretKey() common.PrivKey {
-	return w.secretKey
-}
-
-func (w Wallet) Check() bool {
-	if len(w.secretKey.GetBytes()) == w.secretKey.GetLength() {
-		return true
-	}
-	return false
-}
-
-func (w *Wallet) Load() error {
-
+	w := EmptyWallet(walletNumber)
 	// Open the database with the provided options
-	mutexDb.RLock()
-	walletDB, err := leveldb.OpenFile(HomePath+common.GetSigName(), nil)
+	w.mutexDb.RLock()
+	defer w.mutexDb.RUnlock()
+	walletDB, err := leveldb.OpenFile(w.HomePath, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer walletDB.Close()
-
-	defer mutexDb.RUnlock()
-
-	value, err := walletDB.Get([]byte("main_account"), nil)
+	prefix := common.WalletDBPrefix
+	prefix[1] = walletNumber
+	value, err := walletDB.Get(prefix[:], nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = json.Unmarshal(value, w)
 	if err != nil {
 		log.Println(err)
-		return err
+		return nil, err
 	}
+	w.SetPassword(password)
 	ds, err := w.decrypt(w.EncryptedSecretKey)
 	if err != nil {
 		log.Println(err)
-		*w = EmptyWallet()
-		return err
+		return nil, err
 	}
-	w.secretKey.Init(ds[:w.secretKey.GetLength()], w.Address)
+	err = w.secretKey.Init(ds[:w.secretKey.GetLength()], w.Address)
+	if err != nil {
+		return nil, err
+	}
 	var signer oqs.Signature
-	signer.Init(common.GetSigName(), (*w).secretKey.GetBytes())
-	w.signer = signer
+	err = signer.Init(common.GetSigName(), w.secretKey.GetBytes())
+	if err != nil {
+		return nil, err
+	}
+	(*w).signer = signer
 
-	mainWallet = *w
-	return err
+	return w, err
 }
 
 func (w *Wallet) ChangePassword(password, newPassword string) error {
 	if w.passwordBytes == nil {
 		return fmt.Errorf("You need load wallet first")
 	}
-	w2 := Wallet{
-		password:      password,
-		passwordBytes: nil,
-		Iv:            nil,
-		secretKey:     common.PrivKey{},
-		PublicKey:     common.PubKey{},
-		Address:       common.Address{},
-		signer:        oqs.Signature{},
+	if !bytes.Equal(passwordToByte(password), w.passwordBytes) {
+		return fmt.Errorf("Current password is not valid")
 	}
-	w2.passwordBytes = passwordToByte(password)
-	err := w2.Load()
-	if err != nil {
-		log.Println("Current password not valid")
-		return err
+	w2 := &Wallet{
+		password:      newPassword,
+		passwordBytes: passwordToByte(newPassword),
+		Iv:            w.Iv,
+		secretKey:     w.secretKey,
+		PublicKey:     w.PublicKey,
+		Address:       w.Address,
+		signer:        w.signer,
+		mutexDb:       sync.RWMutex{},
+		HomePath:      w.HomePath,
+		WalletNumber:  w.WalletNumber,
 	}
-	w.password = newPassword
-	w.passwordBytes = passwordToByte(newPassword)
-	err = w.Store()
+
+	err := w2.Store()
 	if err != nil {
 		log.Println("Can not store new wallet")
 		return err
 	}
+	w, err = Load(w2.WalletNumber, newPassword)
+	if err != nil {
+		return err
+	}
 	return nil
+}
+
+func (w *Wallet) Sign(data []byte) (*common.Signature, error) {
+	if len(data) > 0 {
+		signature, err := w.signer.Sign(data)
+		if err != nil {
+			return nil, err
+		}
+
+		sig := &common.Signature{}
+		err = sig.Init(signature, w.Address)
+		if err != nil {
+			return nil, err
+		}
+		return sig, nil
+	}
+	return nil, fmt.Errorf("input data are empty")
 }
 
 func Verify(msg []byte, sig []byte, pubkey []byte) bool {
@@ -345,5 +334,15 @@ func Verify(msg []byte, sig []byte, pubkey []byte) bool {
 		return false
 	}
 	return isVerified
-	//return true
+}
+
+func (w *Wallet) GetSecretKey() common.PrivKey {
+	return w.secretKey
+}
+
+func (w *Wallet) Check() bool {
+	if len(w.secretKey.GetBytes()) == w.secretKey.GetLength() {
+		return true
+	}
+	return false
 }

@@ -23,13 +23,8 @@ func main() {
 		ip = "127.0.0.1"
 	}
 	go clientrpc.ConnectRPC(ip)
-
-	mainWallet := wallet.EmptyWallet().GetWallet()
-	mainWallet.SetPassword("a")
-	err := mainWallet.Load()
-	if err != nil {
-		return
-	}
+	wallet.InitActiveWallet(0, "a")
+	mainWallet := wallet.GetActiveWallet()
 
 	go sendTransactions(mainWallet)
 	chanPeer := make(chan string)
@@ -37,7 +32,7 @@ func main() {
 	<-chanPeer
 }
 
-func SampleTransaction(w wallet.Wallet) transactionType.Transaction {
+func SampleTransaction(w *wallet.Wallet) transactionType.Transaction {
 
 	sender := w.Address
 	recv := common.Address{}
@@ -80,7 +75,7 @@ func SampleTransaction(w wallet.Wallet) transactionType.Transaction {
 	return t
 }
 
-func sendTransactions(w wallet.Wallet) {
+func sendTransactions(w *wallet.Wallet) {
 
 	chain := uint8(0)
 	batchSize := 1

@@ -24,7 +24,7 @@ func CreateBlockFromNonceMessage(nonceTx []transactionType.Transaction,
 	lastBlock blocks.Block,
 	merkleTrie *transactionType.MerkleTree) (blocks.Block, error) {
 
-	myWallet := wallet.EmptyWallet().GetWallet()
+	myWallet := wallet.GetActiveWallet()
 	transactionChain := nonceTx[0].GetChain()
 	heightTransaction := nonceTx[0].GetHeight()
 	for _, at := range nonceTx {
