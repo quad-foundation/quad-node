@@ -224,13 +224,12 @@ func (tx *Transaction) Verify() bool {
 
 func (tx *Transaction) Sign() error {
 	b := tx.GetHash()
-	w := wallet.EmptyWallet()
-	w = w.GetWallet()
+	w := wallet.GetActiveWallet()
 	sign, err := w.Sign(b.GetBytes())
 	if err != nil {
 		return err
 	}
-	tx.Signature = sign
+	tx.Signature = *sign
 	return nil
 }
 

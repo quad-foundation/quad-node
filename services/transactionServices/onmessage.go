@@ -1,7 +1,9 @@
 package transactionServices
 
 import (
+	"encoding/binary"
 	"github.com/chainpqc/chainpqc-node/message"
+	"github.com/chainpqc/chainpqc-node/statistics"
 	"github.com/chainpqc/chainpqc-node/transactionType"
 	"log"
 )
@@ -61,6 +63,13 @@ func OnMessage(addr string, m []byte) {
 					log.Println("No of Tx in SendToPool: ", topic, " = ",
 						transactionType.PoolsTx[topic[1]].NumberOfTransactions())
 				}
+				stats, _ := statistics.LoadStats()
+				for i := uint8(0); i < 5; i++ {
+					nt := transactionType.PoolsTx[i].NumberOfTransactions()
+					stats.TransactionsPending[i] = nt
+					stats.TransactionsPendingSize[i] = nt * binary.Size(transactionType.EmptyTransaction())
+				}
+				stats.SaveStats()
 
 			default:
 			}

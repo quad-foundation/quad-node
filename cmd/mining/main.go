@@ -1,32 +1,41 @@
 package main
 
 import (
+	"fmt"
+	"github.com/chainpqc/chainpqc-node/common"
 	"github.com/chainpqc/chainpqc-node/database"
 	"github.com/chainpqc/chainpqc-node/genesis"
 	serverrpc "github.com/chainpqc/chainpqc-node/rpc/server"
 	nonceService "github.com/chainpqc/chainpqc-node/services/nonceService"
 	"github.com/chainpqc/chainpqc-node/services/transactionServices"
+	"github.com/chainpqc/chainpqc-node/statistics"
 	"github.com/chainpqc/chainpqc-node/tcpip"
 	"github.com/chainpqc/chainpqc-node/transactionType"
 	"github.com/chainpqc/chainpqc-node/wallet"
+	"golang.org/x/crypto/ssh/terminal"
 	"log"
 	"os"
 	"time"
 )
 
 func main() {
+	fmt.Print("Enter password: ")
+	password, err := terminal.ReadPassword(0)
+	if err != nil {
+		log.Fatal(err)
+	}
+	wallet.InitActiveWallet(0, string(password))
+
 	memDatabase.Init()
 	defer memDatabase.CloseDB()
 	transactionType.InitPermanentTrie()
 	defer transactionType.GlobalMerkleTree.Destroy()
+	statistics.InitGlobalMainStats()
+	defer statistics.DestroyGlobalMainStats()
+	w := wallet.GetActiveWallet()
 
-	mainWallet := wallet.EmptyWallet().GetWallet()
-	mainWallet.SetPassword("a")
-	err := mainWallet.Load()
-	if err != nil {
-		log.Println("Could not load wallet", err)
-		return
-	}
+	err = memDatabase.MainDB.Put(append(common.PubKeyDBPrefix[:], w.Address.GetBytes()...),
+		w.PublicKey.GetBytes())
 	genesis.InitGenesis()
 
 	//firstDel := common.GetDelegatedAccountAddress(1)

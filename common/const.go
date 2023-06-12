@@ -27,12 +27,15 @@ var (
 	MinStakingForNode       int64   = 100000000000000
 	MinStakingUser          int64   = 100000000000 // should be 100000000000
 	MinDistributedAmount    int64   = 100000000
+	DefaultWalletHomePath           = "~/.chainpqc/db/wallet/"
 )
 
-// DB prefixes
+// db prefixes
 var (
 	BlocksDBPrefix                     = [2]byte{'B', 'I'}
+	StatDBPrefix                       = [2]byte{'M', 'S'}
 	BlockHeaderDBPrefix                = [2]byte{'H', 'B'}
+	WalletDBPrefix                     = [2]byte{'W', '0'}
 	PubKeyDBPrefix                     = [2]byte{'P', 'K'}
 	BlockByHeightDBPrefix              = [2]byte{'B', 'H'}
 	TransactionsHashesByHeightDBPrefix = [2]byte{'R', 'H'}

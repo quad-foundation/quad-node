@@ -29,7 +29,7 @@ func generateNonceMsg(chain uint8, topic [2]byte) (message.TransactionsMessage, 
 	var nonceTransaction transactionType.Transaction
 	tp := transactionType.TxParam{
 		ChainID:     common.GetChainID(),
-		Sender:      wallet.EmptyWallet().GetWallet().Address,
+		Sender:      wallet.GetActiveWallet().Address,
 		SendingTime: common.GetCurrentTimeStampInSecond(),
 		Nonce:       0,
 		Chain:       chain,

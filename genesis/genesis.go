@@ -29,7 +29,7 @@ type Genesis struct {
 
 func CreateBlockFromGenesis(genesis Genesis) (blocks.Block, error) {
 
-	myWallet := wallet.EmptyWallet().GetWallet()
+	myWallet := wallet.GetActiveWallet()
 
 	//signature := common.Signature{}
 	//err := signature.Set([]byte(genesis.Signature), myWallet.Address)
@@ -58,7 +58,7 @@ func CreateBlockFromGenesis(genesis Genesis) (blocks.Block, error) {
 	if err != nil {
 		return blocks.Block{}, err
 	}
-	bh.Signature = sign
+	bh.Signature = *sign
 
 	bhHash, err := bh.CalcHash()
 	if err != nil {
@@ -137,7 +137,7 @@ func Load(path string) (Genesis, error) {
 		return Genesis{}, err
 	}
 
-	mainWallet := wallet.EmptyWallet().GetWallet()
+	mainWallet := wallet.GetActiveWallet()
 	//fmt.Println(mainWallet.PublicKey.GetHex())
 	fmt.Println(mainWallet.Address.GetHex())
 
