@@ -1,7 +1,6 @@
 package nonceServices
 
 import (
-	"encoding/binary"
 	"github.com/chainpqc/chainpqc-node/blocks"
 	"github.com/chainpqc/chainpqc-node/common"
 	memDatabase "github.com/chainpqc/chainpqc-node/database"
@@ -134,12 +133,12 @@ func OnMessage(addr string, m []byte) {
 					stats.Difficulty = newBlock.BaseBlock.BaseHeader.Difficulty
 					stats.Syncing = common.IsSyncing.Load()
 					stats.TimeInterval = newBlock.BaseBlock.BlockTimeStamp - lastBlock.BaseBlock.BlockTimeStamp
-
+					empt := transactionType.EmptyTransaction()
 					for i := uint8(0); i < 5; i++ {
 						if chain == i {
 							hs, _ := newBlock.GetTransactionsHashes(merkleTrie, h+1)
 							stats.Transactions[i] = len(hs)
-							stats.TransactionsSize[i] = len(hs) * binary.Size(transactionType.EmptyTransaction())
+							stats.TransactionsSize[i] = len(hs) * len(empt.GetBytes())
 						}
 					}
 					err = stats.SaveStats()

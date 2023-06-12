@@ -11,7 +11,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"log"
-	"os"
 	"runtime/debug"
 	"sync"
 )
@@ -26,12 +25,9 @@ func (db *BlockchainDB) GetLdb() *leveldb.DB {
 }
 
 func (db *BlockchainDB) InitPermanent() (*BlockchainDB, error) {
-	homePath, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatal(err)
-	}
-	homePath += "/.chainpqc/db/blockchain"
-
+	var err error
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
 	// in memery db only
 	memStorage := storage.NewMemStorage()
 	db.ldb, err = leveldb.Open(memStorage, nil)
@@ -45,13 +41,7 @@ func (db *BlockchainDB) InitPermanent() (*BlockchainDB, error) {
 }
 
 func (db *BlockchainDB) InitInMemory() (*BlockchainDB, error) {
-	homePath, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatal(err)
-	}
-	homePath += "/.chainpqc/db/blockchain"
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
+	var err error
 	// in memery db only
 	memStorage := storage.NewMemStorage()
 	db.ldb, err = leveldb.Open(memStorage, nil)
@@ -62,8 +52,6 @@ func (db *BlockchainDB) InitInMemory() (*BlockchainDB, error) {
 }
 
 func (db *BlockchainDB) GetNode(hash commoneth.Hash) ([]byte, error) {
-	db.mutex.RLock()
-	defer db.mutex.RUnlock()
 	return db.Get(hash[:])
 }
 
@@ -72,6 +60,8 @@ func (d *BlockchainDB) Reader(root commoneth.Hash) trie.Reader {
 }
 
 func (d *BlockchainDB) Close() {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
 	d.ldb.Close()
 }
 

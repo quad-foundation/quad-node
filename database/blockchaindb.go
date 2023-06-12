@@ -24,6 +24,8 @@ type AnyBlockchainDB interface {
 
 func Init() {
 	db := &BlockchainDB{}
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
 	pdb, err := db.InitInMemory() // should be changed to permanent
 	if err != nil {
 		return
@@ -32,6 +34,8 @@ func Init() {
 }
 
 func CloseDB() {
+	MainDB.mutex.Lock()
+	defer MainDB.mutex.Unlock()
 	(*MainDB).Close()
 }
 
@@ -66,6 +70,9 @@ func GetDBPermanentInstance() AnyBlockchainDB {
 
 func NewInMemoryDB() AnyBlockchainDB {
 	db := BlockchainDB{}
+	db.mutex = sync.RWMutex{}
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
 	memory, err := db.InitInMemory()
 	if err != nil {
 		return nil
