@@ -41,7 +41,7 @@ func InitGlobalMainStats() {
 			TransactionsSize:        map[uint8]int{0: 0, 1: 0, 2: 0, 3: 0, 4: 0},
 			TransactionsPending:     map[uint8]int{0: 0, 1: 0, 2: 0, 3: 0, 4: 0},
 			TransactionsPendingSize: map[uint8]int{0: 0, 1: 0, 2: 0, 3: 0, 4: 0},
-			Tps:                     0,
+			Tps:                     float32(0),
 			Syncing:                 true,
 			Difficulty:              int32(0),
 			db:                      db,
@@ -71,7 +71,7 @@ func (ms *MainStats) SaveStats() error {
 	return nil
 }
 
-func LoadStats() (*MainStats, error) {
+func LoadStats() (*GlobalMainStats, error) {
 	globalMainStats.mutex.Lock()
 	defer globalMainStats.mutex.Unlock()
 	if exist, _ := globalMainStats.MainStats.db.IsKey(common.StatDBPrefix[:]); !exist {
@@ -80,7 +80,7 @@ func LoadStats() (*MainStats, error) {
 			log.Println("Can not initialize stats", err)
 			return nil, err
 		}
-		return globalMainStats.MainStats, nil
+		return globalMainStats, nil
 	}
 	msb, err := globalMainStats.MainStats.db.Get(common.StatDBPrefix[:])
 	if err != nil {
@@ -91,5 +91,5 @@ func LoadStats() (*MainStats, error) {
 		return nil, err
 	}
 	globalMainStats.MainStats.Syncing = common.IsSyncing.Load()
-	return globalMainStats.MainStats, nil
+	return globalMainStats, nil
 }

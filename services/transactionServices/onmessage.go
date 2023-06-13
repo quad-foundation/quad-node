@@ -63,13 +63,14 @@ func OnMessage(addr string, m []byte) {
 						transactionType.PoolsTx[topic[1]].NumberOfTransactions())
 				}
 				stats, _ := statistics.LoadStats()
+
 				empt := transactionType.EmptyTransaction()
 				for i := uint8(0); i < 5; i++ {
 					nt := transactionType.PoolsTx[i].NumberOfTransactions()
-					stats.TransactionsPending[i] = nt
-					stats.TransactionsPendingSize[i] = nt * len(empt.GetBytes())
+					stats.MainStats.TransactionsPending[i] = nt
+					stats.MainStats.TransactionsPendingSize[i] = nt * len(empt.GetBytes())
 				}
-				stats.SaveStats()
+				stats.MainStats.SaveStats()
 
 			default:
 			}

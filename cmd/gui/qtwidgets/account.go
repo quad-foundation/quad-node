@@ -38,7 +38,7 @@ func UpdateAccountStats(w *wallet.Wallet) {
 	for i := uint8(0); i < 5; i++ {
 		txt += fmt.Sprintln("Size of transactions [kB] in ", common.NamesOfChains[i], " : ", st.TransactionsSize[i]/1024, "/", st.TransactionsPendingSize[i]/1024)
 	}
-	txt += fmt.Sprintln("TPS main chain:", st.Tps)
+	txt += fmt.Sprintln("TPS:", st.Tps)
 	if st.Syncing {
 		txt += fmt.Sprintln("Syncing...")
 	}

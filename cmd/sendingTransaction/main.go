@@ -68,10 +68,17 @@ func SampleTransaction(w *wallet.Wallet) transactionType.Transaction {
 	if err != nil {
 		log.Println("calc hash error", err)
 	}
-	err = t.Sign()
+	//err = t.Sign()
+	//if err != nil {
+	//	log.Println("Signing error", err)
+	//}
+	s := rand.RandomBytes(common.SignatureLength)
+	sig := common.Signature{}
+	err = sig.Init(s, w.Address)
 	if err != nil {
-		log.Println("Signing error", err)
+		return transactionType.Transaction{}
 	}
+	t.Signature = sig
 	return t
 }
 
