@@ -68,10 +68,17 @@ func SampleTransaction(w *wallet.Wallet) transactionType.Transaction {
 	if err != nil {
 		log.Println("calc hash error", err)
 	}
-	err = t.Sign()
+	//err = t.Sign()
+	//if err != nil {
+	//	log.Println("Signing error", err)
+	//}
+	s := rand.RandomBytes(common.SignatureLength)
+	sig := common.Signature{}
+	err = sig.Init(s, w.Address)
 	if err != nil {
-		log.Println("Signing error", err)
+		return transactionType.Transaction{}
 	}
+	t.Signature = sig
 	return t
 }
 
@@ -82,7 +89,7 @@ func sendTransactions(w *wallet.Wallet) {
 	count := int64(0)
 	start := common.GetCurrentTimeStampInSecond()
 
-	for range time.Tick(time.Microsecond * 10000) {
+	for range time.Tick(time.Microsecond) {
 		var txs []transactionType.Transaction
 		for i := 0; i < batchSize; i++ {
 			tx := SampleTransaction(w)

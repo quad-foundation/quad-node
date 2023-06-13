@@ -105,7 +105,7 @@ func handleSTAT(byt []byte, reply *[]byte) {
 		log.Println("Can't update stats")
 		return
 	}
-	msb, err := common.Marshal(st, common.StatDBPrefix)
+	msb, err := common.Marshal(st.MainStats, common.StatDBPrefix)
 	if err != nil {
 		log.Println(err)
 		return

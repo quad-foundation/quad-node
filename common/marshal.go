@@ -8,6 +8,8 @@ import (
 var marshalMutex sync.Mutex
 
 func Marshal(v any, prefix [2]byte) ([]byte, error) {
+	marshalMutex.Lock()
+	defer marshalMutex.Unlock()
 	b, err := json.Marshal(v)
 	if err != nil {
 		return nil, err
@@ -16,6 +18,8 @@ func Marshal(v any, prefix [2]byte) ([]byte, error) {
 }
 
 func Unmarshal(b []byte, prefix [2]byte, v any) error {
+	marshalMutex.Lock()
+	defer marshalMutex.Unlock()
 	err := json.Unmarshal(b[2:], v)
 	if err != nil {
 		return err

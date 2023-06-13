@@ -1,7 +1,6 @@
 package nonceServices
 
 import (
-	"encoding/binary"
 	"github.com/chainpqc/chainpqc-node/blocks"
 	"github.com/chainpqc/chainpqc-node/common"
 	memDatabase "github.com/chainpqc/chainpqc-node/database"
@@ -129,20 +128,25 @@ func OnMessage(addr string, m []byte) {
 					}
 					common.SetHeight(newBlock.GetBaseBlock().BaseHeader.Height)
 					stats, _ := statistics.LoadStats()
-					stats.Heights = common.GetHeight()
-					stats.Chain = chain
-					stats.Difficulty = newBlock.BaseBlock.BaseHeader.Difficulty
-					stats.Syncing = common.IsSyncing.Load()
-					stats.TimeInterval = newBlock.BaseBlock.BlockTimeStamp - lastBlock.BaseBlock.BlockTimeStamp
-
+					//stats.mutex.Lock()
+					//defer stats.mutex.Unlock()
+					stats.MainStats.Heights = common.GetHeight()
+					stats.MainStats.Chain = chain
+					stats.MainStats.Difficulty = newBlock.BaseBlock.BaseHeader.Difficulty
+					stats.MainStats.Syncing = common.IsSyncing.Load()
+					stats.MainStats.TimeInterval = newBlock.BaseBlock.BlockTimeStamp - lastBlock.BaseBlock.BlockTimeStamp
+					empt := transactionType.EmptyTransaction()
+					ntxs := 0
 					for i := uint8(0); i < 5; i++ {
 						if chain == i {
 							hs, _ := newBlock.GetTransactionsHashes(merkleTrie, h+1)
-							stats.Transactions[i] = len(hs)
-							stats.TransactionsSize[i] = len(hs) * binary.Size(transactionType.EmptyTransaction())
+							stats.MainStats.Transactions[i] = len(hs)
+							stats.MainStats.TransactionsSize[i] = len(hs) * len(empt.GetBytes())
+							ntxs += len(hs)
 						}
 					}
-					err = stats.SaveStats()
+					stats.MainStats.Tps = float32(ntxs) / float32(stats.MainStats.TimeInterval)
+					err = stats.MainStats.SaveStats()
 					if err != nil {
 						log.Println(err)
 					}

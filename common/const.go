@@ -7,27 +7,30 @@ import (
 	"strconv"
 )
 
+var NamesOfChains = []string{"transaction", "pubkey", "stake", "dex", "contract"}
+
 var (
-	ValidChains                     = []uint8{0, 1, 2, 3, 4}
-	Decimals                uint8   = 8
-	MaxTotalSupply          int64   = 230000000000000000
-	RewardChangeInterval    int64   = 8640 * 3
-	InitialReward           int64   = 100000000 // 3993055556
-	ValidationTag                   = "validationTag"
-	DifficultyMultiplier    int32   = 10
-	BlockTimeInterval       float32 = 5 // 5 sec.
-	DifficultyChange        float32 = 5
-	MaxGasUsage             int64   = 137000000 // circa 65k transactions in block
-	MaxGasPrice             int64   = 100000
-	MaxTransactionsPerBlock int16   = 32000
-	MaxTransactionInPool            = 1000000
-	ConfirmationsNumber     int64   = 6
-	NumberOfHashesInBucket  int64   = 32
-	NumberOfBlocksInBucket  int64   = 20
-	MinStakingForNode       int64   = 100000000000000
-	MinStakingUser          int64   = 100000000000 // should be 100000000000
-	MinDistributedAmount    int64   = 100000000
-	DefaultWalletHomePath           = "~/.chainpqc/db/wallet/"
+	ValidChains                       = []uint8{0, 1, 2, 3, 4}
+	Decimals                  uint8   = 8
+	MaxTotalSupply            int64   = 230000000000000000
+	RewardChangeInterval      int64   = 8640 * 3
+	InitialReward             int64   = 100000000 // 3993055556
+	ValidationTag                     = "validationTag"
+	DifficultyMultiplier      int32   = 10
+	BlockTimeInterval         float32 = 5 // 5 sec.
+	DifficultyChange          float32 = 5
+	MaxGasUsage               int64   = 137000000 // circa 65k transactions in block
+	MaxGasPrice               int64   = 100000
+	MaxTransactionsPerBlock   int16   = 32000
+	MaxTransactionInPool              = 1000000
+	ConfirmationsNumber       int64   = 6
+	NumberOfHashesInBucket    int64   = 32
+	NumberOfBlocksInBucket    int64   = 20
+	MinStakingForNode         int64   = 100000000000000
+	MinStakingUser            int64   = 100000000000 // should be 100000000000
+	MinDistributedAmount      int64   = 100000000
+	DefaultWalletHomePath             = "~/.chainpqc/db/wallet/"
+	DefaultBlockchainHomePath         = "~/.chainpqc/db/blockchain/"
 )
 
 // db prefixes
