@@ -32,7 +32,7 @@ func main() {
 	<-chanPeer
 }
 
-func SampleTransaction(w *wallet.Wallet) transactionType.Transaction {
+func SampleTransaction(w *wallet.Wallet, chain uint8) transactionType.Transaction {
 
 	sender := w.Address
 	recv := common.Address{}
@@ -52,7 +52,7 @@ func SampleTransaction(w *wallet.Wallet) transactionType.Transaction {
 		Sender:      sender,
 		SendingTime: common.GetCurrentTimeStampInSecond(),
 		Nonce:       int16(rand2.Intn(65000)),
-		Chain:       0,
+		Chain:       chain,
 	}
 	t := transactionType.Transaction{
 		TxData:    txdata,
@@ -84,15 +84,15 @@ func SampleTransaction(w *wallet.Wallet) transactionType.Transaction {
 
 func sendTransactions(w *wallet.Wallet) {
 
-	chain := uint8(0)
-	batchSize := 1
+	batchSize := 10
 	count := int64(0)
 	start := common.GetCurrentTimeStampInSecond()
 
 	for range time.Tick(time.Microsecond) {
 		var txs []transactionType.Transaction
+		chain := uint8(rand2.Intn(5))
 		for i := 0; i < batchSize; i++ {
-			tx := SampleTransaction(w)
+			tx := SampleTransaction(w, chain)
 			txs = append(txs, tx)
 		}
 		m, err := transactionServices.GenerateTransactionMsg(txs, chain, [2]byte{'T', chain})
@@ -102,7 +102,7 @@ func sendTransactions(w *wallet.Wallet) {
 		tmm := m.GetBytes()
 		count += int64(batchSize)
 		end := common.GetCurrentTimeStampInSecond()
-		if count%2 == 0 && (end-start) > 0 {
+		if count%100 == 0 && (end-start) > 0 {
 			fmt.Println("tps=", count/(end-start))
 		}
 		clientrpc.InRPC <- append([]byte("TRAN"), tmm...)

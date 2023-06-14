@@ -1,6 +1,7 @@
 package statistics
 
 import (
+	"fmt"
 	"github.com/chainpqc/chainpqc-node/common"
 	memDatabase "github.com/chainpqc/chainpqc-node/database"
 	"log"
@@ -24,12 +25,19 @@ type MainStats struct {
 
 type GlobalMainStats struct {
 	MainStats *MainStats
-	mutex     sync.Mutex
+	Mutex     sync.Mutex
 }
 
 var globalMainStats *GlobalMainStats
 
+var GmsMutex *GlobalMainStats
+
 func InitGlobalMainStats() {
+	GmsMutex = &GlobalMainStats{
+		MainStats: nil,
+		Mutex:     sync.Mutex{},
+	}
+
 	db := memDatabase.NewInMemoryDB()
 	globalMainStats = &GlobalMainStats{
 		MainStats: &MainStats{
@@ -46,13 +54,13 @@ func InitGlobalMainStats() {
 			Difficulty:              int32(0),
 			db:                      db,
 		},
-		mutex: sync.Mutex{},
+		Mutex: sync.Mutex{},
 	}
 }
 
 func DestroyGlobalMainStats() {
-	globalMainStats.mutex.Lock()
-	defer globalMainStats.mutex.Unlock()
+	globalMainStats.Mutex.Lock()
+	defer globalMainStats.Mutex.Unlock()
 	globalMainStats.MainStats.Destroy()
 }
 func (ms *MainStats) Destroy() {
@@ -72,24 +80,26 @@ func (ms *MainStats) SaveStats() error {
 }
 
 func LoadStats() (*GlobalMainStats, error) {
-	globalMainStats.mutex.Lock()
-	defer globalMainStats.mutex.Unlock()
-	if exist, _ := globalMainStats.MainStats.db.IsKey(common.StatDBPrefix[:]); !exist {
-		err := globalMainStats.MainStats.SaveStats()
+	if globalMainStats.Mutex.TryLock() {
+		defer globalMainStats.Mutex.Unlock()
+		if exist, _ := globalMainStats.MainStats.db.IsKey(common.StatDBPrefix[:]); !exist {
+			err := globalMainStats.MainStats.SaveStats()
+			if err != nil {
+				log.Println("Can not initialize stats", err)
+				return nil, err
+			}
+			return globalMainStats, nil
+		}
+		msb, err := globalMainStats.MainStats.db.Get(common.StatDBPrefix[:])
 		if err != nil {
-			log.Println("Can not initialize stats", err)
 			return nil, err
 		}
+		err = common.Unmarshal(msb, common.StatDBPrefix, globalMainStats)
+		if err != nil {
+			return nil, err
+		}
+		globalMainStats.MainStats.Syncing = common.IsSyncing.Load()
 		return globalMainStats, nil
 	}
-	msb, err := globalMainStats.MainStats.db.Get(common.StatDBPrefix[:])
-	if err != nil {
-		return nil, err
-	}
-	err = common.Unmarshal(msb, common.StatDBPrefix, globalMainStats)
-	if err != nil {
-		return nil, err
-	}
-	globalMainStats.MainStats.Syncing = common.IsSyncing.Load()
-	return globalMainStats, nil
+	return nil, fmt.Errorf("try Lock fails")
 }
