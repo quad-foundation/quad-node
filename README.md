@@ -1,4 +1,4 @@
-# Node go chainpqc - currently on building process
+# Node go chainpqc - currently in building process
 
 Works for Ubuntu 20.04+ and go1.19+
 
