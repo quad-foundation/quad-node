@@ -62,15 +62,20 @@ func OnMessage(addr string, m []byte) {
 					log.Println("No of Tx in SendToPool: ", topic, " = ",
 						transactionType.PoolsTx[topic[1]].NumberOfTransactions())
 				}
-				stats, _ := statistics.LoadStats()
 
-				empt := transactionType.EmptyTransaction()
-				for i := uint8(0); i < 5; i++ {
-					nt := transactionType.PoolsTx[i].NumberOfTransactions()
-					stats.MainStats.TransactionsPending[i] = nt
-					stats.MainStats.TransactionsPendingSize[i] = nt * len(empt.GetBytes())
+				if statistics.GmsMutex.Mutex.TryLock() {
+					defer statistics.GmsMutex.Mutex.Unlock()
+
+					stats, _ := statistics.LoadStats()
+					empt := transactionType.EmptyTransaction()
+					for i := uint8(0); i < 5; i++ {
+						nt := transactionType.PoolsTx[i].NumberOfTransactions()
+						stats.MainStats.TransactionsPending[i] = nt
+						stats.MainStats.TransactionsPendingSize[i] = nt * len(empt.GetBytes())
+					}
+					stats.MainStats.SaveStats()
+
 				}
-				stats.MainStats.SaveStats()
 
 			default:
 			}
