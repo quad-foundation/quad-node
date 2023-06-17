@@ -84,7 +84,7 @@ func SampleTransaction(w *wallet.Wallet, chain uint8) transactionType.Transactio
 
 func sendTransactions(w *wallet.Wallet) {
 
-	batchSize := 10
+	batchSize := 1
 	count := int64(0)
 	start := common.GetCurrentTimeStampInSecond()
 
