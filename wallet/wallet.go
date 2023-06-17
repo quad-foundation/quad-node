@@ -60,7 +60,7 @@ func (w *Wallet) ShowInfo() string {
 	s := fmt.Sprintln("Length of public key:", w.PublicKey.GetLength())
 	s += fmt.Sprintln("Beginning of public key:", w.PublicKey.GetHex()[:10])
 	s += fmt.Sprintln("Address:", w.Address.GetHex())
-	s += fmt.Sprintln("Length of private key:", w.secretKey.GetLength())
+	s += fmt.Sprintln("Length of private key:", w.GetSecretKey().GetLength())
 	s += fmt.Sprintln("Wallet location", w.HomePath)
 	s += fmt.Sprintln("Wallet Number", w.WalletNumber)
 	fmt.Println(s)
@@ -157,10 +157,10 @@ func (w *Wallet) decrypt(v []byte) ([]byte, error) {
 }
 
 func (w *Wallet) GetMnemonicWords() (string, error) {
-	if w.secretKey.GetBytes() == nil {
+	if w.GetSecretKey().GetBytes() == nil {
 		return "", fmt.Errorf("You need load wallet first")
 	}
-	mnemonic, _ := bip39.NewMnemonic(w.secretKey.GetBytes())
+	mnemonic, _ := bip39.NewMnemonic(w.GetSecretKey().GetBytes())
 
 	secretKey, _ := bip39.MnemonicToByteArray(mnemonic)
 	if bytes.Compare(secretKey[:w.secretKey.GetLength()], w.secretKey.GetBytes()) != 0 {
@@ -190,7 +190,7 @@ func (w *Wallet) RestoreSecretKeyFromMnemonic(mnemonic string) error {
 }
 
 func (w *Wallet) Store() error {
-	if w.secretKey.GetBytes() == nil {
+	if w.GetSecretKey().GetBytes() == nil {
 		return fmt.Errorf("You need load wallet first")
 	}
 
@@ -337,11 +337,14 @@ func Verify(msg []byte, sig []byte, pubkey []byte) bool {
 }
 
 func (w *Wallet) GetSecretKey() common.PrivKey {
+	if w == nil {
+		return common.PrivKey{}
+	}
 	return w.secretKey
 }
 
 func (w *Wallet) Check() bool {
-	if len(w.secretKey.GetBytes()) == w.secretKey.GetLength() {
+	if len(w.GetSecretKey().GetBytes()) == w.GetSecretKey().GetLength() {
 		return true
 	}
 	return false

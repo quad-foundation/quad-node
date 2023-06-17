@@ -6,7 +6,8 @@ import (
 	"github.com/therecipe/qt/widgets"
 )
 
-var ReserveWallet wallet.Wallet
+var mainWallet *wallet.Wallet
+var err error
 
 func ShowWalletPage(w *wallet.Wallet) *widgets.QTabWidget {
 
@@ -28,7 +29,7 @@ func ShowWalletPage(w *wallet.Wallet) *widgets.QTabWidget {
 	// and add it to the central widgets layout
 	button := widgets.NewQPushButton2("Load wallet", nil)
 	button.ConnectClicked(func(bool) {
-		w, err := wallet.Load(0, input.Text())
+		mainWallet, err = wallet.Load(0, input.Text())
 		if err != nil {
 			return
 		}
@@ -47,29 +48,16 @@ func ShowWalletPage(w *wallet.Wallet) *widgets.QTabWidget {
 	buttonNewWallet.ConnectReleased(func() {
 		info := "Creating reserve wallet success"
 
-		err := ReserveWallet.Store()
+		mainWallet, err = wallet.GenerateNewWallet(mainWallet.WalletNumber+1, input.Text())
 
 		if err != nil {
 			info = fmt.Sprintf("Can not store wallet. Error %v", err)
 		} else {
-			err := ReserveWallet.ChangePassword("a", input.Text())
-			if err != nil {
-				info = fmt.Sprintf("Can not change password. Error %v", err)
-			} else {
-				w, err = wallet.Load(0, input.Text())
-				if err != nil {
-					return
-				}
-				if err != nil {
-					info = fmt.Sprintf("Can not load wallet. Error %v", err)
-				} else {
-					info = w.ShowInfo()
-				}
-			}
+			info = w.ShowInfo()
 		}
 
 		widgets.QMessageBox_Information(nil, "OK", info, widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-		buttonNewWallet.SetDisabled(true)
+		//buttonNewWallet.SetDisabled(true)
 	})
 
 	widget.Layout().AddWidget(buttonNewWallet)
@@ -83,7 +71,7 @@ func ShowWalletPage(w *wallet.Wallet) *widgets.QTabWidget {
 	widget.Layout().AddWidget(repeatPassword)
 	buttonChangePassword := widgets.NewQPushButton2("Change password", nil)
 	buttonChangePassword.ConnectClicked(func(bool) {
-		if w.GetSecretKey().GetLength() == 0 {
+		if mainWallet.GetSecretKey().GetLength() == 0 {
 			widgets.QMessageBox_Information(nil, "Error", "Load wallet first", widgets.QMessageBox__Close, widgets.QMessageBox__Close)
 			return
 		}
@@ -92,8 +80,8 @@ func ShowWalletPage(w *wallet.Wallet) *widgets.QTabWidget {
 			widgets.QMessageBox_Information(nil, "Error", "Passwords do not match", widgets.QMessageBox__Close, widgets.QMessageBox__Close)
 			return
 		}
-		w.SetPassword(newPassword.Text())
-		err := w.Store()
+		mainWallet.SetPassword(newPassword.Text())
+		err = mainWallet.Store()
 		if err != nil {
 			widgets.QMessageBox_Information(nil, "Error", fmt.Sprintf("%v", err), widgets.QMessageBox__Close, widgets.QMessageBox__Close)
 			return
@@ -103,7 +91,7 @@ func ShowWalletPage(w *wallet.Wallet) *widgets.QTabWidget {
 	widget.Layout().AddWidget(buttonChangePassword)
 	buttonMnemonic := widgets.NewQPushButton2("Show mnemonic words", nil)
 	buttonMnemonic.ConnectClicked(func(bool) {
-		mnemonic, _ := w.GetMnemonicWords()
+		mnemonic, _ := mainWallet.GetMnemonicWords()
 		widgets.QMessageBox_Information(nil, "OK", fmt.Sprintf("Mnemonic words:\n%v", mnemonic), widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 	})
 	widget.Layout().AddWidget(buttonMnemonic)
@@ -113,12 +101,12 @@ func ShowWalletPage(w *wallet.Wallet) *widgets.QTabWidget {
 	widget.Layout().AddWidget(inputRestoreMnemonic)
 	buttonRestoreMnemonic := widgets.NewQPushButton2("Restore private key from mnemonic words", nil)
 	buttonRestoreMnemonic.ConnectClicked(func(bool) {
-		err := w.RestoreSecretKeyFromMnemonic(inputRestoreMnemonic.Text())
+		err := mainWallet.RestoreSecretKeyFromMnemonic(inputRestoreMnemonic.Text())
 		if err != nil {
 			widgets.QMessageBox_Information(nil, "OK", fmt.Sprintf("Can not restore Private key from mnemonic words:\n%v", err), widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 			return
 		}
-		sec := w.GetSecretKey()
+		sec := mainWallet.GetSecretKey()
 		widgets.QMessageBox_Information(nil, "OK", fmt.Sprintf("Private Key:\n%v", sec.GetHex()), widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 	})
 	widget.Layout().AddWidget(buttonRestoreMnemonic)

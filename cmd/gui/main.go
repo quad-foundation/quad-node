@@ -34,7 +34,7 @@ func main() {
 	// create a window
 	window := widgets.NewQTabWidget(nil)
 	window.SetMinimumSize2(800, 900)
-	window.SetWindowTitle("Galaxy Wallet - " + ip +
+	window.SetWindowTitle("ChainPQC Wallet - " + ip +
 		" Node Account: " +
 		strconv.Itoa(int(common.NumericalDelegatedAccountAddress(common.GetDelegatedAccount()))))
 
