@@ -1,4 +1,4 @@
-# Node go chainpqc - currently in building process
+# Node go QUAD - currently in building process
 
 Works for Ubuntu 20.04+ and go1.19+
 
@@ -27,8 +27,8 @@ Reload dynamic libraries
 
 Clone project source code
 
-    git clone https://github.com/chainpqc/chainpqc-node
-    cd chainpqc-node
+    git clone https://github.com/quad-foundation/quad-node.git
+    cd quad-node
 
 install go modules
 
@@ -36,11 +36,11 @@ install go modules
 
     sudo cp .config/liboqs.pc.linux /usr/share/pkgconfig/liboqs.pc
 
-    mkdir ~/.chainpqc
+    mkdir ~/.quad
 
 Copy env file and change accordingly.
 
-    cp .chainpqc/.env ~/.chainpqc/.env
+    cp .quad/.env ~/.quad/.env
 
 In the case you are the first who run blockchain and generate genesis block you need to set in .env: DELEGATED_ACCOUNT=1. In other case if you join to other node which is running you can choose unique DELEGATED_ACCOUNT > 1 and < 255.
 

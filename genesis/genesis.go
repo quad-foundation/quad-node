@@ -102,7 +102,7 @@ func InitGenesis() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	genesis, err := Load(pathhome + "/chainpqc-node/genesis/config/genesis.json")
+	genesis, err := Load(pathhome + "/.quad/genesis/config/genesis.json")
 	if err != nil {
 		log.Fatal(err)
 	}
