@@ -116,6 +116,7 @@ func GenerateNewWallet(walletNumber uint8, password string) (*Wallet, error) {
 		return nil, err
 	}
 	(*w).signer = signer
+	fmt.Print(signer.Details())
 	return w, nil
 }
 

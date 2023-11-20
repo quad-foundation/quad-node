@@ -119,7 +119,7 @@ func (tx *Transaction) GetFromBytes(b []byte) (Transaction, []byte, error) {
 		return Transaction{}, nil, err
 	}
 	at.Signature = signature
-	return at, b[56+common.SignatureLength:], nil
+	return at, b[56+signature.GetLength():], nil
 }
 
 func (TxData) GetFromBytes(data []byte) (TxData, []byte, error) {
