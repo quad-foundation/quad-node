@@ -8,6 +8,7 @@ import (
 	"github.com/quad/quad-node/message"
 	"github.com/quad/quad-node/tcpip"
 	"github.com/quad/quad-node/transactionsDefinition"
+	"github.com/quad/quad-node/transactionsPool"
 	"github.com/quad/quad-node/wallet"
 	"sync"
 )

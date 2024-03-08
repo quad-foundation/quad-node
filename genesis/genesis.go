@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/quad/quad-node/blocks"
 	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/transactionsPool"
 	"github.com/quad/quad-node/wallet"
 	"log"
 	"os"

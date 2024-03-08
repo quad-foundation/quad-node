@@ -8,6 +8,7 @@ import (
 	"github.com/quad/quad-node/services"
 	"github.com/quad/quad-node/statistics"
 	"github.com/quad/quad-node/transactionsDefinition"
+	"github.com/quad/quad-node/transactionsPool"
 	"log"
 )
 

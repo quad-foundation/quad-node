@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/quad/quad-node/common"
 	memDatabase "github.com/quad/quad-node/database"
+	"github.com/quad/quad-node/transactionsPool"
 )
 
 type Block struct {

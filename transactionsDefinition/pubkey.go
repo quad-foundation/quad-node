@@ -8,16 +8,6 @@ type PubkeyData struct {
 	Pubkey common.PubKey `json:"pubkey"`
 }
 
-func (pkd PubkeyData) GetString() string {
-	t := "Pubkey: " + pkd.Pubkey.GetHex()[:20] + "\n"
-	t += "Address: " + pkd.Pubkey.Address.GetHex() + "\n"
-	return t
-}
-
-func (pkd PubkeyData) GetAddress() common.Address {
-	return pkd.Pubkey.Address
-}
-
 func (pkd PubkeyData) GetBytes() []byte {
 	return pkd.Pubkey.GetBytes()
 }
