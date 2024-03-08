@@ -8,6 +8,16 @@ import (
 	"sync"
 )
 
+var (
+	PoolsTx [5]*TransactionPool
+)
+
+func init() {
+	for c := 0; c < 5; c++ {
+		PoolsTx[c] = NewTransactionPool(common.MaxTransactionInPool)
+	}
+}
+
 type Item struct {
 	transactionsDefinition.Transaction
 	value    [common.HashLength]byte

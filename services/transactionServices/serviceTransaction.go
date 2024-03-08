@@ -6,6 +6,7 @@ import (
 	"github.com/quad/quad-node/services"
 	"github.com/quad/quad-node/tcpip"
 	"github.com/quad/quad-node/transactionsDefinition"
+	"github.com/quad/quad-node/transactionsPool"
 	"log"
 	"time"
 )
@@ -65,7 +66,7 @@ func SendTransactionMsg(ip string, chain uint8, topic [2]byte) {
 	if isync == true {
 		return
 	}
-	txs := transactionsDefinition.PoolsTx[chain].PeekTransactions(int(common.MaxTransactionsPerBlock))
+	txs := transactionsPool.PoolsTx[chain].PeekTransactions(int(common.MaxTransactionsPerBlock))
 	n, err := GenerateTransactionMsg(txs, chain, topic)
 	if err != nil {
 		log.Println(err)

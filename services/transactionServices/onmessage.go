@@ -4,6 +4,7 @@ import (
 	"github.com/quad/quad-node/message"
 	"github.com/quad/quad-node/statistics"
 	"github.com/quad/quad-node/transactionsDefinition"
+	"github.com/quad/quad-node/transactionsPool"
 	"log"
 )
 
@@ -52,7 +53,7 @@ func OnMessage(addr string, m []byte) {
 				// need to check transactions
 				for topic, v := range txs {
 					for _, t := range v {
-						transactionsDefinition.PoolsTx[topic[1]].AddTransaction(*t)
+						transactionsPool.PoolsTx[topic[1]].AddTransaction(*t)
 						err := t.StoreToDBPoolTx(topic[:])
 						if err != nil {
 							log.Println(err)
@@ -60,7 +61,7 @@ func OnMessage(addr string, m []byte) {
 					}
 
 					log.Println("No of Tx in SendToPool: ", topic, " = ",
-						transactionsDefinition.PoolsTx[topic[1]].NumberOfTransactions())
+						transactionsPool.PoolsTx[topic[1]].NumberOfTransactions())
 				}
 
 				if statistics.GmsMutex.Mutex.TryLock() {
@@ -69,7 +70,7 @@ func OnMessage(addr string, m []byte) {
 					stats, _ := statistics.LoadStats()
 					empt := transactionsDefinition.EmptyTransaction()
 					for i := uint8(0); i < 5; i++ {
-						nt := transactionsDefinition.PoolsTx[i].NumberOfTransactions()
+						nt := transactionsPool.PoolsTx[i].NumberOfTransactions()
 						stats.MainStats.TransactionsPending[i] = nt
 						stats.MainStats.TransactionsPendingSize[i] = nt * len(empt.GetBytes())
 					}

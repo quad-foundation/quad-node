@@ -78,7 +78,7 @@ func OnMessage(addr string, m []byte) {
 			if err != nil {
 				panic(err)
 			}
-			txs := transactionsDefinition.PoolsTx[transaction.GetChain()].PeekTransactions(int(common.MaxTransactionsPerBlock))
+			txs := transactionsPool.PoolsTx[transaction.GetChain()].PeekTransactions(int(common.MaxTransactionsPerBlock))
 			txsBytes := make([][]byte, len(txs))
 			for _, tx := range txs {
 				hash := tx.GetHash().GetBytes()
@@ -111,7 +111,7 @@ func OnMessage(addr string, m []byte) {
 					txs := []transactionsDefinition.Transaction{}
 					txshb := [][]byte{}
 					for _, h := range hashes {
-						tx := transactionsDefinition.PoolsTx[chain].PopTransactionByHash(h.GetBytes())
+						tx := transactionsPool.PoolsTx[chain].PopTransactionByHash(h.GetBytes())
 						txs = append(txs, tx)
 						txshb = append(txshb, tx.GetHash().GetBytes())
 						err = memDatabase.MainDB.Put(tx.GetHash().GetBytes(), tx.GetBytes())
