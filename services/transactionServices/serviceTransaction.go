@@ -5,7 +5,7 @@ import (
 	"github.com/quad/quad-node/message"
 	"github.com/quad/quad-node/services"
 	"github.com/quad/quad-node/tcpip"
-	"github.com/quad/quad-node/transactionType"
+	"github.com/quad/quad-node/transactionsDefinition"
 	"log"
 	"time"
 )
@@ -19,7 +19,7 @@ func InitTransactionService() {
 	go broadcastTransactionsMsgInLoop(services.SendChanTx)
 }
 
-func GenerateTransactionMsg(txs []transactionType.Transaction, chain uint8, topic [2]byte) (message.TransactionsMessage, error) {
+func GenerateTransactionMsg(txs []transactionsDefinition.Transaction, chain uint8, topic [2]byte) (message.TransactionsMessage, error) {
 
 	topic[1] = chain
 	bm := message.BaseMessage{
@@ -65,7 +65,7 @@ func SendTransactionMsg(ip string, chain uint8, topic [2]byte) {
 	if isync == true {
 		return
 	}
-	txs := transactionType.PoolsTx[chain].PeekTransactions(int(common.MaxTransactionsPerBlock))
+	txs := transactionsDefinition.PoolsTx[chain].PeekTransactions(int(common.MaxTransactionsPerBlock))
 	n, err := GenerateTransactionMsg(txs, chain, topic)
 	if err != nil {
 		log.Println(err)

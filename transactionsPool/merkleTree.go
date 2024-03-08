@@ -1,4 +1,4 @@
-package transactionType
+package transactionsPool
 
 import (
 	"bytes"

@@ -6,7 +6,7 @@ import (
 	"github.com/quad/quad-node/crypto/oqs/rand"
 	clientrpc "github.com/quad/quad-node/rpc/client"
 	"github.com/quad/quad-node/services/transactionServices"
-	"github.com/quad/quad-node/transactionType"
+	"github.com/quad/quad-node/transactionsDefinition"
 	"github.com/quad/quad-node/wallet"
 	rand2 "math/rand"
 
@@ -32,29 +32,29 @@ func main() {
 	<-chanPeer
 }
 
-func SampleTransaction(w *wallet.Wallet, chain uint8) transactionType.Transaction {
+func SampleTransaction(w *wallet.Wallet, chain uint8) transactionsDefinition.Transaction {
 
 	sender := w.Address
 	recv := common.Address{}
 	br := rand.RandomBytes(20)
 	err := recv.Init(br)
 	if err != nil {
-		return transactionType.Transaction{}
+		return transactionsDefinition.Transaction{}
 	}
 
-	txdata := transactionType.TxData{
+	txdata := transactionsDefinition.TxData{
 		Recipient: recv,
 		Amount:    int64(rand2.Intn(10000000)),
 		OptData:   nil,
 	}
-	txParam := transactionType.TxParam{
+	txParam := transactionsDefinition.TxParam{
 		ChainID:     common.GetChainID(),
 		Sender:      sender,
 		SendingTime: common.GetCurrentTimeStampInSecond(),
 		Nonce:       int16(rand2.Intn(65000)),
 		Chain:       chain,
 	}
-	t := transactionType.Transaction{
+	t := transactionsDefinition.Transaction{
 		TxData:    txdata,
 		TxParam:   txParam,
 		Hash:      common.Hash{},
@@ -76,7 +76,7 @@ func SampleTransaction(w *wallet.Wallet, chain uint8) transactionType.Transactio
 	sig := common.Signature{}
 	err = sig.Init(s, w.Address)
 	if err != nil {
-		return transactionType.Transaction{}
+		return transactionsDefinition.Transaction{}
 	}
 	t.Signature = sig
 	return t
@@ -89,7 +89,7 @@ func sendTransactions(w *wallet.Wallet) {
 	start := common.GetCurrentTimeStampInSecond()
 
 	for range time.Tick(time.Microsecond) {
-		var txs []transactionType.Transaction
+		var txs []transactionsDefinition.Transaction
 		chain := uint8(rand2.Intn(5))
 		for i := 0; i < batchSize; i++ {
 			tx := SampleTransaction(w, chain)

@@ -7,7 +7,7 @@ import (
 	"github.com/quad/quad-node/common"
 	"github.com/quad/quad-node/message"
 	"github.com/quad/quad-node/tcpip"
-	"github.com/quad/quad-node/transactionType"
+	"github.com/quad/quad-node/transactionsDefinition"
 	"github.com/quad/quad-node/wallet"
 	"sync"
 )
@@ -20,9 +20,9 @@ var (
 	SendMutexTx       sync.RWMutex
 )
 
-func CreateBlockFromNonceMessage(nonceTx []transactionType.Transaction,
+func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 	lastBlock blocks.Block,
-	merkleTrie *transactionType.MerkleTree) (blocks.Block, error) {
+	merkleTrie *transactionsPool.MerkleTree) (blocks.Block, error) {
 
 	myWallet := wallet.GetActiveWallet()
 	transactionChain := nonceTx[0].GetChain()

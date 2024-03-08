@@ -1,8 +1,9 @@
-package transactionType
+package transactionsDefinition
 
 import (
 	"fmt"
 	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/transactionsPool"
 	"strconv"
 	"time"
 )
@@ -16,12 +17,12 @@ type TxParam struct {
 }
 
 var (
-	PoolsTx [5]*TransactionPool
+	PoolsTx [5]*transactionsPool.TransactionPool
 )
 
 func init() {
 	for c := 0; c < 5; c++ {
-		PoolsTx[c] = NewTransactionPool(common.MaxTransactionInPool)
+		PoolsTx[c] = transactionsPool.NewTransactionPool(common.MaxTransactionInPool)
 	}
 }
 

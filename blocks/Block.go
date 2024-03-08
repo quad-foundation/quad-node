@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/quad/quad-node/common"
 	memDatabase "github.com/quad/quad-node/database"
-	"github.com/quad/quad-node/transactionType"
 )
 
 type Block struct {
@@ -70,7 +69,7 @@ func (tb Block) CheckProofOfSynergy() bool {
 	return CheckProofOfSynergy(tb.BaseBlock)
 }
 
-func (b Block) GetTransactionsHashes(tempMerkleTrie *transactionType.MerkleTree, height int64) ([]common.Hash, error) {
+func (b Block) GetTransactionsHashes(tempMerkleTrie *transactionsPool.MerkleTree, height int64) ([]common.Hash, error) {
 	txsHashes, err := tempMerkleTrie.LoadTransactionsHashes(height)
 	if err != nil {
 		return nil, err

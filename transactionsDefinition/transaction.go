@@ -1,21 +1,13 @@
-package transactionType
+package transactionsDefinition
 
 import (
-	"encoding/hex"
 	"fmt"
-	"github.com/quad/quad-node/account"
 	"github.com/quad/quad-node/common"
 	memDatabase "github.com/quad/quad-node/database"
 	"github.com/quad/quad-node/wallet"
 	"log"
 	"strconv"
 )
-
-type TxData struct {
-	Recipient common.Address `json:"recipient"`
-	Amount    int64          `json:"amount"`
-	OptData   []byte         `json:"opt_data,omitempty"`
-}
 
 type Transaction struct {
 	TxData    TxData           `json:"tx_data"`
@@ -59,13 +51,6 @@ func (mt *Transaction) GetHash() common.Hash {
 	return mt.Hash
 }
 
-func (td TxData) GetString() string {
-	t := "Recipient: " + td.Recipient.GetHex() + "\n"
-	t += "Amount PQC: " + fmt.Sprintln(account.Int64toFloat64(td.Amount)) + "\n"
-	t += "Opt Data: " + hex.EncodeToString(td.OptData) + "\n"
-	return t
-}
-
 func (tx *Transaction) GetString() string {
 	t := "Common parameters:\n" + tx.TxParam.GetString() + "\n"
 	t += "Data:\n" + tx.TxData.GetString() + "\n"
@@ -79,14 +64,6 @@ func (tx *Transaction) GetString() string {
 
 func (tx *Transaction) GetSenderAddress() common.Address {
 	return tx.TxParam.Sender
-}
-
-func (md TxData) GetBytes() ([]byte, error) {
-	b := md.Recipient.GetBytes()
-	b = append(b, common.GetByteInt64(md.Amount)...)
-	opt := common.BytesToLenAndBytes(md.OptData)
-	b = append(b, opt...)
-	return b, nil
 }
 
 func (tx *Transaction) GetFromBytes(b []byte) (Transaction, []byte, error) {
@@ -122,23 +99,6 @@ func (tx *Transaction) GetFromBytes(b []byte) (Transaction, []byte, error) {
 	return at, b[56+signature.GetLength():], nil
 }
 
-func (TxData) GetFromBytes(data []byte) (TxData, []byte, error) {
-	md := TxData{}
-	address, err := common.BytesToAddress(data[:common.AddressLength])
-	if err != nil {
-		return TxData{}, []byte{}, err
-	}
-	md.Recipient = address
-	amountBytes := data[common.AddressLength : common.AddressLength+8]
-	md.Amount = common.GetInt64FromByte(amountBytes)
-	opt, left, err := common.BytesWithLenToBytes(data[common.AddressLength+8:])
-	if err != nil {
-		return TxData{}, []byte{}, err
-	}
-	md.OptData = opt
-	return md, left, nil
-}
-
 func (mt *Transaction) GetGasPrice() int64 {
 	return mt.GasPrice
 }
@@ -168,16 +128,6 @@ func (mt *Transaction) CalcHashAndSet() error {
 	}
 	mt.Hash = hash
 	return nil
-}
-
-func (md TxData) GetOptData() []byte {
-	return md.OptData
-}
-func (md TxData) GetAmount() int64 {
-	return md.Amount
-}
-func (md TxData) GetRecipient() common.Address {
-	return md.Recipient
 }
 
 func (mt *Transaction) GetBytes() []byte {
