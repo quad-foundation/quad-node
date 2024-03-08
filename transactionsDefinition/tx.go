@@ -69,7 +69,7 @@ func (TxData) GetFromBytes(data []byte) (TxData, []byte, error) {
 		return TxData{}, []byte{}, err
 	}
 	err = md.Pubkey.Init(pk)
-	if err != nil {
+	if err != nil && len(pk) > 0 {
 		return TxData{}, nil, err
 	}
 	return md, left, nil
