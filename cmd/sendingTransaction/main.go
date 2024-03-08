@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/common"
-	"github.com/chainpqc/chainpqc-node/crypto/oqs/rand"
-	clientrpc "github.com/chainpqc/chainpqc-node/rpc/client"
-	"github.com/chainpqc/chainpqc-node/services/transactionServices"
-	"github.com/chainpqc/chainpqc-node/transactionType"
-	"github.com/chainpqc/chainpqc-node/wallet"
+	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/crypto/oqs/rand"
+	clientrpc "github.com/quad/quad-node/rpc/client"
+	"github.com/quad/quad-node/services/transactionServices"
+	"github.com/quad/quad-node/transactionType"
+	"github.com/quad/quad-node/wallet"
 	rand2 "math/rand"
 
 	"log"

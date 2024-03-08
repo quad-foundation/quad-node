@@ -2,7 +2,7 @@ package oqs
 
 import (
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/common"
+	"github.com/quad/quad-node/common"
 )
 
 func NewKeyPair() (Signature, []byte) {

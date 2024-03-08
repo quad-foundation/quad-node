@@ -3,7 +3,7 @@ package tcpip
 import (
 	"bytes"
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/common"
+	"github.com/quad/quad-node/common"
 	"log"
 	"net"
 	"strings"

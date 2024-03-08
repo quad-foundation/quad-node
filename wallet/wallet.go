@@ -10,8 +10,8 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/wonabru/bip39"
 
-	"github.com/chainpqc/chainpqc-node/common"
-	"github.com/chainpqc/chainpqc-node/crypto/oqs"
+	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/crypto/oqs"
 	"golang.org/x/crypto/sha3"
 	"io"
 	"log"

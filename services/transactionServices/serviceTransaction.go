@@ -1,11 +1,11 @@
 package transactionServices
 
 import (
-	"github.com/chainpqc/chainpqc-node/common"
-	"github.com/chainpqc/chainpqc-node/message"
-	"github.com/chainpqc/chainpqc-node/services"
-	"github.com/chainpqc/chainpqc-node/tcpip"
-	"github.com/chainpqc/chainpqc-node/transactionType"
+	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/message"
+	"github.com/quad/quad-node/services"
+	"github.com/quad/quad-node/tcpip"
+	"github.com/quad/quad-node/transactionType"
 	"log"
 	"time"
 )

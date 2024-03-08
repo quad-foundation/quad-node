@@ -1,13 +1,13 @@
 package nonceServices
 
 import (
-	"github.com/chainpqc/chainpqc-node/blocks"
-	"github.com/chainpqc/chainpqc-node/common"
-	memDatabase "github.com/chainpqc/chainpqc-node/database"
-	"github.com/chainpqc/chainpqc-node/message"
-	"github.com/chainpqc/chainpqc-node/services"
-	"github.com/chainpqc/chainpqc-node/statistics"
-	"github.com/chainpqc/chainpqc-node/transactionType"
+	"github.com/quad/quad-node/blocks"
+	"github.com/quad/quad-node/common"
+	memDatabase "github.com/quad/quad-node/database"
+	"github.com/quad/quad-node/message"
+	"github.com/quad/quad-node/services"
+	"github.com/quad/quad-node/statistics"
+	"github.com/quad/quad-node/transactionType"
 	"log"
 )
 

@@ -1,9 +1,9 @@
 package transactionServices
 
 import (
-	"github.com/chainpqc/chainpqc-node/message"
-	"github.com/chainpqc/chainpqc-node/statistics"
-	"github.com/chainpqc/chainpqc-node/transactionType"
+	"github.com/quad/quad-node/message"
+	"github.com/quad/quad-node/statistics"
+	"github.com/quad/quad-node/transactionType"
 	"log"
 )
 

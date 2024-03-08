@@ -3,7 +3,7 @@ package transactionType
 import (
 	"bytes"
 	"container/heap"
-	"github.com/chainpqc/chainpqc-node/common"
+	"github.com/quad/quad-node/common"
 	"sync"
 )
 

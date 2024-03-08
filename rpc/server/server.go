@@ -2,11 +2,11 @@ package serverrpc
 
 import (
 	"encoding/json"
-	"github.com/chainpqc/chainpqc-node/common"
-	"github.com/chainpqc/chainpqc-node/services/transactionServices"
-	"github.com/chainpqc/chainpqc-node/statistics"
-	"github.com/chainpqc/chainpqc-node/tcpip"
-	"github.com/chainpqc/chainpqc-node/wallet"
+	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/services/transactionServices"
+	"github.com/quad/quad-node/statistics"
+	"github.com/quad/quad-node/tcpip"
+	"github.com/quad/quad-node/wallet"
 	"log"
 	"net"
 	"net/rpc"

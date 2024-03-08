@@ -2,10 +2,10 @@ package qtwidgets
 
 import (
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/common"
-	clientrpc "github.com/chainpqc/chainpqc-node/rpc/client"
-	"github.com/chainpqc/chainpqc-node/statistics"
-	"github.com/chainpqc/chainpqc-node/wallet"
+	"github.com/quad/quad-node/common"
+	clientrpc "github.com/quad/quad-node/rpc/client"
+	"github.com/quad/quad-node/statistics"
+	"github.com/quad/quad-node/wallet"
 	"github.com/therecipe/qt/widgets"
 
 	"log"

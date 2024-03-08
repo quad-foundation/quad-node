@@ -3,10 +3,10 @@ package transactionType
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/account"
-	"github.com/chainpqc/chainpqc-node/common"
-	memDatabase "github.com/chainpqc/chainpqc-node/database"
-	"github.com/chainpqc/chainpqc-node/wallet"
+	"github.com/quad/quad-node/account"
+	"github.com/quad/quad-node/common"
+	memDatabase "github.com/quad/quad-node/database"
+	"github.com/quad/quad-node/wallet"
 	"log"
 	"strconv"
 )

@@ -1,8 +1,8 @@
 package account
 
 import (
-	"github.com/chainpqc/chainpqc-node/account/stake"
-	"github.com/chainpqc/chainpqc-node/common"
+	"github.com/quad/quad-node/account/stake"
+	"github.com/quad/quad-node/common"
 )
 
 type StakingAccounts struct {

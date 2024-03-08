@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/crypto/blake2b"
+	"github.com/quad/quad-node/crypto/blake2b"
 	"log"
 )
 
