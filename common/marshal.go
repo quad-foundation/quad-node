@@ -20,6 +20,9 @@ func Marshal(v any, prefix [2]byte) ([]byte, error) {
 func Unmarshal(b []byte, prefix [2]byte, v any) error {
 	marshalMutex.Lock()
 	defer marshalMutex.Unlock()
+	if len(b) < 2 {
+		return nil
+	}
 	err := json.Unmarshal(b[2:], v)
 	if err != nil {
 		return err

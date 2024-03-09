@@ -3,12 +3,42 @@ package tcpip
 import (
 	"bytes"
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/common"
+	"github.com/quad/quad-node/common"
 	"log"
 	"net"
 	"strings"
+	"syscall"
 	"time"
 )
+
+// Helper function to log buffer sizes
+func logBufferSizes(tcpConn *net.TCPConn) {
+	if tcpConn == nil {
+		log.Println("TCP connection is nil")
+		return
+	}
+
+	fd, err := tcpConn.File() // Note: This may cause issues with the runtime's network poller
+	if err != nil {
+		log.Println("Failed to get file descriptor:", err)
+		return
+	}
+	defer fd.Close()
+
+	readBuffer, err := syscall.GetsockoptInt(int(fd.Fd()), syscall.SOL_SOCKET, syscall.SO_RCVBUF)
+	if err != nil {
+		log.Println("Failed to get read buffer size:", err)
+		return
+	}
+
+	writeBuffer, err := syscall.GetsockoptInt(int(fd.Fd()), syscall.SOL_SOCKET, syscall.SO_SNDBUF)
+	if err != nil {
+		log.Println("Failed to get write buffer size:", err)
+		return
+	}
+
+	log.Printf("TCP buffer sizes - Read: %d, Write: %d\n", readBuffer, writeBuffer)
+}
 
 func StartNewListener(sendChan <-chan []byte, topic [2]byte) {
 
@@ -24,6 +54,7 @@ func StartNewListener(sendChan <-chan []byte, topic [2]byte) {
 			tcpConn.Close()
 		}
 	}()
+	index_logs := 0
 	go LoopSend(sendChan, topic)
 	for {
 		select {
@@ -35,6 +66,12 @@ func StartNewListener(sendChan <-chan []byte, topic [2]byte) {
 				log.Println(err)
 				continue
 			}
+
+			for code, tcpConn := range tcpConnections[topic] {
+				log.Printf("TCP buffer sizes %v", code)
+				logBufferSizes(tcpConn)
+			}
+			index_logs++
 		}
 	}
 }

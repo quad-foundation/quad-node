@@ -2,7 +2,7 @@ package message
 
 import (
 	"bytes"
-	"github.com/chainpqc/chainpqc-node/common"
+	"github.com/quad/quad-node/common"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

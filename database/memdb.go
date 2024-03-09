@@ -3,10 +3,10 @@ package memDatabase
 import (
 	"errors"
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/common"
-	"github.com/chainpqc/chainpqc-node/wallet"
 	commoneth "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/wallet"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/util"

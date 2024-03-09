@@ -1,13 +1,14 @@
 package nonceServices
 
 import (
-	"github.com/chainpqc/chainpqc-node/blocks"
-	"github.com/chainpqc/chainpqc-node/common"
-	memDatabase "github.com/chainpqc/chainpqc-node/database"
-	"github.com/chainpqc/chainpqc-node/message"
-	"github.com/chainpqc/chainpqc-node/services"
-	"github.com/chainpqc/chainpqc-node/statistics"
-	"github.com/chainpqc/chainpqc-node/transactionType"
+	"github.com/quad/quad-node/blocks"
+	"github.com/quad/quad-node/common"
+	memDatabase "github.com/quad/quad-node/database"
+	"github.com/quad/quad-node/message"
+	"github.com/quad/quad-node/services"
+	"github.com/quad/quad-node/statistics"
+	"github.com/quad/quad-node/transactionsDefinition"
+	"github.com/quad/quad-node/transactionsPool"
 	"log"
 )
 
@@ -42,7 +43,7 @@ func OnMessage(addr string, m []byte) {
 		return
 	}
 
-	nonceTransaction := map[[2]byte]transactionType.Transaction{}
+	nonceTransaction := map[[2]byte]transactionsDefinition.Transaction{}
 
 	for k, v := range txn {
 		nonceTransaction[k] = v[0]
@@ -52,7 +53,7 @@ func OnMessage(addr string, m []byte) {
 		case "nn": // nonce
 			//fmt.Printf("%v", nonceTransaction)
 			//var topic [2]byte
-			var transaction transactionType.Transaction
+			var transaction transactionsDefinition.Transaction
 			for _, v := range nonceTransaction {
 				//topic = k
 				transaction = v
@@ -77,16 +78,16 @@ func OnMessage(addr string, m []byte) {
 			if err != nil {
 				panic(err)
 			}
-			txs := transactionType.PoolsTx[transaction.GetChain()].PeekTransactions(int(common.MaxTransactionsPerBlock))
+			txs := transactionsPool.PoolsTx[transaction.GetChain()].PeekTransactions(int(common.MaxTransactionsPerBlock))
 			txsBytes := make([][]byte, len(txs))
 			for _, tx := range txs {
 				hash := tx.GetHash().GetBytes()
 				txsBytes = append(txsBytes, hash)
 			}
-			merkleTrie, err := transactionType.BuildMerkleTree(h+1, txsBytes)
+			merkleTrie, err := transactionsPool.BuildMerkleTree(h+1, txsBytes)
 			defer merkleTrie.Destroy()
 
-			newBlock, err := services.CreateBlockFromNonceMessage([]transactionType.Transaction{transaction},
+			newBlock, err := services.CreateBlockFromNonceMessage([]transactionsDefinition.Transaction{transaction},
 				lastBlock,
 				merkleTrie)
 
@@ -107,10 +108,10 @@ func OnMessage(addr string, m []byte) {
 					}
 
 					log.Println("Number of transactions in block: ", len(hashes))
-					txs := []transactionType.Transaction{}
+					txs := []transactionsDefinition.Transaction{}
 					txshb := [][]byte{}
 					for _, h := range hashes {
-						tx := transactionType.PoolsTx[chain].PopTransactionByHash(h.GetBytes())
+						tx := transactionsPool.PoolsTx[chain].PopTransactionByHash(h.GetBytes())
 						txs = append(txs, tx)
 						txshb = append(txshb, tx.GetHash().GetBytes())
 						err = memDatabase.MainDB.Put(tx.GetHash().GetBytes(), tx.GetBytes())
@@ -135,7 +136,7 @@ func OnMessage(addr string, m []byte) {
 					stats.MainStats.Difficulty = newBlock.BaseBlock.BaseHeader.Difficulty
 					stats.MainStats.Syncing = common.IsSyncing.Load()
 					stats.MainStats.TimeInterval = newBlock.BaseBlock.BlockTimeStamp - lastBlock.BaseBlock.BlockTimeStamp
-					empt := transactionType.EmptyTransaction()
+					empt := transactionsDefinition.EmptyTransaction()
 					ntxs := 0
 					for i := uint8(0); i < 5; i++ {
 						if chain == i {

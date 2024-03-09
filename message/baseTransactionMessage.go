@@ -2,8 +2,8 @@ package message
 
 import (
 	"bytes"
-	"github.com/chainpqc/chainpqc-node/common"
-	"github.com/chainpqc/chainpqc-node/transactionType"
+	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/transactionsDefinition"
 	"log"
 )
 
@@ -14,14 +14,14 @@ type TransactionsMessage struct {
 	TransactionsBytes map[[2]byte][][]byte `json:"transactions_bytes"`
 }
 
-func (a TransactionsMessage) GetTransactions() (map[[2]byte][]transactionType.Transaction, error) {
-	txn := map[[2]byte][]transactionType.Transaction{}
+func (a TransactionsMessage) GetTransactions() (map[[2]byte][]transactionsDefinition.Transaction, error) {
+	txn := map[[2]byte][]transactionsDefinition.Transaction{}
 	for _, topic := range validTopics {
 		chain := a.GetChain()
 		topic[1] = chain
 		if common.IsInKeysOfList(a.TransactionsBytes, topic) {
 			for _, tb := range a.TransactionsBytes[topic] {
-				tx := transactionType.Transaction{}
+				tx := transactionsDefinition.Transaction{}
 				at, rest, err := tx.GetFromBytes(tb)
 				if err != nil || len(rest) > 0 {
 					return nil, err

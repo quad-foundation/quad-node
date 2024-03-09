@@ -1,20 +1,31 @@
-package transactionType
+package transactionsPool
 
 import (
 	"bytes"
 	"container/heap"
-	"github.com/chainpqc/chainpqc-node/common"
+	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/transactionsDefinition"
 	"sync"
 )
 
+var (
+	PoolsTx [5]*TransactionPool
+)
+
+func init() {
+	for c := 0; c < 5; c++ {
+		PoolsTx[c] = NewTransactionPool(common.MaxTransactionInPool)
+	}
+}
+
 type Item struct {
-	Transaction
+	transactionsDefinition.Transaction
 	value    [common.HashLength]byte
 	priority int64
 	index    int
 }
 
-func NewItem(tx Transaction, priority int64) *Item {
+func NewItem(tx transactionsDefinition.Transaction, priority int64) *Item {
 	hash := [common.HashLength]byte{}
 	calcHash := tx.GetHash()
 	//if err != nil {
@@ -29,20 +40,36 @@ func NewItem(tx Transaction, priority int64) *Item {
 }
 
 type TransactionPool struct {
-	transactions    map[[common.HashLength]byte]Transaction
-	priorityQueue   PriorityQueue
-	maxTransactions int
-	rwmutex         sync.RWMutex
+	transactions       map[[common.HashLength]byte]transactionsDefinition.Transaction
+	transactionIndices map[[common.HashLength]byte]int // New map for tracking indices
+	priorityQueue      PriorityQueue
+	maxTransactions    int
+	rwmutex            sync.RWMutex
 }
+
+// Modify AddTransaction to update transactionIndices
+// Modify RemoveTransactionByHash and PopTransactionByHash to use transactionIndices for direct access
+
+func (tp *TransactionPool) updateIndices() {
+	// Call this method after any operation that might change the indices of items in the priorityQueue
+	for i := range tp.priorityQueue {
+		txHash := tp.priorityQueue[i].GetHash().GetBytes()
+		var hash [common.HashLength]byte
+		copy(hash[:], txHash)
+		tp.transactionIndices[hash] = i
+	}
+}
+
+// Ensure heap operations (push, pop, remove) call updateIndices to keep the map accurate
 
 func NewTransactionPool(maxTransactions int) *TransactionPool {
 	return &TransactionPool{
-		transactions:    make(map[[common.HashLength]byte]Transaction),
+		transactions:    make(map[[common.HashLength]byte]transactionsDefinition.Transaction),
 		priorityQueue:   make(PriorityQueue, 0),
 		maxTransactions: maxTransactions,
 	}
 }
-func (tp *TransactionPool) AddTransaction(tx Transaction) {
+func (tp *TransactionPool) AddTransaction(tx transactionsDefinition.Transaction) {
 	var hash [common.HashLength]byte
 	copy(hash[:], tx.GetHash().GetBytes())
 	tp.rwmutex.Lock()
@@ -56,13 +83,14 @@ func (tp *TransactionPool) AddTransaction(tx Transaction) {
 			delete(tp.transactions, removed.value)
 		}
 	}
+	tp.updateIndices()
 }
-func (tp *TransactionPool) PeekTransactions(n int) []Transaction {
+func (tp *TransactionPool) PeekTransactions(n int) []transactionsDefinition.Transaction {
 	if n > len(tp.transactions) {
 		n = len(tp.transactions)
 	}
 	hash := [common.HashLength]byte{}
-	topTransactions := []Transaction{}
+	topTransactions := []transactionsDefinition.Transaction{}
 	tp.rwmutex.RLock()
 	defer tp.rwmutex.RUnlock()
 	for i := 0; i < n; i++ {
@@ -89,8 +117,9 @@ func (tp *TransactionPool) RemoveTransactionByHash(hash []byte) {
 		}
 		delete(tp.transactions, h)
 	}
+	tp.updateIndices()
 }
-func (tp *TransactionPool) PopTransactionByHash(hash []byte) Transaction {
+func (tp *TransactionPool) PopTransactionByHash(hash []byte) transactionsDefinition.Transaction {
 	h := [common.HashLength]byte{}
 	copy(h[:], hash)
 	tp.rwmutex.Lock()
@@ -106,8 +135,10 @@ func (tp *TransactionPool) PopTransactionByHash(hash []byte) Transaction {
 			}
 		}
 	}
-	return EmptyTransaction()
+	tp.updateIndices()
+	return transactionsDefinition.EmptyTransaction()
 }
+
 func (tp *TransactionPool) NumberOfTransactions() int {
 	tp.rwmutex.RLock()
 	defer tp.rwmutex.RUnlock()

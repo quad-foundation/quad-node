@@ -29,8 +29,8 @@ var (
 	MinStakingForNode         int64   = 100000000000000
 	MinStakingUser            int64   = 100000000000 // should be 100000000000
 	MinDistributedAmount      int64   = 100000000
-	DefaultWalletHomePath             = "~/.chainpqc/db/wallet/"
-	DefaultBlockchainHomePath         = "~/.chainpqc/db/blockchain/"
+	DefaultWalletHomePath             = "~/.quad/db/wallet/"
+	DefaultBlockchainHomePath         = "~/.quad/db/blockchain/"
 )
 
 // db prefixes
@@ -78,7 +78,7 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = godotenv.Load(homePath + "/.chainpqc/.env")
+	err = godotenv.Load(homePath + "/.quad/.env")
 	if err != nil {
 		log.Fatal("Error loading .env file", err)
 	}
