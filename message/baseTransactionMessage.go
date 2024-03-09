@@ -14,7 +14,11 @@ type TransactionsMessage struct {
 	TransactionsBytes map[[2]byte][][]byte `json:"transactions_bytes"`
 }
 
-func (a TransactionsMessage) GetTransactions() (map[[2]byte][]transactionsDefinition.Transaction, error) {
+func (a TransactionsMessage) GetTransactionsBytes() map[[2]byte][][]byte {
+	return a.TransactionsBytes
+}
+
+func (a TransactionsMessage) GetTransactionsFromBytes() (map[[2]byte][]transactionsDefinition.Transaction, error) {
 	txn := map[[2]byte][]transactionsDefinition.Transaction{}
 	for _, topic := range validTopics {
 		chain := a.GetChain()

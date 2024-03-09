@@ -8,7 +8,7 @@ import (
 var height int64
 var heightMutex sync.RWMutex
 var BalanceMutex sync.RWMutex
-var BlockMutex sync.Mutex
+var BlockMutex sync.RWMutex
 var SyncingMutex sync.Mutex
 var IsSyncing = atomic.Bool{}
 

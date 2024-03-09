@@ -3,7 +3,6 @@ package message
 import (
 	"bytes"
 	"github.com/quad/quad-node/common"
-	"github.com/quad/quad-node/transactionsDefinition"
 	"log"
 )
 
@@ -19,7 +18,7 @@ type BaseMessage struct {
 type AnyMessage interface {
 	GetHead() []byte
 	GetChainID() int16
-	GetTransactions() (map[[2]byte][]transactionsDefinition.Transaction, error)
+	GetTransactionsBytes() map[[2]byte][][]byte
 	GetChain() uint8
 	GetBytes() []byte
 	GetFromBytes([]byte) (AnyMessage, error)

@@ -31,7 +31,7 @@ func OnMessage(addr string, m []byte) {
 		panic("message is invalid")
 	}
 	msg = amsg.(message.TransactionsMessage)
-	txn, err := msg.GetTransactions()
+	txn, err := msg.GetTransactionsFromBytes()
 	if err != nil {
 		return
 	}
