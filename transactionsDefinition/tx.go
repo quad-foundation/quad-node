@@ -8,8 +8,8 @@ import (
 )
 
 type TxData struct {
-	Recipient common.Address `json:"recipient"`
-	Amount    int64          `json:"amount"`
+	Recipient common.Address `json:"recipient,omitempty"`
+	Amount    int64          `json:"amount,omitempty"`
 	OptData   []byte         `json:"opt_data,omitempty"`
 	Pubkey    common.PubKey  `json:"pubkey,omitempty"`
 }
