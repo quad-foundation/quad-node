@@ -40,11 +40,27 @@ func NewItem(tx transactionsDefinition.Transaction, priority int64) *Item {
 }
 
 type TransactionPool struct {
-	transactions    map[[common.HashLength]byte]transactionsDefinition.Transaction
-	priorityQueue   PriorityQueue
-	maxTransactions int
-	rwmutex         sync.RWMutex
+	transactions       map[[common.HashLength]byte]transactionsDefinition.Transaction
+	transactionIndices map[[common.HashLength]byte]int // New map for tracking indices
+	priorityQueue      PriorityQueue
+	maxTransactions    int
+	rwmutex            sync.RWMutex
 }
+
+// Modify AddTransaction to update transactionIndices
+// Modify RemoveTransactionByHash and PopTransactionByHash to use transactionIndices for direct access
+
+func (tp *TransactionPool) updateIndices() {
+	// Call this method after any operation that might change the indices of items in the priorityQueue
+	for i := range tp.priorityQueue {
+		txHash := tp.priorityQueue[i].GetHash().GetBytes()
+		var hash [common.HashLength]byte
+		copy(hash[:], txHash)
+		tp.transactionIndices[hash] = i
+	}
+}
+
+// Ensure heap operations (push, pop, remove) call updateIndices to keep the map accurate
 
 func NewTransactionPool(maxTransactions int) *TransactionPool {
 	return &TransactionPool{
@@ -67,6 +83,7 @@ func (tp *TransactionPool) AddTransaction(tx transactionsDefinition.Transaction)
 			delete(tp.transactions, removed.value)
 		}
 	}
+	tp.updateIndices()
 }
 func (tp *TransactionPool) PeekTransactions(n int) []transactionsDefinition.Transaction {
 	if n > len(tp.transactions) {
@@ -100,6 +117,7 @@ func (tp *TransactionPool) RemoveTransactionByHash(hash []byte) {
 		}
 		delete(tp.transactions, h)
 	}
+	tp.updateIndices()
 }
 func (tp *TransactionPool) PopTransactionByHash(hash []byte) transactionsDefinition.Transaction {
 	h := [common.HashLength]byte{}
@@ -117,8 +135,10 @@ func (tp *TransactionPool) PopTransactionByHash(hash []byte) transactionsDefinit
 			}
 		}
 	}
+	tp.updateIndices()
 	return transactionsDefinition.EmptyTransaction()
 }
+
 func (tp *TransactionPool) NumberOfTransactions() int {
 	tp.rwmutex.RLock()
 	defer tp.rwmutex.RUnlock()
