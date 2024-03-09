@@ -26,6 +26,9 @@ func UpdateAccountStats(w *wallet.Wallet) {
 		log.Println("Can not unmarshal statistics")
 		return
 	}
+	if st.Heights == 0 {
+		return
+	}
 	txt := fmt.Sprintln("Height:", st.Heights)
 	txt += fmt.Sprintln("Chain:", st.Chain, " : ", common.NamesOfChains[st.Chain])
 	txt += fmt.Sprintln("Heights max:", st.HeightMax)

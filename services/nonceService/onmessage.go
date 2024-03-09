@@ -128,28 +128,36 @@ func OnMessage(addr string, m []byte) {
 						panic(err)
 					}
 					common.SetHeight(newBlock.GetBaseBlock().BaseHeader.Height)
-					stats, _ := statistics.LoadStats()
-					//stats.mutex.Lock()
-					//defer stats.mutex.Unlock()
-					stats.MainStats.Heights = common.GetHeight()
-					stats.MainStats.Chain = chain
-					stats.MainStats.Difficulty = newBlock.BaseBlock.BaseHeader.Difficulty
-					stats.MainStats.Syncing = common.IsSyncing.Load()
-					stats.MainStats.TimeInterval = newBlock.BaseBlock.BlockTimeStamp - lastBlock.BaseBlock.BlockTimeStamp
-					empt := transactionsDefinition.EmptyTransaction()
-					ntxs := 0
-					for i := uint8(0); i < 5; i++ {
-						if chain == i {
-							hs, _ := newBlock.GetTransactionsHashes(merkleTrie, h+1)
-							stats.MainStats.Transactions[i] = len(hs)
-							stats.MainStats.TransactionsSize[i] = len(hs) * len(empt.GetBytes())
-							ntxs += len(hs)
+					if statistics.GmsMutex.Mutex.TryLock() {
+						defer statistics.GmsMutex.Mutex.Unlock()
+						stats, _ := statistics.LoadStats()
+						stats.MainStats.Heights = common.GetHeight()
+						stats.MainStats.Chain = chain
+						stats.MainStats.Difficulty = newBlock.BaseBlock.BaseHeader.Difficulty
+						stats.MainStats.Syncing = common.IsSyncing.Load()
+						stats.MainStats.TimeInterval = newBlock.BaseBlock.BlockTimeStamp - lastBlock.BaseBlock.BlockTimeStamp
+						empt := transactionsDefinition.EmptyTransaction()
+						ntxs := 0
+						for i := uint8(0); i < 5; i++ {
+							if chain == i {
+								hs, _ := newBlock.GetTransactionsHashes(merkleTrie, h+1)
+								stats.MainStats.Transactions[i] = len(hs)
+								stats.MainStats.TransactionsSize[i] = len(hs) * len(empt.GetBytes())
+								ntxs += len(hs)
+							}
 						}
-					}
-					stats.MainStats.Tps = float32(ntxs) / float32(stats.MainStats.TimeInterval)
-					err = stats.MainStats.SaveStats()
-					if err != nil {
-						log.Println(err)
+						stats.MainStats.Tps = float32(ntxs) / float32(stats.MainStats.TimeInterval)
+
+						for i := uint8(0); i < 5; i++ {
+							nt := transactionsPool.PoolsTx[i].NumberOfTransactions()
+							stats.MainStats.TransactionsPending[i] = nt
+							stats.MainStats.TransactionsPendingSize[i] = nt * len(empt.GetBytes())
+						}
+
+						err = stats.MainStats.SaveStats()
+						if err != nil {
+							log.Println(err)
+						}
 					}
 					//services.BroadcastBlock(newBlock)
 					return

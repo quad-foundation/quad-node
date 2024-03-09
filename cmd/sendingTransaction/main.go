@@ -103,7 +103,7 @@ func sendTransactions(w *wallet.Wallet) {
 		tmm := m.GetBytes()
 		count += int64(batchSize)
 		end := common.GetCurrentTimeStampInSecond()
-		if count%100 == 0 && (end-start) > 0 {
+		if count%1000 == 0 && (end-start) > 0 {
 			fmt.Println("tps=", count/(end-start))
 		}
 		clientrpc.InRPC <- append([]byte("TRAN"), tmm...)
