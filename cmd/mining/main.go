@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/quad/quad-node/account"
+	"github.com/quad/quad-node/account/stake"
 	"github.com/quad/quad-node/common"
 	"github.com/quad/quad-node/database"
 	"github.com/quad/quad-node/genesis"
@@ -25,13 +27,51 @@ func main() {
 		log.Fatal(err)
 	}
 	wallet.InitActiveWallet(0, string(password))
-
+	addrbytes := [common.AddressLength]byte{}
+	copy(addrbytes[:], wallet.GetActiveWallet().Address.GetBytes())
 	memDatabase.Init()
 	defer memDatabase.CloseDB()
+
+	a := account.Account{
+		Balance: 0,
+		Address: addrbytes,
+	}
+	allAccounts := map[[20]byte]account.Account{}
+	allAccounts[addrbytes] = a
+	account.Accounts = account.AccountsType{AllAccounts: allAccounts}
+	err = account.StoreAccounts()
+	if err != nil {
+		log.Fatal(err)
+	}
+	sa := stake.StakingAccount{
+		StakedBalance:  0,
+		StakingRewards: 0,
+		Address:        addrbytes,
+		StakingDetails: nil,
+	}
+	allStakingAccounts := map[[20]byte]stake.StakingAccount{}
+	allStakingAccounts[addrbytes] = sa
+	account.StakingAccounts = account.StakingAccountsType{AllStakingAccounts: allStakingAccounts}
+
+	err = account.StoreStakingAccounts()
+	if err != nil {
+		log.Fatal(err)
+	}
 	transactionsPool.InitPermanentTrie()
 	defer transactionsPool.GlobalMerkleTree.Destroy()
 	statistics.InitGlobalMainStats()
 	defer statistics.DestroyGlobalMainStats()
+	err = account.LoadAccounts()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer account.StoreAccounts()
+	err = account.LoadStakingAccounts()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer account.StoreStakingAccounts()
+
 	w := wallet.GetActiveWallet()
 
 	err = memDatabase.MainDB.Put(append(common.PubKeyDBPrefix[:], w.Address.GetBytes()...),

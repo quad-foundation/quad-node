@@ -49,6 +49,8 @@ var (
 	TransactionPoolHashesDBPrefix      = [2]byte{'D', '0'}
 	TransactionToSendHashesDBPrefix    = [2]byte{'E', '0'}
 	TransactionSyncingHashesDBPrefix   = [2]byte{'S', '0'}
+	AccountsDBPrefix                   = [2]byte{'A', 'C'}
+	StakingAccountsDBPrefix            = [2]byte{'S', 'A'}
 )
 
 var chainID = int16(23)
