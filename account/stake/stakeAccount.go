@@ -3,6 +3,7 @@ package stake
 import (
 	"bytes"
 	"github.com/quad/quad-node/common"
+	"math"
 )
 
 type StakingAccount struct {
@@ -16,6 +17,11 @@ type StakingDetail struct {
 	Amount      int64 `json:"amount"`
 	Reward      int64 `json:"reward"`
 	LastUpdated int64 `json:"last_updated"`
+}
+
+// GetStakeConfirmedFloat get amount of confirmed staked QAD in human-readable format
+func (a *StakingAccount) GetBalanceConfirmedFloat() float64 {
+	return float64(a.StakedBalance) * math.Pow10(-int(common.Decimals))
 }
 
 // Marshal converts StakingAccount to a binary format.

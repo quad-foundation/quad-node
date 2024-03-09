@@ -3,11 +3,17 @@ package account
 import (
 	"fmt"
 	"github.com/quad/quad-node/common"
+	"math"
 )
 
 type Account struct {
 	Balance int64                      `json:"balance"`
 	Address [common.AddressLength]byte `json:"address"`
+}
+
+// GetBalanceConfirmedFloat get amount of confirmed QAD in human-readable format
+func (a *Account) GetBalanceConfirmedFloat() float64 {
+	return float64(a.Balance) * math.Pow10(-int(common.Decimals))
 }
 
 func (a Account) Marshal() []byte {
