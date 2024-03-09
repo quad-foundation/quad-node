@@ -1,20 +1,16 @@
 package main
 
 import (
-	"encoding/json"
 	"github.com/quad/quad-node/cmd/gui/qtwidgets"
 	"github.com/quad/quad-node/common"
 	clientrpc "github.com/quad/quad-node/rpc/client"
 	"github.com/quad/quad-node/statistics"
 	"github.com/quad/quad-node/wallet"
 	"github.com/therecipe/qt/widgets"
-	"log"
 	"os"
 	"strconv"
 	"time"
 )
-
-var MainWalllet *wallet.Wallet
 
 func main() {
 	var ip string
@@ -38,24 +34,24 @@ func main() {
 		" Node Account: " +
 		strconv.Itoa(int(common.NumericalDelegatedAccountAddress(common.GetDelegatedAccount()))))
 
-	MainWalllet = wallet.EmptyWallet(0)
-	var reply []byte
-
-	for {
-		clientrpc.InRPC <- []byte("WALL")
-		reply = <-clientrpc.OutRPC
-		if string(reply) != "Timeout" {
-			break
-		}
-		time.Sleep(time.Second)
-	}
-	err := json.Unmarshal(reply, MainWalllet)
-	if err != nil {
-		log.Println("Can not unmarshal wallet")
-	}
-	walletWidget := qtwidgets.ShowWalletPage(MainWalllet)
+	qtwidgets.MainWalllet = wallet.EmptyWallet(0)
+	//var reply []byte
+	//
+	//for {
+	//	clientrpc.InRPC <- []byte("WALL")
+	//	reply = <-clientrpc.OutRPC
+	//	if string(reply) != "Timeout" {
+	//		break
+	//	}
+	//	time.Sleep(time.Second)
+	//}
+	//err := json.Unmarshal(reply, MainWalllet)
+	//if err != nil {
+	//	log.Println("Can not unmarshal wallet")
+	//}
+	walletWidget := qtwidgets.ShowWalletPage()
 	accountWidget := qtwidgets.ShowAccountPage()
-	//sendWidget := qtwidgets.ShowSendPage(&MainWalllet)
+	sendWidget := qtwidgets.ShowSendPage()
 	//historyWidget := qtwidgets.ShowHistoryPage()
 	//detailsWidget := qtwidgets.ShowDetailsPage()
 	//stakingWidget := qtwidgets.ShowStakingPage(&MainWalllet)
@@ -63,7 +59,7 @@ func main() {
 	//dexWidget := qtwidgets.ShowDexPage(&MainWalllet)
 	window.AddTab(walletWidget, "Wallet")
 	window.AddTab(accountWidget, "Account")
-	//window.AddTab(sendWidget, "Send/Register")
+	window.AddTab(sendWidget, "Send/Register")
 	//window.AddTab(stakingWidget, "Staking/Unstaking")
 	//window.AddTab(historyWidget, "Transactions history")
 	//window.AddTab(detailsWidget, "Details")
@@ -74,7 +70,7 @@ func main() {
 
 	go func() {
 		for range time.Tick(time.Second * 3) {
-			qtwidgets.UpdateAccountStats(MainWalllet)
+			qtwidgets.UpdateAccountStats()
 		}
 	}()
 	//go func() {

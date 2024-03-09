@@ -12,8 +12,9 @@ import (
 )
 
 var StatsLabel *widgets.QLabel
+var MainWalllet *wallet.Wallet
 
-func UpdateAccountStats(w *wallet.Wallet) {
+func UpdateAccountStats() {
 	clientrpc.InRPC <- []byte("STAT")
 	var reply []byte
 	reply = <-clientrpc.OutRPC

@@ -62,7 +62,7 @@ func generateNonceMsg(chain uint8, topic [2]byte) (message.TransactionsMessage, 
 		return message.TransactionsMessage{}, err
 	}
 
-	err = (&nonceTransaction).Sign()
+	err = (&nonceTransaction).Sign(wallet.GetActiveWallet())
 	if err != nil {
 		return message.TransactionsMessage{}, err
 	}
