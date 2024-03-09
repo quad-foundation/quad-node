@@ -48,15 +48,17 @@ func OnMessage(addr string, m []byte) {
 				return
 			}
 			switch string(msg.GetHead()) {
-			case "tx": // nonce
+			case "tx":
 
 				// need to check transactions
 				for topic, v := range txs {
 					for _, t := range v {
-						transactionsPool.PoolsTx[topic[1]].AddTransaction(*t)
-						err := t.StoreToDBPoolTx(topic[:])
-						if err != nil {
-							log.Println(err)
+						if (*t).Verify() {
+							transactionsPool.PoolsTx[topic[1]].AddTransaction(*t)
+							err := t.StoreToDBPoolTx(topic[:])
+							if err != nil {
+								log.Println(err)
+							}
 						}
 					}
 
