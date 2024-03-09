@@ -1,7 +1,10 @@
 package qtwidgets
 
 import (
+	"encoding/hex"
 	"fmt"
+	"github.com/quad/quad-node/account"
+	stake2 "github.com/quad/quad-node/account/stake"
 	"github.com/quad/quad-node/common"
 	clientrpc "github.com/quad/quad-node/rpc/client"
 	"github.com/quad/quad-node/statistics"
@@ -12,8 +15,9 @@ import (
 )
 
 var StatsLabel *widgets.QLabel
+var MainWalllet *wallet.Wallet
 
-func UpdateAccountStats(w *wallet.Wallet) {
+func UpdateAccountStats() {
 	clientrpc.InRPC <- []byte("STAT")
 	var reply []byte
 	reply = <-clientrpc.OutRPC
@@ -24,6 +28,9 @@ func UpdateAccountStats(w *wallet.Wallet) {
 	err := common.Unmarshal(reply, common.StatDBPrefix, st)
 	if err != nil {
 		log.Println("Can not unmarshal statistics")
+		return
+	}
+	if st.Heights == 0 {
 		return
 	}
 	txt := fmt.Sprintln("Height:", st.Heights)
@@ -42,48 +49,62 @@ func UpdateAccountStats(w *wallet.Wallet) {
 	if st.Syncing {
 		txt += fmt.Sprintln("Syncing...")
 	}
-	//inb := append([]byte("ACCT"), w.Address.GetBytes()...)
-	//clientrpc.InRPC <- inb
-	//var re []byte
-	//var acc account.Account
-	//
-	//re = <-clientrpc.OutRPC
-	//if string(reply) == "Timeout" {
-	//	return
-	//}
-	//err = json.Unmarshal(re, &acc)
-	//if err != nil {
-	//	log.Println("cannot unmarshal account")
-	//	return
-	//}
-	//conf := acc.GetBalanceConfirmedFloat(st.Heights)
-	//uncTx := acc.GetUnconfirmedTransactionFloat(st.Heights)
-	//
-	//stake := acc.GetStakeConfirmedFloat(st.Heights)
-	//uncStake := acc.GetUnconfirmedStakeFloat(st.Heights)
-	//
-	//txt += fmt.Sprintln("\n\nYour Address:", w.Address.GetHex())
-	//txt += fmt.Sprintf("Your holdings: %18.8f GXY\n", conf+uncTx+stake+uncStake)
-	//txt += fmt.Sprintf("Confirmed balance: %18.8f GXY\n", conf)
-	//txt += fmt.Sprintf("Transactions unconfirmed balance: %18.8f GXY\n", uncTx)
-	//txt += fmt.Sprintf("Staked amount: %18.8f GXY\n", stake)
-	//txt += fmt.Sprintf("Unconfirmed staked amount: %18.8f GXY\n", uncStake)
-	//txt += fmt.Sprintf("\nStaking details:\n")
-	//for k, v := range acc.StakingAddresses {
-	//	if v == 0 {
-	//		continue
-	//	}
-	//	ab, _ := hex.DecodeString(k)
-	//	a := common.Address{}
-	//	a.Init(ab[:])
-	//	if n := common.NumericalDelegatedAccountAddress(a); n > 0 {
-	//
-	//		txt += fmt.Sprintf("Delegated Address: %v\n", a.GetHex())
-	//		txt += fmt.Sprintf("Delegated Account Number: %v = %v\n", n, account.Int64toFloat64(v))
-	//
-	//	}
-	//}
-	//fmt.Println(txt)
+	inb := append([]byte("ACCT"), MainWalllet.Address.GetBytes()...)
+	clientrpc.InRPC <- inb
+	var re []byte
+	var acc account.Account
+
+	re = <-clientrpc.OutRPC
+	if string(reply) == "Timeout" {
+		return
+	}
+	err = acc.Unmarshal(re)
+	if err != nil {
+		log.Println("cannot unmarshal account")
+		return
+	}
+	conf := acc.GetBalanceConfirmedFloat()
+	uncTx := 0.0 //acc.GetUnconfirmedTransactionFloat(st.Heights)
+
+	inb = append([]byte("ACCS"), MainWalllet.Address.GetBytes()...)
+	clientrpc.InRPC <- inb
+	var accs stake2.StakingAccount
+
+	re = <-clientrpc.OutRPC
+	if string(reply) == "Timeout" {
+		return
+	}
+	err = accs.Unmarshal(re)
+	if err != nil {
+		log.Println("cannot unmarshal stake account")
+		return
+	}
+
+	stake := accs.GetBalanceConfirmedFloat()
+	uncStake := 0.0 // acc.GetUnconfirmedStakeFloat(st.Heights)
+
+	txt += fmt.Sprintln("\n\nYour Address:", MainWalllet.Address.GetHex())
+	txt += fmt.Sprintf("Your holdings: %18.8f GXY\n", conf+uncTx+stake+uncStake)
+	txt += fmt.Sprintf("Confirmed balance: %18.8f GXY\n", conf)
+	txt += fmt.Sprintf("Transactions unconfirmed balance: %18.8f GXY\n", uncTx)
+	txt += fmt.Sprintf("Staked amount: %18.8f GXY\n", stake)
+	txt += fmt.Sprintf("Unconfirmed staked amount: %18.8f GXY\n", uncStake)
+	txt += fmt.Sprintf("\nStaking details:\n")
+	for k, v := range accs.StakingDetails {
+		if v.Amount == 0 {
+			continue
+		}
+		ab, _ := hex.DecodeString(k)
+		a := common.Address{}
+		a.Init(ab[:])
+		if n := common.NumericalDelegatedAccountAddress(a); n > 0 {
+
+			txt += fmt.Sprintf("Delegated Address: %v\n", a.GetHex())
+			txt += fmt.Sprintf("Delegated Account Number: %v = %v\n", n, account.Int64toFloat64(v.Amount))
+
+		}
+	}
+	fmt.Println(txt)
 	StatsLabel.SetText(txt)
 	//txt2 := ""
 	//if lastSt.Heights == 0 {

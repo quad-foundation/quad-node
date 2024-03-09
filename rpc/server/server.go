@@ -2,6 +2,7 @@ package serverrpc
 
 import (
 	"encoding/json"
+	"github.com/quad/quad-node/account"
 	"github.com/quad/quad-node/common"
 	"github.com/quad/quad-node/services/transactionServices"
 	"github.com/quad/quad-node/statistics"
@@ -51,8 +52,10 @@ func (l *Listener) Send(line []byte, reply *[]byte) error {
 		handleTRAN(byt, reply)
 	//case "VIEW":
 	//	handleVIEW(byt, reply)
-	//case "ACCT":
-	//	handleACCT(byt, reply)
+	case "ACCT":
+		handleACCT(byt, reply)
+	case "ACCS":
+		handleACCS(byt, reply)
 	//case "DETS":
 	//	handleDETS(byt, reply)
 	//case "STAK":
@@ -93,6 +96,27 @@ func handleWALL(line []byte, reply *[]byte) {
 	}
 	*reply = r
 }
+
+func handleACCT(line []byte, reply *[]byte) {
+
+	byt := [common.AddressLength]byte{}
+	copy(byt[:], line[:common.AddressLength])
+
+	acc := account.Accounts.AllAccounts[byt]
+	am := acc.Marshal()
+	*reply = am
+}
+
+func handleACCS(line []byte, reply *[]byte) {
+
+	byt := [common.AddressLength]byte{}
+	copy(byt[:], line[:common.AddressLength])
+
+	acc := account.StakingAccounts.AllStakingAccounts[byt]
+	am := acc.Marshal()
+	*reply = am
+}
+
 func handleTRAN(byt []byte, reply *[]byte) {
 
 	*reply = []byte("transaction sent")

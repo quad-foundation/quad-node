@@ -23,7 +23,8 @@ var (
 
 func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 	lastBlock blocks.Block,
-	merkleTrie *transactionsPool.MerkleTree) (blocks.Block, error) {
+	merkleTrie *transactionsPool.MerkleTree,
+	txs []common.Hash) (blocks.Block, error) {
 
 	myWallet := wallet.GetActiveWallet()
 	transactionChain := nonceTx[0].GetChain()
@@ -47,13 +48,15 @@ func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 	bblock := lastBlock.GetBaseBlock()
 	diff := blocks.AdjustDifficulty(bblock.BaseHeader.Difficulty, ti)
 	sendingTimeMessage := common.GetByteInt64(nonceTx[0].GetParam().SendingTime)
+	rootMerkleTrie := common.Hash{}
+	rootMerkleTrie.Set(merkleTrie.GetRootHash())
 	bh := blocks.BaseHeader{
 		PreviousHash:     lastBlock.GetBlockHash(),
 		Difficulty:       diff,
 		Height:           heightTransaction,
 		DelegatedAccount: common.GetDelegatedAccount(),
 		OperatorAccount:  myWallet.Address,
-		RootMerkleTree:   lastBlock.GetTransactionsHash(),
+		RootMerkleTree:   rootMerkleTrie,
 		Signature:        common.Signature{},
 		SignatureMessage: sendingTimeMessage,
 	}
@@ -74,15 +77,14 @@ func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 		RewardPercentage: common.GetRewardPercentage(),
 	}
 
-	rmthash := common.GetHashFromBytes(merkleTrie.GetRootHash())
 	if err != nil {
 		return blocks.Block{}, err
 	}
 	bl := blocks.Block{
-		BaseBlock:        bb,
-		Chain:            transactionChain,
-		TransactionsHash: rmthash,
-		BlockHash:        common.Hash{},
+		BaseBlock:          bb,
+		Chain:              transactionChain,
+		TransactionsHashes: txs,
+		BlockHash:          common.Hash{},
 	}
 	hash, err := bl.CalcBlockHash()
 	if err != nil {
@@ -101,7 +103,7 @@ func GenerateBlockMessage(bl blocks.Block) message.TransactionsMessage {
 		Chain:   bl.GetChain(),
 	}
 	txm := [2]byte{}
-	copy(txm[:], "bs")
+	copy(txm[:], append([]byte("N"), bm.Chain))
 	atm := message.TransactionsMessage{
 		BaseMessage:       bm,
 		TransactionsBytes: map[[2]byte][][]byte{},

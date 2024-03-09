@@ -8,10 +8,10 @@ import (
 )
 
 type Block struct {
-	BaseBlock        BaseBlock   `json:"base_block"`
-	Chain            uint8       `json:"chain"`
-	TransactionsHash common.Hash `json:"transactions_hashes"`
-	BlockHash        common.Hash `json:"block_hash"`
+	BaseBlock          BaseBlock     `json:"base_block"`
+	Chain              uint8         `json:"chain"`
+	TransactionsHashes []common.Hash `json:"transactions_hashes"`
+	BlockHash          common.Hash   `json:"block_hash"`
 }
 
 func (tb Block) GetBaseBlock() BaseBlock {
@@ -29,8 +29,11 @@ func (tb Block) GetRewardPercentage() int16 {
 func (tb Block) GetChain() uint8 {
 	return tb.Chain
 }
-func (tb Block) GetTransactionsHash() common.Hash {
-	return tb.TransactionsHash
+func (tb Block) GetHeader() BaseHeader {
+	return tb.GetBaseBlock().BaseHeader
+}
+func (tb Block) GetBlockTransactionsHashes() []common.Hash {
+	return tb.TransactionsHashes
 }
 func (tb Block) GetBlockHash() common.Hash {
 	return tb.BlockHash
@@ -38,8 +41,16 @@ func (tb Block) GetBlockHash() common.Hash {
 func (tb Block) GetBytes() []byte {
 	b := tb.BaseBlock.GetBytes()
 	b = append(b, tb.Chain)
-	b = append(b, tb.TransactionsHash.GetBytes()...)
 	b = append(b, tb.BlockHash.GetBytes()...)
+	for _, tx := range tb.TransactionsHashes {
+		b = append(b, tx.GetBytes()...)
+	}
+	return b
+}
+
+func (tb Block) GetBytesForHash() []byte {
+	b := tb.BaseBlock.GetBytes()
+	b = append(b, tb.Chain)
 	return b
 }
 
@@ -49,16 +60,21 @@ func (tb Block) GetFromBytes(b []byte) (Block, error) {
 		return Block{}, err
 	}
 	tb.Chain = b[0]
-	tb.TransactionsHash = common.GetHashFromBytes(b[1:33])
-	tb.BlockHash = common.GetHashFromBytes(b[33:65])
-	if len(b) > 65 {
+	tb.BlockHash = common.GetHashFromBytes(b[1:33])
+	b = b[33:]
+	if len(b)%32 != 0 {
 		return Block{}, fmt.Errorf("wrongly decompile block")
+	}
+	transactionHashesLength := len(b) / 32
+	for i := 0; i < transactionHashesLength; i++ {
+		bb := b[i*32 : (i+1)*32]
+		tb.TransactionsHashes = append(tb.TransactionsHashes, common.GetHashFromBytes(bb))
 	}
 	return tb, nil
 }
 
 func (tb Block) CalcBlockHash() (common.Hash, error) {
-	toByte, err := common.CalcHashToByte(tb.GetBytes())
+	toByte, err := common.CalcHashToByte(tb.GetBytesForHash())
 	if err != nil {
 		return common.Hash{}, err
 	}

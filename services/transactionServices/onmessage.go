@@ -2,7 +2,6 @@ package transactionServices
 
 import (
 	"github.com/quad/quad-node/message"
-	"github.com/quad/quad-node/statistics"
 	"github.com/quad/quad-node/transactionsDefinition"
 	"github.com/quad/quad-node/transactionsPool"
 	"log"
@@ -32,7 +31,7 @@ func OnMessage(addr string, m []byte) {
 		panic("message is invalid")
 	}
 	msg = amsg.(message.TransactionsMessage)
-	txn, err := msg.GetTransactions()
+	txn, err := msg.GetTransactionsFromBytes()
 	if err != nil {
 		return
 	}
@@ -62,22 +61,8 @@ func OnMessage(addr string, m []byte) {
 						}
 					}
 
-					log.Println("No of Tx in SendToPool: ", topic, " = ",
-						transactionsPool.PoolsTx[topic[1]].NumberOfTransactions())
-				}
-
-				if statistics.GmsMutex.Mutex.TryLock() {
-					defer statistics.GmsMutex.Mutex.Unlock()
-
-					stats, _ := statistics.LoadStats()
-					empt := transactionsDefinition.EmptyTransaction()
-					for i := uint8(0); i < 5; i++ {
-						nt := transactionsPool.PoolsTx[i].NumberOfTransactions()
-						stats.MainStats.TransactionsPending[i] = nt
-						stats.MainStats.TransactionsPendingSize[i] = nt * len(empt.GetBytes())
-					}
-					stats.MainStats.SaveStats()
-
+					//log.Println("No of Tx in SendToPool: ", topic, " = ",
+					//	transactionsPool.PoolsTx[topic[1]].NumberOfTransactions())
 				}
 
 			default:

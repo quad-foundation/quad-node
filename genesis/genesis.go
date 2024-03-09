@@ -76,16 +76,13 @@ func CreateBlockFromGenesis(genesis Genesis) (blocks.Block, error) {
 		return blocks.Block{}, err
 	}
 	defer tempInstance.Destroy()
-	rmthash := common.GetHashFromBytes(tempInstance.GetRootHash())
-	if err != nil {
-		return blocks.Block{}, err
-	}
+	rmthash := []common.Hash{}
 
 	bl := blocks.Block{
-		BaseBlock:        bb,
-		Chain:            0,
-		TransactionsHash: rmthash,
-		BlockHash:        common.EmptyHash(),
+		BaseBlock:          bb,
+		Chain:              0,
+		TransactionsHashes: rmthash,
+		BlockHash:          common.EmptyHash(),
 	}
 	hash, err := bl.CalcBlockHash()
 	if err != nil {
