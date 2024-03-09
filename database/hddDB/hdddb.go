@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/common"
+	"github.com/quad/quad-node/common"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"log"
@@ -18,7 +18,7 @@ func Init() error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	homePath += "/.chainpqc/db/blockchain"
+	homePath += "/.quad/db/blockchain"
 
 	// Open or create a new LevelDB database
 	blockchainDB, err = leveldb.OpenFile(homePath, nil)

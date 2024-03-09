@@ -1,12 +1,14 @@
 package tcpip
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strings"
 	"sync"
@@ -61,6 +63,31 @@ func init() {
 		tcpConnections[k] = map[string]*net.TCPConn{}
 	}
 }
+
+func logsBufferForPort(port string) {
+	// Example of invoking netstat to show network statistics
+	cmd := exec.Command("netstat", "-an")
+
+	// Buffer for standard output
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	// Execute the command and wait for it to complete
+	err := cmd.Run()
+	if err != nil {
+		log.Println("Error occurred while running netstat:", err)
+		return
+	}
+
+	// Filter the output for the specific port
+	lines := strings.Split(out.String(), "\n")
+	for _, line := range lines {
+		if strings.Contains(line, ":"+port) {
+			log.Println(line)
+		}
+	}
+}
+
 func getInternalIp() string {
 	ifaces, err := net.Interfaces()
 	if err != nil {
@@ -145,6 +172,7 @@ func Send(conn *net.TCPConn, message []byte) {
 	}
 }
 func Receive(topic [2]byte, conn *net.TCPConn) []byte {
+	//logsBufferForPort(strconv.Itoa(Ports[[2]byte(topic[:2])]))
 	buf := make([]byte, 1024*1024)
 	n, err := conn.Read(buf[:])
 	if err != nil {

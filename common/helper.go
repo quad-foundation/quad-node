@@ -3,7 +3,7 @@ package common
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/crypto/blake2b"
+	"github.com/quad/quad-node/crypto/blake2b"
 	"log"
 	"time"
 )

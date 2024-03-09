@@ -34,8 +34,6 @@ install go modules
 
     go get ./...
 
-    sudo cp .config/liboqs.pc.linux /usr/share/pkgconfig/liboqs.pc
-
     mkdir ~/.quad
 
 Copy env file and change accordingly.

@@ -2,8 +2,8 @@ package message
 
 import (
 	"bytes"
-	"github.com/chainpqc/chainpqc-node/common"
-	"github.com/chainpqc/chainpqc-node/transactionType"
+	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/transactionsDefinition"
 	"log"
 )
 
@@ -19,7 +19,7 @@ type BaseMessage struct {
 type AnyMessage interface {
 	GetHead() []byte
 	GetChainID() int16
-	GetTransactions() (map[[2]byte][]transactionType.Transaction, error)
+	GetTransactions() (map[[2]byte][]transactionsDefinition.Transaction, error)
 	GetChain() uint8
 	GetBytes() []byte
 	GetFromBytes([]byte) (AnyMessage, error)

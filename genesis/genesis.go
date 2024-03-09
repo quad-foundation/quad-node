@@ -4,10 +4,10 @@ package genesis
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/blocks"
-	"github.com/chainpqc/chainpqc-node/common"
-	"github.com/chainpqc/chainpqc-node/transactionType"
-	"github.com/chainpqc/chainpqc-node/wallet"
+	"github.com/quad/quad-node/blocks"
+	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/transactionsPool"
+	"github.com/quad/quad-node/wallet"
 	"log"
 	"os"
 )
@@ -71,7 +71,7 @@ func CreateBlockFromGenesis(genesis Genesis) (blocks.Block, error) {
 		RewardPercentage: 0,
 	}
 
-	tempInstance, err := transactionType.BuildMerkleTree(0, [][]byte{})
+	tempInstance, err := transactionsPool.BuildMerkleTree(0, [][]byte{})
 	if err != nil {
 		return blocks.Block{}, err
 	}

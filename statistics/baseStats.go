@@ -2,8 +2,8 @@ package statistics
 
 import (
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/common"
-	memDatabase "github.com/chainpqc/chainpqc-node/database"
+	"github.com/quad/quad-node/common"
+	memDatabase "github.com/quad/quad-node/database"
 	"log"
 	"sync"
 )

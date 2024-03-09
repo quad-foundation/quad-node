@@ -1,7 +1,7 @@
 package blocks
 
 import (
-	"github.com/chainpqc/chainpqc-node/common"
+	"github.com/quad/quad-node/common"
 	"math"
 	"math/big"
 )

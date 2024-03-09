@@ -1,8 +1,8 @@
-package transactionType
+package transactionsDefinition
 
 import (
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/common"
+	"github.com/quad/quad-node/common"
 	"strconv"
 	"time"
 )
@@ -13,16 +13,6 @@ type TxParam struct {
 	SendingTime int64          `json:"sending_time"`
 	Nonce       int16          `json:"nonce"`
 	Chain       uint8          `json:"chain"`
-}
-
-var (
-	PoolsTx [5]*TransactionPool
-)
-
-func init() {
-	for c := 0; c < 5; c++ {
-		PoolsTx[c] = NewTransactionPool(common.MaxTransactionInPool)
-	}
 }
 
 func (tp TxParam) GetBytes() []byte {

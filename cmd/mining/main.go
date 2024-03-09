@@ -2,16 +2,16 @@ package main
 
 import (
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/common"
-	"github.com/chainpqc/chainpqc-node/database"
-	"github.com/chainpqc/chainpqc-node/genesis"
-	serverrpc "github.com/chainpqc/chainpqc-node/rpc/server"
-	nonceService "github.com/chainpqc/chainpqc-node/services/nonceService"
-	"github.com/chainpqc/chainpqc-node/services/transactionServices"
-	"github.com/chainpqc/chainpqc-node/statistics"
-	"github.com/chainpqc/chainpqc-node/tcpip"
-	"github.com/chainpqc/chainpqc-node/transactionType"
-	"github.com/chainpqc/chainpqc-node/wallet"
+	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/database"
+	"github.com/quad/quad-node/genesis"
+	serverrpc "github.com/quad/quad-node/rpc/server"
+	nonceService "github.com/quad/quad-node/services/nonceService"
+	"github.com/quad/quad-node/services/transactionServices"
+	"github.com/quad/quad-node/statistics"
+	"github.com/quad/quad-node/tcpip"
+	"github.com/quad/quad-node/transactionsPool"
+	"github.com/quad/quad-node/wallet"
 	"golang.org/x/crypto/ssh/terminal"
 	"log"
 	"os"
@@ -28,8 +28,8 @@ func main() {
 
 	memDatabase.Init()
 	defer memDatabase.CloseDB()
-	transactionType.InitPermanentTrie()
-	defer transactionType.GlobalMerkleTree.Destroy()
+	transactionsPool.InitPermanentTrie()
+	defer transactionsPool.GlobalMerkleTree.Destroy()
 	statistics.InitGlobalMainStats()
 	defer statistics.DestroyGlobalMainStats()
 	w := wallet.GetActiveWallet()

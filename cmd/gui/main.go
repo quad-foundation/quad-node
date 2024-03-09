@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/chainpqc/chainpqc-node/cmd/gui/qtwidgets"
-	"github.com/chainpqc/chainpqc-node/common"
-	clientrpc "github.com/chainpqc/chainpqc-node/rpc/client"
-	"github.com/chainpqc/chainpqc-node/statistics"
-	"github.com/chainpqc/chainpqc-node/wallet"
+	"github.com/quad/quad-node/cmd/gui/qtwidgets"
+	"github.com/quad/quad-node/common"
+	clientrpc "github.com/quad/quad-node/rpc/client"
+	"github.com/quad/quad-node/statistics"
+	"github.com/quad/quad-node/wallet"
 	"github.com/therecipe/qt/widgets"
 	"log"
 	"os"
@@ -34,7 +34,7 @@ func main() {
 	// create a window
 	window := widgets.NewQTabWidget(nil)
 	window.SetMinimumSize2(800, 900)
-	window.SetWindowTitle("ChainPQC Wallet - " + ip +
+	window.SetWindowTitle("QUAD Wallet - " + ip +
 		" Node Account: " +
 		strconv.Itoa(int(common.NumericalDelegatedAccountAddress(common.GetDelegatedAccount()))))
 

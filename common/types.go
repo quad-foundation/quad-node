@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/crypto/blake2b"
+	"github.com/quad/quad-node/crypto/blake2b"
 	"log"
 )
 
@@ -31,7 +31,7 @@ func (p PrivKey) GetLength() int {
 }
 
 func (s Signature) GetLength() int {
-	return SignatureLength
+	return len(s.ByteValue)
 }
 
 func (a Address) GetLength() int {
@@ -147,7 +147,7 @@ type Signature struct {
 }
 
 func (s *Signature) Init(b []byte, address Address) error {
-	if len(b) > s.GetLength() {
+	if len(b) > SignatureLength {
 		return fmt.Errorf("error Signature initialization with wrong length, should be %v", s.GetLength())
 	}
 	s.ByteValue = b[:]

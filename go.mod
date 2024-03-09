@@ -1,4 +1,4 @@
-module github.com/chainpqc/chainpqc-node
+module github.com/quad/quad-node
 
 go 1.20
 

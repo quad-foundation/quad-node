@@ -1,13 +1,13 @@
 package nonceServices
 
 import (
-	"github.com/chainpqc/chainpqc-node/blocks"
-	"github.com/chainpqc/chainpqc-node/common"
-	"github.com/chainpqc/chainpqc-node/message"
-	"github.com/chainpqc/chainpqc-node/services"
-	"github.com/chainpqc/chainpqc-node/tcpip"
-	"github.com/chainpqc/chainpqc-node/transactionType"
-	"github.com/chainpqc/chainpqc-node/wallet"
+	"github.com/quad/quad-node/blocks"
+	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/message"
+	"github.com/quad/quad-node/services"
+	"github.com/quad/quad-node/tcpip"
+	"github.com/quad/quad-node/transactionsDefinition"
+	"github.com/quad/quad-node/wallet"
 	"log"
 	"time"
 )
@@ -26,8 +26,8 @@ func InitNonceService() {
 func generateNonceMsg(chain uint8, topic [2]byte) (message.TransactionsMessage, error) {
 	h := common.GetHeight()
 
-	var nonceTransaction transactionType.Transaction
-	tp := transactionType.TxParam{
+	var nonceTransaction transactionsDefinition.Transaction
+	tp := transactionsDefinition.TxParam{
 		ChainID:     common.GetChainID(),
 		Sender:      wallet.GetActiveWallet().Address,
 		SendingTime: common.GetCurrentTimeStampInSecond(),
@@ -41,12 +41,12 @@ func generateNonceMsg(chain uint8, topic [2]byte) (message.TransactionsMessage, 
 	optData := common.GetByteInt64(h)
 	optData = append(optData, lastBlockHash...)
 
-	dataTx := transactionType.TxData{
+	dataTx := transactionsDefinition.TxData{
 		Recipient: common.EmptyAddress(),
 		Amount:    0,
 		OptData:   optData[:],
 	}
-	nonceTransaction = transactionType.Transaction{
+	nonceTransaction = transactionsDefinition.Transaction{
 		TxData:    dataTx,
 		TxParam:   tp,
 		Hash:      common.Hash{},

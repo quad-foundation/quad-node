@@ -2,9 +2,9 @@ package blocks
 
 import (
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/common"
-	memDatabase "github.com/chainpqc/chainpqc-node/database"
-	"github.com/chainpqc/chainpqc-node/wallet"
+	"github.com/quad/quad-node/common"
+	memDatabase "github.com/quad/quad-node/database"
+	"github.com/quad/quad-node/wallet"
 	"log"
 )
 
@@ -61,7 +61,7 @@ func (b *BaseHeader) GetBytes() []byte {
 	rb = append(rb, b.OperatorAccount.GetBytes()...)
 	rb = append(rb, b.RootMerkleTree.GetBytes()...)
 	rb = append(rb, common.BytesToLenAndBytes(b.SignatureMessage)...)
-	rb = append(rb, b.Signature.GetBytes()...)
+	rb = append(rb, common.BytesToLenAndBytes(b.Signature.GetBytes())...)
 	log.Println("block ", b.Height, " len bytes ", len(rb))
 	return rb
 }
@@ -119,12 +119,16 @@ func (bh *BaseHeader) GetFromBytes(b []byte) ([]byte, error) {
 		return nil, err
 	}
 	bh.SignatureMessage = msgb
-	sig, err := common.GetSignatureFromBytes(b[:common.SignatureLength], opAddress)
+	sigBytes, b, err := common.BytesWithLenToBytes(b[:])
+	if err != nil {
+		return nil, err
+	}
+	sig, err := common.GetSignatureFromBytes(sigBytes, opAddress)
 	if err != nil {
 		return nil, err
 	}
 	bh.Signature = sig
-	return b[common.SignatureLength:], nil
+	return b, nil
 }
 
 func (bb *BaseBlock) GetBytes() []byte {

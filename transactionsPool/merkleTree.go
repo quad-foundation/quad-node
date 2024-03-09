@@ -1,9 +1,9 @@
-package transactionType
+package transactionsPool
 
 import (
 	"bytes"
-	"github.com/chainpqc/chainpqc-node/common"
-	memDatabase "github.com/chainpqc/chainpqc-node/database"
+	"github.com/quad/quad-node/common"
+	memDatabase "github.com/quad/quad-node/database"
 	"log"
 )
 
@@ -181,7 +181,7 @@ func (tree *MerkleTree) LoadTransactionsHashes(height int64) ([][]byte, error) {
 		return nil, err
 	}
 	ret := [][]byte{}
-	for i := 0; i < len(hashes)/32-1; i++ {
+	for i := 0; i < len(hashes)/32; i++ {
 		hash := hashes[i*32 : (i+1)*32]
 		ret = append(ret, hash)
 	}

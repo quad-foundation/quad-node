@@ -2,7 +2,7 @@ package qtwidgets
 
 import (
 	"fmt"
-	"github.com/chainpqc/chainpqc-node/wallet"
+	"github.com/quad/quad-node/wallet"
 	"github.com/therecipe/qt/widgets"
 )
 

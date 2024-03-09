@@ -1,9 +1,10 @@
 package transactionServices
 
 import (
-	"github.com/chainpqc/chainpqc-node/message"
-	"github.com/chainpqc/chainpqc-node/statistics"
-	"github.com/chainpqc/chainpqc-node/transactionType"
+	"github.com/quad/quad-node/message"
+	"github.com/quad/quad-node/statistics"
+	"github.com/quad/quad-node/transactionsDefinition"
+	"github.com/quad/quad-node/transactionsPool"
 	"log"
 )
 
@@ -36,8 +37,8 @@ func OnMessage(addr string, m []byte) {
 		return
 	}
 
-	txs := map[[2]byte][]*transactionType.Transaction{}
-	var at *transactionType.Transaction
+	txs := map[[2]byte][]*transactionsDefinition.Transaction{}
+	var at *transactionsDefinition.Transaction
 	for k, v := range txn {
 		for _, t := range v {
 			at = &t
@@ -47,29 +48,31 @@ func OnMessage(addr string, m []byte) {
 				return
 			}
 			switch string(msg.GetHead()) {
-			case "tx": // nonce
+			case "tx":
 
 				// need to check transactions
 				for topic, v := range txs {
 					for _, t := range v {
-						transactionType.PoolsTx[topic[1]].AddTransaction(*t)
-						err := t.StoreToDBPoolTx(topic[:])
-						if err != nil {
-							log.Println(err)
+						if (*t).Verify() {
+							transactionsPool.PoolsTx[topic[1]].AddTransaction(*t)
+							err := t.StoreToDBPoolTx(topic[:])
+							if err != nil {
+								log.Println(err)
+							}
 						}
 					}
 
 					log.Println("No of Tx in SendToPool: ", topic, " = ",
-						transactionType.PoolsTx[topic[1]].NumberOfTransactions())
+						transactionsPool.PoolsTx[topic[1]].NumberOfTransactions())
 				}
 
 				if statistics.GmsMutex.Mutex.TryLock() {
 					defer statistics.GmsMutex.Mutex.Unlock()
 
 					stats, _ := statistics.LoadStats()
-					empt := transactionType.EmptyTransaction()
+					empt := transactionsDefinition.EmptyTransaction()
 					for i := uint8(0); i < 5; i++ {
-						nt := transactionType.PoolsTx[i].NumberOfTransactions()
+						nt := transactionsPool.PoolsTx[i].NumberOfTransactions()
 						stats.MainStats.TransactionsPending[i] = nt
 						stats.MainStats.TransactionsPendingSize[i] = nt * len(empt.GetBytes())
 					}
