@@ -170,6 +170,8 @@ func OnMessage(addr string, m []byte) {
 				log.Println(err)
 				panic("storing block failed")
 			}
+			common.SetHeight(block.GetHeader().Height)
+			log.Println("New Block success -------------------------------------", block.GetHeader().Height, "-------chain", block.Chain)
 		}
 
 	case "gh":
