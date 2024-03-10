@@ -42,6 +42,77 @@ func generateSyncMsgHeight() []byte {
 	return nb
 }
 
+func generateSyncMsgGetHeaders(height int64) []byte {
+	if height <= 0 {
+		return nil
+	}
+	bHeight := height - common.NumberOfHashesInBucket
+	if bHeight <= 0 {
+		bHeight = 0
+	}
+	bm := message.BaseMessage{
+		Head:    []byte("gh"),
+		ChainID: common.GetChainID(),
+		Chain:   255,
+	}
+	n := message.TransactionsMessage{
+		BaseMessage:       bm,
+		TransactionsBytes: map[[2]byte][][]byte{},
+	}
+	n.TransactionsBytes[[2]byte{'B', 'H'}] = [][]byte{common.GetByteInt64(bHeight)}
+
+	n.TransactionsBytes[[2]byte{'E', 'H'}] = [][]byte{common.GetByteInt64(height)}
+	nb := n.GetBytes()
+	return nb
+}
+
+func generateSyncMsgSendHeaders(bHeight int64, height int64) []byte {
+	if height < 0 {
+		log.Println("height cannot be smaller than 0")
+		return []byte{}
+	}
+	h := common.GetHeight()
+	if height > h {
+		log.Println("Warning: height cannot be larger than last height")
+		height = h
+	}
+	if bHeight < 0 || bHeight > height {
+		log.Println("starting height cannot be smaller than 0")
+		return []byte{}
+	}
+	bm := message.BaseMessage{
+		Head:    []byte("sh"),
+		ChainID: common.GetChainID(),
+		Chain:   255,
+	}
+	n := message.TransactionsMessage{
+		BaseMessage:       bm,
+		TransactionsBytes: map[[2]byte][][]byte{},
+	}
+	for i := bHeight; i <= height; i++ {
+		n.TransactionsBytes[[2]byte{'I', 'H'}] = [][]byte{common.GetByteInt64(i)}
+		block, err := blocks.LoadBlock(i)
+		if err != nil {
+			log.Println(err)
+			return []byte{}
+		}
+		n.TransactionsBytes[[2]byte{'H', 'V'}] = [][]byte{block.GetBytes()}
+	}
+
+	nb := n.GetBytes()
+	return nb
+}
+
+func SendHeaders(addr string, bHeight int64, height int64) {
+	n := generateSyncMsgSendHeaders(bHeight, height)
+	Send(addr, n)
+}
+
+func SendGetHeaders(addr string, height int64) {
+	n := generateSyncMsgGetHeaders(height)
+	Send(addr, n)
+}
+
 func Send(addr string, nb []byte) {
 	bip := []byte(addr)
 	lip := common.GetByteInt16(int16(len(bip)))

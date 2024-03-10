@@ -1,7 +1,6 @@
 package nonceServices
 
 import (
-	"bytes"
 	"github.com/quad/quad-node/blocks"
 	"github.com/quad/quad-node/common"
 	memDatabase "github.com/quad/quad-node/database"
@@ -127,51 +126,17 @@ func OnMessage(addr string, m []byte) {
 					panic("cannot load blocks from bytes")
 				}
 				chain := newBlock.GetChain()
-				blockHeight := newBlock.GetHeader().Height
-				if blockHeight != h+1 {
-					panic("block of too short chain")
-				}
-				if common.CheckHeight(chain, blockHeight) == false {
-					panic("improper height value in block")
-				}
 				if chain != k[1] {
 					panic("improper chain vs topic")
 				}
-				if bytes.Compare(lastBlock.BlockHash.GetBytes(), newBlock.GetHeader().PreviousHash.GetBytes()) != 0 {
-					panic("last block hash not much to store in new block")
-				}
-				// needs to check block and process
-				if newBlock.CheckProofOfSynergy() == false {
-					panic("proof of synergy fails of block")
-				}
-				hash, err := newBlock.CalcBlockHash()
-				if err != nil {
-					panic("cannot calculate hash of block")
-				}
-				if bytes.Compare(hash.GetBytes(), newBlock.BlockHash.GetBytes()) != 0 {
-					panic("wrong hash of block")
-				}
 
-				log.Println("New Block success -------------------------------------", blockHeight, "-------chain", chain)
-				rootMarkleTrie := newBlock.GetHeader().RootMerkleTree
-				txs := newBlock.TransactionsHashes
-				txsBytes := make([][]byte, len(txs))
-				for _, tx := range txs {
-					hash := tx.GetBytes()
-					txsBytes = append(txsBytes, hash)
-				}
-				merkleTrie, err := transactionsPool.BuildMerkleTree(blockHeight, txsBytes)
-				if err != nil {
-					panic("cannot build merkleTrie")
-				}
+				merkleTrie, err := blocks.CheckBlock(newBlock, lastBlock)
 				defer merkleTrie.Destroy()
-				if bytes.Compare(merkleTrie.GetRootHash(), rootMarkleTrie.GetBytes()) != 0 {
-					panic("root merkleTrie hash check fails")
+				if err != nil {
+					panic(err)
 				}
 				hashes := newBlock.GetBlockTransactionsHashes()
-
 				log.Println("Number of transactions in block: ", len(hashes))
-
 				txshb := [][]byte{}
 				for _, h := range hashes {
 					tx := transactionsPool.PoolsTx[chain].PopTransactionByHash(h.GetBytes())
@@ -181,7 +146,7 @@ func OnMessage(addr string, m []byte) {
 						panic("Transaction not saved")
 					}
 				}
-				err = merkleTrie.StoreTree(newBlock.GetBaseBlock().BaseHeader.Height, txshb)
+				err = merkleTrie.StoreTree(newBlock.GetHeader().Height, txshb)
 				if err != nil {
 					panic(err)
 				}
@@ -190,7 +155,8 @@ func OnMessage(addr string, m []byte) {
 					log.Println(err)
 					panic("cannot store block")
 				}
-				common.SetHeight(blockHeight)
+				common.SetHeight(h + 1)
+				log.Println("New Block success -------------------------------------", h+1, "-------chain", chain)
 				if statistics.GmsMutex.Mutex.TryLock() {
 					defer statistics.GmsMutex.Mutex.Unlock()
 					stats, _ := statistics.LoadStats()

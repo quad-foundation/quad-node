@@ -6,8 +6,8 @@ import (
 	"log"
 )
 
-// tx - transaction, gt - get transaction, st - sync transaction, "nn" - nonce, "bl" - block, "rb" - reject block
-var validHead = []string{"nn", "bl", "rb", "tx", "gt", "st"}
+// tx - transaction, gt - get transaction, st - sync transaction, "nn" - nonce, "bl" - block, "rb" - reject block, "hi" - GetHeight, "gh" - GetHeaders, "sh" - SendHeaders
+var validHead = []string{"nn", "bl", "rb", "tx", "gt", "st", "hi", "gh", "sh"}
 
 type BaseMessage struct {
 	Head    []byte `json:"head"`
