@@ -39,13 +39,10 @@ func OnMessage(addr string, m []byte) {
 		if amsg.GetChain() != 255 {
 			panic("not adequate chain for hi")
 		}
-		txn, err := amsg.(message.TransactionsMessage).GetTransactionsFromBytes()
-		if err != nil {
-			return
-		}
+		txn := amsg.(message.TransactionsMessage).GetTransactionsBytes()
 		h := common.GetHeight()
-		lastOtherHeight := common.GetInt64FromByte(txn[[2]byte{'L', 'H'}][0].GetBytes())
-		lastOtherBlockHashBytes := txn[[2]byte{'L', 'B'}][0].GetBytes()
+		lastOtherHeight := common.GetInt64FromByte(txn[[2]byte{'L', 'H'}][0])
+		lastOtherBlockHashBytes := txn[[2]byte{'L', 'B'}][0]
 		if lastOtherHeight == h {
 			//lastBlock, err := blocks.LoadBlock(h)
 			//if err != nil {
@@ -175,12 +172,10 @@ func OnMessage(addr string, m []byte) {
 		if amsg.GetChain() != 255 {
 			panic("not adequate chain for hi")
 		}
-		txn, err := amsg.(message.TransactionsMessage).GetTransactionsFromBytes()
-		if err != nil {
-			return
-		}
-		bHeight := common.GetInt64FromByte(txn[[2]byte{'B', 'H'}][0].GetBytes())
-		eHeight := common.GetInt64FromByte(txn[[2]byte{'E', 'H'}][0].GetBytes())
+		txn := amsg.(message.TransactionsMessage).GetTransactionsBytes()
+
+		bHeight := common.GetInt64FromByte(txn[[2]byte{'B', 'H'}][0])
+		eHeight := common.GetInt64FromByte(txn[[2]byte{'E', 'H'}][0])
 		SendHeaders(addr, bHeight, eHeight)
 	default:
 	}
