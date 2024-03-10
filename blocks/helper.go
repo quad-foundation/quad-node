@@ -10,10 +10,7 @@ import (
 func CheckBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTree, error) {
 	chain := newBlock.GetChain()
 	blockHeight := newBlock.GetHeader().Height
-	h := common.GetHeight()
-	if blockHeight != h+1 {
-		return nil, fmt.Errorf("block of too short chain")
-	}
+
 	if common.CheckHeight(chain, blockHeight) == false {
 		return nil, fmt.Errorf("improper height value in block")
 	}

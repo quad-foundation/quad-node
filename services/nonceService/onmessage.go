@@ -129,7 +129,9 @@ func OnMessage(addr string, m []byte) {
 				if chain != k[1] {
 					panic("improper chain vs topic")
 				}
-
+				if newBlock.GetHeader().Height != h+1 {
+					panic("block of too short chain")
+				}
 				merkleTrie, err := blocks.CheckBlock(newBlock, lastBlock)
 				defer merkleTrie.Destroy()
 				if err != nil {
