@@ -97,16 +97,19 @@ func generateSyncMsgSendHeaders(bHeight int64, height int64) []byte {
 		BaseMessage:       bm,
 		TransactionsBytes: map[[2]byte][][]byte{},
 	}
+	indices := [][]byte{}
+	blcks := [][]byte{}
 	for i := bHeight; i <= height; i++ {
-		n.TransactionsBytes[[2]byte{'I', 'H'}] = [][]byte{common.GetByteInt64(i)}
+		indices = append(indices, common.GetByteInt64(i))
 		block, err := blocks.LoadBlock(i)
 		if err != nil {
 			log.Println(err)
 			return []byte{}
 		}
-		n.TransactionsBytes[[2]byte{'H', 'V'}] = [][]byte{block.GetBytes()}
+		blcks = append(blcks, block.GetBytes())
 	}
-
+	n.TransactionsBytes[[2]byte{'I', 'H'}] = indices
+	n.TransactionsBytes[[2]byte{'H', 'V'}] = blcks
 	nb := n.GetBytes()
 	return nb
 }
