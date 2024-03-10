@@ -1,14 +1,12 @@
 package tcpip
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
-	"os/exec"
 	"os/signal"
 	"strings"
 	"sync"
@@ -19,10 +17,11 @@ import (
 var (
 	peersConnected   = map[string]string{}
 	oldPeers         = map[string]string{}
-	CheckCount       int64
+	CheckCount       = 0
+	receiveMutex     = &sync.Mutex{}
 	waitChan         = make(chan []byte)
 	tcpConnections   = make(map[[2]byte]map[string]*net.TCPConn)
-	peersMutex       sync.RWMutex
+	peersMutex       = &sync.RWMutex{}
 	Quit             chan os.Signal
 	TransactionTopic = [5][2]byte{{'T', 0}, {'T', 1}, {'T', 2}, {'T', 3}, {'T', 4}}
 	NonceTopic       = [5][2]byte{{'N', 0}, {'N', 1}, {'N', 2}, {'N', 3}, {'N', 4}}
@@ -61,30 +60,6 @@ func init() {
 	MyIP = getInternalIp()
 	for k := range Ports {
 		tcpConnections[k] = map[string]*net.TCPConn{}
-	}
-}
-
-func logsBufferForPort(port string) {
-	// Example of invoking netstat to show network statistics
-	cmd := exec.Command("netstat", "-an")
-
-	// Buffer for standard output
-	var out bytes.Buffer
-	cmd.Stdout = &out
-
-	// Execute the command and wait for it to complete
-	err := cmd.Run()
-	if err != nil {
-		log.Println("Error occurred while running netstat:", err)
-		return
-	}
-
-	// Filter the output for the specific port
-	lines := strings.Split(out.String(), "\n")
-	for _, line := range lines {
-		if strings.Contains(line, ":"+port) {
-			log.Println(line)
-		}
 	}
 }
 
@@ -133,68 +108,76 @@ func Listen(ip string, port int) (*net.TCPListener, error) {
 	}
 	return conn, nil
 }
+
 func Accept(topic [2]byte, conn *net.TCPListener) (*net.TCPConn, error) {
 	tcpConn, err := conn.AcceptTCP()
-	if err == nil {
-		NewConnectionPeer(topic, tcpConn)
-		return tcpConn, nil
+	if err != nil {
+		return nil, fmt.Errorf("error accepting connection: %w", err)
 	}
-	return nil, fmt.Errorf("no connection available yet")
+	RegisterPeer(topic, tcpConn)
+	return tcpConn, nil
 }
-func NewConnectionPeer(topic [2]byte, tcpConn *net.TCPConn) {
-	raddr := tcpConn.RemoteAddr().String()
-	ra := strings.Split(raddr, ":")
-	addrRemote := ra[0]
-	topicip := string(topic[:]) + ra[0]
-	peersMutex.Lock()
-	if t, ok := peersConnected[string(topicip)]; !ok || t != string(topic[:]) {
-		log.Println("New connection from address", addrRemote, topic)
-		tcpConnections[topic][addrRemote] = tcpConn
-		peersConnected[string(topicip)] = string(topic[:])
-	}
-	peersMutex.Unlock()
-}
+
 func Send(conn *net.TCPConn, message []byte) {
 	message = append(message, []byte("<-END->")...)
-	n, err := conn.Write(message)
+	_, err := conn.Write(message)
 	if err != nil {
-		log.Printf("Cann't send response %v", err)
-		if err == io.EOF {
-			log.Println("buffer is full (send)")
-			time.Sleep(time.Millisecond * 10)
-		}
+		log.Printf("Can't send response: %v", err)
 		if errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ECONNABORTED) {
 			CloseAndRemoveConnection(conn)
 		}
 	}
-	if n != len(message) && n > 0 {
-		log.Println("Not whole message was send")
-	}
 }
+
+// Receive reads data from the connection and handles errors
 func Receive(topic [2]byte, conn *net.TCPConn) []byte {
-	//logsBufferForPort(strconv.Itoa(Ports[[2]byte(topic[:2])]))
-	buf := make([]byte, 1024*1024)
-	n, err := conn.Read(buf[:])
+	const bufSize = 1048576
+	buf := make([]byte, bufSize)
+	n, err := conn.Read(buf)
+
 	if err != nil {
-		if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
-			return nil
-		}
-		if errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ECONNABORTED) {
-			log.Print("This is broken pipe error")
-			return []byte("QUITFOR")
-		}
-		if err == io.EOF {
-			return []byte("WAIT")
-		}
+		handleConnectionError(err, topic, conn)
 		return nil
 	}
-	if CheckCount > 10 {
-		NewConnectionPeer(topic, conn)
-		CheckCount = 0
-	}
-	CheckCount++
+
 	return buf[:n]
 }
+
+// handleConnectionError logs different connection errors and tries to reconnect if necessary
+func handleConnectionError(err error, topic [2]byte, conn *net.TCPConn) {
+	switch {
+	case errors.Is(err, syscall.EPIPE), errors.Is(err, syscall.ECONNRESET), errors.Is(err, syscall.ECONNABORTED):
+		log.Print("This is a broken pipe error. Attempting to reconnect...")
+	case err == io.EOF:
+		log.Print("Connection closed by peer. Attempting to reconnect...")
+	default:
+		log.Printf("Unexpected error: %v", err)
+	}
+	// Close the current connection
+	conn.Close()
+}
+
+// RegisterPeer registers a new peer connection
+func RegisterPeer(topic [2]byte, tcpConn *net.TCPConn) {
+	raddr := tcpConn.RemoteAddr().String()
+	ra := strings.Split(raddr, ":")
+	addrRemote := ra[0]
+	topicip := string(topic[:]) + addrRemote
+
+	peersMutex.Lock()
+	defer peersMutex.Unlock()
+
+	if _, ok := peersConnected[topicip]; !ok {
+		log.Println("New connection from address", addrRemote, "on topic", topic)
+		// Initialize the map for the topic if it doesn't exist
+		if _, ok := tcpConnections[topic]; !ok {
+			tcpConnections[topic] = make(map[string]*net.TCPConn)
+		}
+		tcpConnections[topic][addrRemote] = tcpConn
+		peersConnected[topicip] = string(topic[:])
+	}
+}
+
 func LookUpForNewPeersToConnect(chanPeer chan string) {
 	for {
 		peersMutex.RLock()

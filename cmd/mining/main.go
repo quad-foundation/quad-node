@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/quad/quad-node/account"
 	"github.com/quad/quad-node/account/stake"
 	"github.com/quad/quad-node/common"
@@ -14,18 +13,19 @@ import (
 	"github.com/quad/quad-node/tcpip"
 	"github.com/quad/quad-node/transactionsPool"
 	"github.com/quad/quad-node/wallet"
-	"golang.org/x/crypto/ssh/terminal"
 	"log"
 	"os"
 	"time"
 )
 
 func main() {
-	fmt.Print("Enter password: ")
-	password, err := terminal.ReadPassword(0)
-	if err != nil {
-		log.Fatal(err)
-	}
+	//fmt.Print("Enter password: ")
+	//password, err := terminal.ReadPassword(0)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	var err error
+	password := "a"
 	wallet.InitActiveWallet(0, string(password))
 	addrbytes := [common.AddressLength]byte{}
 	copy(addrbytes[:], wallet.GetActiveWallet().Address.GetBytes())
