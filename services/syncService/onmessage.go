@@ -99,6 +99,10 @@ func OnMessage(addr string, m []byte) {
 			log.Println("shorter other chain")
 			return
 		}
+		if indices[0] > h {
+			log.Println("too far blocks of other")
+			return
+		}
 		// check blocks
 		lastGoodBlock := indices[0]
 		merkleTries := map[int64]*transactionsPool.MerkleTree{}
