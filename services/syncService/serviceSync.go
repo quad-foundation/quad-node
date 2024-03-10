@@ -46,9 +46,18 @@ func generateSyncMsgGetHeaders(height int64) []byte {
 	if height <= 0 {
 		return nil
 	}
+	eHeight := height
+	h := common.GetHeight()
 	bHeight := height - common.NumberOfHashesInBucket
 	if bHeight <= 0 {
 		bHeight = 0
+	}
+	if bHeight > h {
+		bHeight = h
+		eHeight = h + common.NumberOfHashesInBucket
+		if eHeight > height {
+			eHeight = height
+		}
 	}
 	bm := message.BaseMessage{
 		Head:    []byte("gh"),
@@ -60,8 +69,7 @@ func generateSyncMsgGetHeaders(height int64) []byte {
 		TransactionsBytes: map[[2]byte][][]byte{},
 	}
 	n.TransactionsBytes[[2]byte{'B', 'H'}] = [][]byte{common.GetByteInt64(bHeight)}
-
-	n.TransactionsBytes[[2]byte{'E', 'H'}] = [][]byte{common.GetByteInt64(height)}
+	n.TransactionsBytes[[2]byte{'E', 'H'}] = [][]byte{common.GetByteInt64(eHeight)}
 	nb := n.GetBytes()
 	return nb
 }
