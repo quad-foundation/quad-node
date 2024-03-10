@@ -86,11 +86,10 @@ func Send(addr string, nb []byte) {
 }
 
 func startPublishingTransactionMsg() {
-	services.SendMutexTx.Lock()
 	for i := 0; i < 5; i++ {
 		go tcpip.StartNewListener(services.SendChanTx, tcpip.TransactionTopic[i])
 	}
-	services.SendMutexTx.Unlock()
+
 }
 
 func StartSubscribingTransactionMsg(ip string, chain uint8) {

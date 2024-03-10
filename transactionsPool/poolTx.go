@@ -52,6 +52,8 @@ type TransactionPool struct {
 
 func (tp *TransactionPool) updateIndices() {
 	// Call this method after any operation that might change the indices of items in the priorityQueue
+	tp.rwmutex.Lock()
+	defer tp.rwmutex.Unlock()
 	for i := range tp.priorityQueue {
 		txHash := tp.priorityQueue[i].GetHash().GetBytes()
 		var hash [common.HashLength]byte
@@ -64,16 +66,16 @@ func (tp *TransactionPool) updateIndices() {
 
 func NewTransactionPool(maxTransactions int) *TransactionPool {
 	return &TransactionPool{
-		transactions:    make(map[[common.HashLength]byte]transactionsDefinition.Transaction),
-		priorityQueue:   make(PriorityQueue, 0),
-		maxTransactions: maxTransactions,
+		transactions:       make(map[[common.HashLength]byte]transactionsDefinition.Transaction),
+		priorityQueue:      make(PriorityQueue, 0),
+		transactionIndices: map[[common.HashLength]byte]int{},
+		maxTransactions:    maxTransactions,
 	}
 }
 func (tp *TransactionPool) AddTransaction(tx transactionsDefinition.Transaction) {
 	var hash [common.HashLength]byte
 	copy(hash[:], tx.GetHash().GetBytes())
 	tp.rwmutex.Lock()
-	defer tp.rwmutex.Unlock()
 	if _, exists := tp.transactions[hash]; !exists {
 		tp.transactions[hash] = tx
 		item := NewItem(tx, tx.GetGasPrice())
@@ -83,16 +85,18 @@ func (tp *TransactionPool) AddTransaction(tx transactionsDefinition.Transaction)
 			delete(tp.transactions, removed.value)
 		}
 	}
+	tp.rwmutex.Unlock()
 	tp.updateIndices()
 }
 func (tp *TransactionPool) PeekTransactions(n int) []transactionsDefinition.Transaction {
-	if n > len(tp.transactions) {
-		n = len(tp.transactions)
-	}
+
 	hash := [common.HashLength]byte{}
 	topTransactions := []transactionsDefinition.Transaction{}
 	tp.rwmutex.RLock()
 	defer tp.rwmutex.RUnlock()
+	if n > len(tp.transactions) {
+		n = len(tp.transactions)
+	}
 	for i := 0; i < n; i++ {
 		if len(tp.priorityQueue) > i {
 			transaction := *tp.priorityQueue[i]
@@ -100,13 +104,13 @@ func (tp *TransactionPool) PeekTransactions(n int) []transactionsDefinition.Tran
 			topTransactions = append(topTransactions, tp.transactions[hash])
 		}
 	}
+
 	return topTransactions
 }
 func (tp *TransactionPool) RemoveTransactionByHash(hash []byte) {
 	h := [common.HashLength]byte{}
 	copy(h[:], hash)
 	tp.rwmutex.Lock()
-	defer tp.rwmutex.Unlock()
 	if _, exists := tp.transactions[h]; exists {
 		for i := 0; i < tp.priorityQueue.Len(); i++ {
 			h2 := (*tp.priorityQueue[i]).GetHash().GetBytes()
@@ -117,6 +121,7 @@ func (tp *TransactionPool) RemoveTransactionByHash(hash []byte) {
 		}
 		delete(tp.transactions, h)
 	}
+	tp.rwmutex.Unlock()
 	tp.updateIndices()
 }
 func (tp *TransactionPool) PopTransactionByHash(hash []byte) transactionsDefinition.Transaction {

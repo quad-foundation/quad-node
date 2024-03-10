@@ -11,7 +11,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"log"
-	"runtime/debug"
 	"sync"
 )
 
@@ -146,14 +145,18 @@ func (db *BlockchainDB) IsKey(key []byte) (bool, error) {
 	defer db.mutex.RUnlock()
 	_, err := db.ldb.Get(key, nil)
 	if err != nil {
-		debug.PrintStack()
 		if errors.Is(err, leveldb.ErrNotFound) {
 			return false, nil
 		}
+		// Optionally print the stack trace if in debug mode
+		// if debugMode {
+		//     debug.PrintStack()
+		// }
 		return false, err
 	}
 	return true, nil
 }
+
 func (db *BlockchainDB) Delete(key []byte) error {
 	if len(key) == 0 {
 		return errors.New("key cannot be empty")

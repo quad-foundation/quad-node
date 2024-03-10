@@ -130,12 +130,12 @@ func sendNonceMsgInLoop() {
 }
 
 func startPublishingNonceMsg() {
-	services.SendMutexNonce.Lock()
+
 	for i := 0; i < 5; i++ {
 		go tcpip.StartNewListener(services.SendChanNonce, tcpip.NonceTopic[i])
 		go tcpip.StartNewListener(services.SendChanSelfNonce, tcpip.SelfNonceTopic[i])
 	}
-	services.SendMutexNonce.Unlock()
+
 }
 
 func StartSubscribingNonceMsg(ip string, chain uint8) {
