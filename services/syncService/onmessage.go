@@ -57,11 +57,11 @@ func OnMessage(addr string, m []byte) {
 			}
 			return
 		} else if lastOtherHeight < h {
-			bHeight := h - common.NumberOfHashesInBucket
-			if bHeight <= 0 {
-				bHeight = 0
-			}
-			SendHeaders(addr, bHeight, h)
+			//bHeight := h - common.NumberOfHashesInBucket
+			//if bHeight <= 0 {
+			//	bHeight = 0
+			//}
+			//SendHeaders(addr, bHeight, h)
 			return
 		}
 		// when others have longer chain
