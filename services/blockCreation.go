@@ -19,6 +19,8 @@ var (
 	SendMutexNonce    sync.RWMutex
 	SendChanTx        chan []byte
 	SendMutexTx       sync.RWMutex
+	SendChanSync      chan []byte
+	SendMutexSync     sync.RWMutex
 )
 
 func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
