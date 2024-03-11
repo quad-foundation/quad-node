@@ -5,14 +5,6 @@ import (
 	"math"
 )
 
-func getRatio(height int64) float64 {
-
-	rci := float64(common.RewardChangeInterval)
-	h := float64(height)
-
-	return math.Pow(0.999, math.Floor(h/rci))
-}
-
 func getRemainingSupply(supply int64) int64 {
 	return common.MaxTotalSupply - supply
 }

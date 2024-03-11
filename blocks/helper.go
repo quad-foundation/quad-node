@@ -10,7 +10,7 @@ import (
 func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTree, error) {
 	chain := newBlock.GetChain()
 	blockHeight := newBlock.GetHeader().Height
-	if newBlock.BaseBlock.Supply > common.MaxTotalSupply {
+	if newBlock.GetBlockSupply() > common.MaxTotalSupply {
 		return nil, fmt.Errorf("supply is too high")
 	}
 	if common.CheckHeight(chain, blockHeight) == false {

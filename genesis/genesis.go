@@ -14,17 +14,16 @@ import (
 
 // Genesis represents the genesis file.
 type Genesis struct {
-	Timestamp            int64            `json:"date"`
-	ChainID              int16            `json:"chain_id"`   // The chain id represents an unique id for this running instance.
-	Difficulty           int32            `json:"difficulty"` // How difficult it needs to be to solve the work problem.
-	InitialReward        int64            `json:"initial_reward"`
-	RewardChangeInterval int64            `json:"reward_change_interval"`
-	Decimals             uint8            `json:"decimals"`
-	BlockTimeInterval    float32          `json:"block_time_interval"`
-	Balances             map[string]int64 `json:"balances"`
-	Signature            string           `json:"signature"`
-	OperatorPubKey       string           `json:"operator_pub_key"`
-	DelegatedAccount     map[string]int   `json:"delegated_account"`
+	Timestamp         int64            `json:"date"`
+	ChainID           int16            `json:"chain_id"`   // The chain id represents an unique id for this running instance.
+	Difficulty        int32            `json:"difficulty"` // How difficult it needs to be to solve the work problem.
+	RewardRatio       float64          `json:"reward_ratio"`
+	Decimals          uint8            `json:"decimals"`
+	BlockTimeInterval float32          `json:"block_time_interval"`
+	Balances          map[string]int64 `json:"balances"`
+	Signature         string           `json:"signature"`
+	OperatorPubKey    string           `json:"operator_pub_key"`
+	DelegatedAccount  map[string]int   `json:"delegated_account"`
 }
 
 func CreateBlockFromGenesis(genesis Genesis) (blocks.Block, error) {
@@ -116,8 +115,7 @@ func InitGenesis() {
 	common.SetChainID(genesis.ChainID)
 
 	common.BlockTimeInterval = genesis.BlockTimeInterval
-	common.InitialReward = genesis.InitialReward
-	common.RewardChangeInterval = genesis.RewardChangeInterval
+	common.RewardRatio = genesis.RewardRatio
 	common.Decimals = genesis.Decimals
 }
 

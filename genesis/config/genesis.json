@@ -2,8 +2,7 @@
     "date": 1662296251,
     "chain_id": 23,
     "difficulty": 10,
-	"initial_reward": 131770833333,
-    "reward_change_interval": 8640,
+	"reward_ratio": 1e-7,
     "decimals": 8,
     "block_time_interval": 10.0,
     "balances": {

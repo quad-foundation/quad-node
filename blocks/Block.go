@@ -23,6 +23,9 @@ func (tb Block) GetBlockHeaderHash() common.Hash {
 func (tb Block) GetBlockTimeStamp() int64 {
 	return tb.BaseBlock.BlockTimeStamp
 }
+func (tb Block) GetBlockSupply() int64 {
+	return tb.BaseBlock.Supply
+}
 func (tb Block) GetRewardPercentage() int16 {
 	return tb.BaseBlock.RewardPercentage
 }
