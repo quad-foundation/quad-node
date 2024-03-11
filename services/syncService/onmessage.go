@@ -136,7 +136,7 @@ func OnMessage(addr string, m []byte) {
 			if !common.CheckHeight(block.Chain, index) {
 				panic("chain improper related to height")
 			}
-			merkleTrie, err := blocks.CheckBlock(block, oldBlock)
+			merkleTrie, err := blocks.CheckBaseBlock(block, oldBlock)
 			defer merkleTrie.Destroy()
 			if err != nil {
 				panic(err)

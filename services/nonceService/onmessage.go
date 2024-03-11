@@ -132,7 +132,7 @@ func OnMessage(addr string, m []byte) {
 				if newBlock.GetHeader().Height != h+1 {
 					panic("block of too short chain")
 				}
-				merkleTrie, err := blocks.CheckBlock(newBlock, lastBlock)
+				merkleTrie, err := blocks.CheckBaseBlock(newBlock, lastBlock)
 				defer merkleTrie.Destroy()
 				if err != nil {
 					panic(err)

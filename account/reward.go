@@ -13,9 +13,12 @@ func getRatio(height int64) float64 {
 	return math.Pow(0.999, math.Floor(h/rci))
 }
 
-func GetReward(height int64) int64 {
-	cr := float64(common.InitialReward) * getRatio(height)
+func getRemainingSupply(supply int64) int64 {
+	return common.MaxTotalSupply - supply
+}
 
+func GetReward(supply int64) int64 {
+	cr := common.RewardRatio * float64(getRemainingSupply(supply))
 	cr = math.Round(cr)
 	return int64(cr)
 }

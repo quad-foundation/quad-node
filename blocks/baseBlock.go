@@ -24,23 +24,8 @@ type BaseBlock struct {
 	BlockHeaderHash  common.Hash `json:"block_header_hash"`
 	BlockTimeStamp   int64       `json:"block_time_stamp"`
 	RewardPercentage int16       `json:"reward_percentage"`
+	Supply           int64       `json:"supply"`
 }
-
-//
-//type AnyBlock interface {
-//	GetBaseBlock() BaseBlock
-//	GetBlockHeaderHash() common.Hash
-//	GetBlockTimeStamp() int64
-//	GetRewardPercentage() int16
-//	GetChain() uint8
-//	GetTransactionsHash() common.Hash
-//	GetBlockHash() common.Hash
-//	CalcBlockHash() (common.Hash, error)
-//	CheckProofOfSynergy() bool
-//	GetBytes() []byte
-//	GetFromBytes([]byte) (AnyBlock, error)
-//	GetTransactionsHashes(*transactionType.PatriciaMerkleTree) ([]common.Hash, error)
-//}
 
 func (b *BaseHeader) GetBytesWithoutSignature() []byte {
 	rb := b.PreviousHash.GetBytes()
@@ -136,6 +121,7 @@ func (bb *BaseBlock) GetBytes() []byte {
 	b = append(b, bb.BlockHeaderHash.GetBytes()...)
 	b = append(b, common.GetByteInt64(bb.BlockTimeStamp)...)
 	b = append(b, common.GetByteInt16(bb.RewardPercentage)...)
+	b = append(b, common.GetByteInt64(bb.Supply)...)
 	return b
 }
 
@@ -150,7 +136,8 @@ func (bb *BaseBlock) GetFromBytes(b []byte) ([]byte, error) {
 	bb.BlockHeaderHash = common.GetHashFromBytes(b[:32])
 	bb.BlockTimeStamp = common.GetInt64FromByte(b[32:40])
 	bb.RewardPercentage = common.GetInt16FromByte(b[40:42])
-	return b[42:], nil
+	bb.Supply = common.GetInt64FromByte(b[42:50])
+	return b[50:], nil
 }
 
 func (b *BaseHeader) CalcHash() (common.Hash, error) {
