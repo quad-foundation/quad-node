@@ -72,7 +72,7 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 		if bytes.Compare(acc.Address[:], address.GetBytes()) != 0 {
 			return 0, fmt.Errorf("no account found in check block transafer")
 		}
-		if common.IsInKeysOfMapAccounts(accounts, acc.Address) {
+		if IsInKeysOfMapAccounts(accounts, acc.Address) {
 			acc = accounts[acc.Address]
 			acc.Balance -= total_amount
 			accounts[acc.Address] = acc
@@ -89,6 +89,19 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 		return 0, fmt.Errorf("block supply checking fails")
 	}
 	return totalFee, nil
+}
+
+func ExtractKeysFromMapAccounts(m map[[common.AddressLength]byte]account.Account) [][common.AddressLength]byte {
+	keys := [][common.AddressLength]byte{}
+	for k, _ := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func IsInKeysOfMapAccounts(m map[[common.AddressLength]byte]account.Account, searchKey [common.AddressLength]byte) bool {
+	keys := ExtractKeysFromMapAccounts(m)
+	return common.ContainsKeyInMap(keys, searchKey)
 }
 
 func ProcessBlockTransfers(block Block) error {
@@ -118,7 +131,7 @@ func ProcessBlockTransfers(block Block) error {
 		if bytes.Compare(accRecipient.Address[:], addressRecipient.GetBytes()) != 0 {
 			return fmt.Errorf("no account found in check block transafer")
 		}
-		if common.IsInKeysOfMapAccounts(accounts, acc.Address) {
+		if IsInKeysOfMapAccounts(accounts, acc.Address) {
 			acc = accounts[acc.Address]
 			acc.Balance -= total_amount
 			accounts[acc.Address] = acc
@@ -129,7 +142,7 @@ func ProcessBlockTransfers(block Block) error {
 		if acc.Balance < 0 {
 			return fmt.Errorf("not enough funds on account")
 		}
-		if common.IsInKeysOfMapAccounts(recipients, accRecipient.Address) {
+		if IsInKeysOfMapAccounts(recipients, accRecipient.Address) {
 			accRecipient = recipients[accRecipient.Address]
 			accRecipient.Balance += amount
 			recipients[accRecipient.Address] = accRecipient
