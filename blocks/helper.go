@@ -3,7 +3,9 @@ package blocks
 import (
 	"bytes"
 	"fmt"
+	"github.com/quad/quad-node/account"
 	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/transactionsDefinition"
 	"github.com/quad/quad-node/transactionsPool"
 )
 
@@ -46,4 +48,95 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 		return nil, fmt.Errorf("root merkleTrie hash check fails")
 	}
 	return merkleTrie, nil
+}
+
+func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
+	txs := block.TransactionsHashes
+	chain := block.Chain
+	lastSupply := lastBlock.GetBlockSupply()
+	accounts := map[[common.AddressLength]byte]account.Account{}
+	totalFee := int64(0)
+	for _, tx := range txs {
+		hash := tx.GetBytes()
+		prefix := []byte{common.TransactionDBPrefix[0], chain}
+		poolTx, err := transactionsDefinition.LoadFromDBPoolTx(prefix, hash)
+		if err != nil {
+			return 0, err
+		}
+		fee := poolTx.GasPrice * poolTx.GasUsage
+		totalFee += fee
+		amount := poolTx.TxData.Amount
+		total_amount := fee + amount
+		address := poolTx.GetSenderAddress()
+		acc := account.GetAccountByAddressBytes(address.GetBytes())
+		if bytes.Compare(acc.Address[:], address.GetBytes()) != 0 {
+			return 0, fmt.Errorf("no account found in check block transafer")
+		}
+		if common.IsInKeysOfMapAccounts(accounts, acc.Address) {
+			acc = accounts[acc.Address]
+			acc.Balance -= total_amount
+			accounts[acc.Address] = acc
+		} else {
+			acc.Balance -= total_amount
+			accounts[acc.Address] = acc
+		}
+		if acc.Balance < 0 {
+			return 0, fmt.Errorf("not enough funds on account")
+		}
+	}
+	lastSupply -= totalFee
+	if lastSupply != block.GetBlockSupply() {
+		return 0, fmt.Errorf("block supply checking fails")
+	}
+	return totalFee, nil
+}
+
+func ProcessBlockTransfers(block Block) error {
+	txs := block.TransactionsHashes
+	chain := block.Chain
+	accounts := map[[common.AddressLength]byte]account.Account{}
+	recipients := map[[common.AddressLength]byte]account.Account{}
+	totalFee := int64(0)
+	for _, tx := range txs {
+		hash := tx.GetBytes()
+		prefix := []byte{common.TransactionDBPrefix[0], chain}
+		poolTx, err := transactionsDefinition.LoadFromDBPoolTx(prefix, hash)
+		if err != nil {
+			return err
+		}
+		fee := poolTx.GasPrice * poolTx.GasUsage
+		totalFee += fee
+		amount := poolTx.TxData.Amount
+		total_amount := fee + amount
+		address := poolTx.GetSenderAddress()
+		acc := account.GetAccountByAddressBytes(address.GetBytes())
+		if bytes.Compare(acc.Address[:], address.GetBytes()) != 0 {
+			return fmt.Errorf("no account found in check block transafer")
+		}
+		addressRecipient := poolTx.TxData.Recipient
+		accRecipient := account.GetAccountByAddressBytes(addressRecipient.GetBytes())
+		if bytes.Compare(accRecipient.Address[:], addressRecipient.GetBytes()) != 0 {
+			return fmt.Errorf("no account found in check block transafer")
+		}
+		if common.IsInKeysOfMapAccounts(accounts, acc.Address) {
+			acc = accounts[acc.Address]
+			acc.Balance -= total_amount
+			accounts[acc.Address] = acc
+		} else {
+			acc.Balance -= total_amount
+			accounts[acc.Address] = acc
+		}
+		if acc.Balance < 0 {
+			return fmt.Errorf("not enough funds on account")
+		}
+		if common.IsInKeysOfMapAccounts(recipients, accRecipient.Address) {
+			accRecipient = recipients[accRecipient.Address]
+			accRecipient.Balance += amount
+			recipients[accRecipient.Address] = accRecipient
+		} else {
+			accRecipient.Balance += amount
+			recipients[accRecipient.Address] = accRecipient
+		}
+	}
+	return nil
 }

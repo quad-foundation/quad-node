@@ -3,6 +3,8 @@ package common
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/quad/quad-node/account"
 	"github.com/quad/quad-node/crypto/blake2b"
 	"log"
 	"time"
@@ -109,9 +111,26 @@ func ContainsKeyOfList(keys [][2]byte, searchKey [2]byte) bool {
 	return false
 }
 
+func ContainsKeyInMap(keys [][common.AddressLength]byte, searchKey [common.AddressLength]byte) bool {
+	for _, key := range keys {
+		if key == searchKey {
+			return true
+		}
+	}
+	return false
+}
+
 func ExtractKeysOfList(m map[[2]byte][][]byte) [][2]byte {
 	keys := [][2]byte{}
 	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func ExtractKeysFromMapAccounts(m map[[common.AddressLength]byte]account.Account) [][common.AddressLength]byte {
+	keys := [][common.AddressLength]byte{}
+	for k, _ := range m {
 		keys = append(keys, k)
 	}
 	return keys
@@ -125,6 +144,11 @@ func IsInKeys2Byte(m map[[2]byte][]byte, searchKey string) bool {
 func IsInKeysOfList(m map[[2]byte][][]byte, searchKey [2]byte) bool {
 	keys := ExtractKeysOfList(m)
 	return ContainsKeyOfList(keys, searchKey)
+}
+
+func IsInKeysOfMapAccounts(m map[[common.AddressLength]byte]account.Account, searchKey [common.AddressLength]byte) bool {
+	keys := ExtractKeysFromMapAccounts(m)
+	return ContainsKeyInMap(keys, searchKey)
 }
 
 func BytesToLenAndBytes(b []byte) []byte {

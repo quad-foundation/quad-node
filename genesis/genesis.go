@@ -133,15 +133,14 @@ func Load(path string) (Genesis, error) {
 	}
 
 	mainWallet := wallet.GetActiveWallet()
-	//fmt.Println(mainWallet.PublicKey.GetHex())
 	fmt.Println(mainWallet.Address.GetHex())
 
-	//del1 := common.GetDelegatedAccountAddress(1)
-	//delegatedAccount := common.GetDelegatedAccount()
-	//if mainWallet.PublicKey.GetBytes() != nil &&
-	//	genesis.OperatorPubKey[:100] != mainWallet.PublicKey.GetHex()[:100] &&
-	//	delegatedAccount.GetHex() == del1.GetHex() {
-	//	log.Fatal("Main Wallet address should be the same as in config genesis.json file")
-	//}
+	del1 := common.GetDelegatedAccountAddress(1)
+	delegatedAccount := common.GetDelegatedAccount()
+	if mainWallet.PublicKey.GetBytes() != nil &&
+		genesis.OperatorPubKey[:100] != mainWallet.PublicKey.GetHex()[:100] &&
+		delegatedAccount.GetHex() == del1.GetHex() {
+		log.Fatal("Main Wallet address should be the same as in config genesis.json file")
+	}
 	return genesis, nil
 }

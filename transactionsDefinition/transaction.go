@@ -148,12 +148,14 @@ func (mt *Transaction) StoreToDBPoolTx(prefix []byte) error {
 	}
 	return nil
 }
-func (mt *Transaction) RestoreFromDBPoolTx(prefix []byte, hashTransaction []byte) (Transaction, error) {
+
+func LoadFromDBPoolTx(prefix []byte, hashTransaction []byte) (Transaction, error) {
 	prefix = append(prefix, hashTransaction...)
 	bt, err := (*memDatabase.MainDB).Get(prefix)
 	if err != nil {
 		return Transaction{}, err
 	}
+	mt := &Transaction{}
 	at, restb, err := mt.GetFromBytes(bt)
 	if err != nil || len(restb) > 0 {
 		return Transaction{}, err
