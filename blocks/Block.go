@@ -53,7 +53,6 @@ func (tb Block) GetBytes() []byte {
 
 func (tb Block) GetBytesForHash() []byte {
 	b := tb.BaseBlock.GetBytes()
-	b = append(b, tb.Chain)
 	return b
 }
 
