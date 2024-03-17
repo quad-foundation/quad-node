@@ -98,7 +98,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 		Difficulty:       genesis.Difficulty,
 		Height:           0,
 		DelegatedAccount: common.GetDelegatedAccountAddress(1),
-		OperatorAccount:  myWallet.Address,
+		OperatorAccount:  addressOp1,
 		RootMerkleTree:   rootHash,
 		Signature:        common.Signature{},
 		SignatureMessage: []byte{},
@@ -116,6 +116,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 	//}
 	//bh.Signature = *sign
 	//log.Println("Block Signature:", bh.Signature.GetHex())
+
 	signature, err := common.GetSignatureFromString(genesis.Signature, addressOp1)
 	if err != nil {
 		log.Fatal(err)
