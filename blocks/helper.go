@@ -158,7 +158,8 @@ func CheckBlockAndTransferFunds(newBlock Block, lastBlock Block, merkleTrie *tra
 	for _, h := range hashes {
 		tx := transactionsPool.PoolsTx[newBlock.Chain].PopTransactionByHash(h.GetBytes())
 		txshb = append(txshb, tx.GetHash().GetBytes())
-		err = tx.StoreToDBPoolTx(common.TransactionDBPrefix[:])
+		prefix := []byte{common.TransactionDBPrefix[0], newBlock.GetChain()}
+		err = tx.StoreToDBPoolTx(prefix)
 		if err != nil {
 			return err
 		}

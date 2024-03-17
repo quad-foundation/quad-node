@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/quad/quad-node/blocks"
 	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/genesis"
 	"github.com/quad/quad-node/message"
 	"github.com/quad/quad-node/transactionsPool"
 	"log"
@@ -43,10 +44,7 @@ func OnMessage(addr string, m []byte) {
 		lastOtherHeight := common.GetInt64FromByte(txn[[2]byte{'L', 'H'}][0])
 		lastOtherBlockHashBytes := txn[[2]byte{'L', 'B'}][0]
 		if lastOtherHeight == h {
-			//lastBlock, err := blocks.LoadBlock(h)
-			//if err != nil {
-			//	panic(err)
-			//}
+
 			lastBlockHashBytes, err := blocks.LoadHashOfBlock(h)
 			if err != nil {
 				panic(err)
@@ -54,13 +52,10 @@ func OnMessage(addr string, m []byte) {
 			if bytes.Compare(lastOtherBlockHashBytes, lastBlockHashBytes) != 0 {
 				SendGetHeaders(addr, lastOtherHeight)
 			}
+			common.IsSyncing.Store(false)
 			return
 		} else if lastOtherHeight < h {
-			//bHeight := h - common.NumberOfHashesInBucket
-			//if bHeight <= 0 {
-			//	bHeight = 0
-			//}
-			//SendHeaders(addr, bHeight, h)
+			common.IsSyncing.Store(false)
 			return
 		}
 		// when others have longer chain
@@ -108,9 +103,12 @@ func OnMessage(addr string, m []byte) {
 		for i := 0; i < len(blcks); i++ {
 			header := blcks[i].GetHeader()
 			index := indices[i]
+			if index <= 0 {
+				continue
+			}
 			block := blcks[i]
 			oldBlock := blocks.Block{}
-			if index > h {
+			if index <= h {
 				hashOfMyBlockBytes, err := blocks.LoadHashOfBlock(index)
 				if err != nil {
 					panic("cannot load block hash")
@@ -120,7 +118,7 @@ func OnMessage(addr string, m []byte) {
 					continue
 				}
 			}
-			if i > 0 {
+			if i > 0 && index > 1 {
 				oldBlock = blcks[i-1]
 			} else {
 				oldBlock, err = blocks.LoadBlock(index - 1)
@@ -130,14 +128,17 @@ func OnMessage(addr string, m []byte) {
 			}
 
 			if header.Height != index {
+				genesis.ResetAccountsAndBlocksSync(0)
 				panic("not relevant height vs index")
 			}
 			if !common.CheckHeight(block.Chain, index) {
+				genesis.ResetAccountsAndBlocksSync(0)
 				panic("chain improper related to height")
 			}
 			merkleTrie, err := blocks.CheckBaseBlock(block, oldBlock)
 			defer merkleTrie.Destroy()
 			if err != nil {
+				genesis.ResetAccountsAndBlocksSync(0)
 				panic(err)
 			}
 			merkleTries[index] = merkleTrie

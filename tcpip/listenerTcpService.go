@@ -105,6 +105,13 @@ func StartNewConnection(ip string, receiveChan chan []byte, topic [2]byte) {
 		fmt.Println("connection to ip was unsuccessful", ip, topic, err)
 		return
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			//debug.PrintStack()
+			log.Println("recover (receive Msg)", r)
+		}
+		return
+	}()
 	raddr := tcpConn.RemoteAddr().String()
 	fmt.Println("New connection from address", raddr, topic)
 	lastBytes := []byte{}

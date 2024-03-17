@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/quad/quad-node/crypto/blake2b"
@@ -65,6 +66,21 @@ func GetSignatureFromBytes(b []byte, address Address) (Signature, error) {
 		return Signature{}, err
 	}
 	return s, nil
+}
+
+func GetSignatureFromString(s string, address Address) (Signature, error) {
+	sig := Signature{}
+	sigBytes, err := hex.DecodeString(s)
+	if err != nil {
+		log.Println("decoding string fails")
+		return Signature{}, err
+	}
+	err = sig.Init(sigBytes, address)
+	if err != nil {
+		log.Println("Get Hash from bytes failed")
+		return Signature{}, err
+	}
+	return sig, nil
 }
 
 func GetHashFromBytes(b []byte) Hash {
