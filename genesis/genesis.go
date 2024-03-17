@@ -31,7 +31,7 @@ type Genesis struct {
 
 func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 
-	myWallet := wallet.GetActiveWallet()
+	//myWallet := wallet.GetActiveWallet()
 
 	pubKeyOpBytes, err := hex.DecodeString(genesis.OperatorPubKey)
 	if err != nil {
