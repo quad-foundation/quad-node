@@ -30,5 +30,6 @@ func GetSupplyInAccounts() int64 {
 
 func ResetAccountsAndBlocksSync(height int64) {
 	common.IsSyncing.Store(true)
+	account.Accounts.AllAccounts = map[[20]byte]account.Account{}
 	genesis.InitGenesis()
 }
