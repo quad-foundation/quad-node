@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"fmt"
+	"github.com/quad/quad-node/account"
 	"github.com/quad/quad-node/blocks"
 	"github.com/quad/quad-node/common"
 	"github.com/quad/quad-node/message"
@@ -19,6 +20,8 @@ var (
 	SendMutexNonce    sync.RWMutex
 	SendChanTx        chan []byte
 	SendMutexTx       sync.RWMutex
+	SendChanSync      chan []byte
+	SendMutexSync     sync.RWMutex
 )
 
 func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
@@ -29,6 +32,7 @@ func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 	myWallet := wallet.GetActiveWallet()
 	transactionChain := nonceTx[0].GetChain()
 	heightTransaction := nonceTx[0].GetHeight()
+	totalFee := int64(0)
 	for _, at := range nonceTx {
 		heightLastBlocktransaction := common.GetInt64FromByte(at.GetData().GetOptData()[:8])
 		hashLastBlocktransaction := at.GetData().GetOptData()[8:40]
@@ -42,7 +46,12 @@ func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 		if heightTransaction != heightLastBlocktransaction+1 {
 			return blocks.Block{}, fmt.Errorf("last block height and nonce height do not match")
 		}
+		totalFee += at.GasUsage * at.GasPrice
 	}
+
+	reward := account.GetReward(lastBlock.GetBlockSupply())
+	supply := lastBlock.GetBlockSupply() - totalFee + reward
+
 	sendingTimeTransaction := nonceTx[0].GetParam().SendingTime
 	ti := sendingTimeTransaction - lastBlock.GetBlockTimeStamp()
 	bblock := lastBlock.GetBaseBlock()
@@ -75,6 +84,7 @@ func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 		BlockHeaderHash:  bhHash,
 		BlockTimeStamp:   common.GetCurrentTimeStampInSecond(),
 		RewardPercentage: common.GetRewardPercentage(),
+		Supply:           supply,
 	}
 
 	if err != nil {

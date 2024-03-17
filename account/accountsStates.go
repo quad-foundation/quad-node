@@ -14,6 +14,18 @@ type AccountsType struct {
 
 var Accounts AccountsType
 
+// error is not checked one should do the checking before
+func SetBalance(address [common.AddressLength]byte, balance int64) {
+	acc := Accounts.AllAccounts[address]
+	acc.Balance = balance
+	Accounts.AllAccounts[address] = acc
+}
+
+// error is not checked one should do the checking before
+func GetBalance(address [common.AddressLength]byte) int64 {
+	return Accounts.AllAccounts[address].Balance
+}
+
 // Marshal converts AccountsType to a binary format.
 func (at AccountsType) Marshal() []byte {
 	var buffer bytes.Buffer

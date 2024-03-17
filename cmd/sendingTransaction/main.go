@@ -6,6 +6,7 @@ import (
 	"github.com/quad/quad-node/crypto/oqs/rand"
 	clientrpc "github.com/quad/quad-node/rpc/client"
 	"github.com/quad/quad-node/services/transactionServices"
+	"github.com/quad/quad-node/statistics"
 	"github.com/quad/quad-node/transactionsDefinition"
 	"github.com/quad/quad-node/wallet"
 	rand2 "math/rand"
@@ -46,6 +47,7 @@ func SampleTransaction(w *wallet.Wallet, chain uint8) transactionsDefinition.Tra
 		Recipient: recv,
 		Amount:    int64(rand2.Intn(10000000)),
 		OptData:   nil,
+		Pubkey:    common.PubKey{},
 	}
 	txParam := transactionsDefinition.TxParam{
 		ChainID:     common.GetChainID(),
@@ -63,6 +65,16 @@ func SampleTransaction(w *wallet.Wallet, chain uint8) transactionsDefinition.Tra
 		GasPrice:  0,
 		GasUsage:  0,
 	}
+
+	clientrpc.InRPC <- []byte("STAT")
+	var reply []byte
+	reply = <-clientrpc.OutRPC
+	st := statistics.MainStats{}
+	err = common.Unmarshal(reply, common.StatDBPrefix, &st)
+	if err != nil {
+		return transactionsDefinition.Transaction{}
+	}
+	t.Height = st.Heights
 
 	err = t.CalcHashAndSet()
 	if err != nil {
@@ -84,11 +96,11 @@ func SampleTransaction(w *wallet.Wallet, chain uint8) transactionsDefinition.Tra
 
 func sendTransactions(w *wallet.Wallet) {
 
-	batchSize := 1000
+	batchSize := 1
 	count := int64(0)
 	start := common.GetCurrentTimeStampInSecond()
 
-	for range time.Tick(time.Millisecond) {
+	for range time.Tick(time.Second) {
 		var txs []transactionsDefinition.Transaction
 		chain := uint8(rand2.Intn(5))
 		for i := 0; i < batchSize; i++ {

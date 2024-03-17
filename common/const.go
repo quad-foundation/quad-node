@@ -10,11 +10,11 @@ import (
 var NamesOfChains = []string{"transaction", "pubkey", "stake", "dex", "contract"}
 
 var (
-	ValidChains                       = []uint8{0, 1, 2, 3, 4}
+	ValidChains                       = []uint8{0, 1, 2, 3, 4, 255}
 	Decimals                  uint8   = 8
 	MaxTotalSupply            int64   = 230000000000000000
-	RewardChangeInterval      int64   = 8640 * 3
-	InitialReward             int64   = 100000000 // 3993055556
+	InitSupply                int64   = 23000000000000000
+	RewardRatio                       = 1e-7
 	ValidationTag                     = "validationTag"
 	DifficultyMultiplier      int32   = 10
 	BlockTimeInterval         float32 = 5 // 5 sec.

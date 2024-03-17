@@ -11,6 +11,12 @@ type Account struct {
 	Address [common.AddressLength]byte `json:"address"`
 }
 
+func GetAccountByAddressBytes(address []byte) Account {
+	addrb := [common.AddressLength]byte{}
+	copy(addrb[:], address[:common.AddressLength])
+	return Accounts.AllAccounts[addrb]
+}
+
 // GetBalanceConfirmedFloat get amount of confirmed QAD in human-readable format
 func (a *Account) GetBalanceConfirmedFloat() float64 {
 	return float64(a.Balance) * math.Pow10(-int(common.Decimals))

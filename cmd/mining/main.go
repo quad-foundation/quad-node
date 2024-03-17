@@ -8,6 +8,7 @@ import (
 	"github.com/quad/quad-node/genesis"
 	serverrpc "github.com/quad/quad-node/rpc/server"
 	nonceService "github.com/quad/quad-node/services/nonceService"
+	syncServices "github.com/quad/quad-node/services/syncService"
 	"github.com/quad/quad-node/services/transactionServices"
 	"github.com/quad/quad-node/statistics"
 	"github.com/quad/quad-node/tcpip"
@@ -85,7 +86,7 @@ func main() {
 
 	transactionServices.InitTransactionService()
 	nonceService.InitNonceService()
-	//nonceMsg.InitSyncService()
+	syncServices.InitSyncService()
 
 	go serverrpc.ListenRPC()
 
@@ -93,6 +94,7 @@ func main() {
 		go nonceService.StartSubscribingNonceMsgSelf(i)
 		go nonceService.StartSubscribingNonceMsg(tcpip.MyIP, i)
 		go transactionServices.StartSubscribingTransactionMsg(tcpip.MyIP, i)
+		go syncServices.StartSubscribingSyncMsg(tcpip.MyIP, i)
 	}
 	time.Sleep(time.Second)
 	if len(os.Args) > 1 {
@@ -100,7 +102,7 @@ func main() {
 		for i := uint8(0); i < 5; i++ {
 			go transactionServices.StartSubscribingTransactionMsg(ip, i)
 			go nonceService.StartSubscribingNonceMsg(ip, i)
-			//go nonceMsg.StartSubscribingSync(ip)
+			go syncServices.StartSubscribingSyncMsg(ip, i)
 		}
 	}
 	time.Sleep(time.Second)
@@ -125,8 +127,7 @@ QF:
 				go nonceService.StartSubscribingNonceMsgSelf(chain)
 			}
 			if topic[0] == 'B' {
-				// to be implemented
-				//go StartSu
+				go syncServices.StartSubscribingSyncMsg(ip, chain)
 			}
 
 		case <-tcpip.Quit:
@@ -135,16 +136,3 @@ QF:
 	}
 
 }
-
-//func sendTransactionSideChain(t transaction.TxSideType) {
-//
-//	for range time.Tick(time.Second) {
-//		m := message.GenerateTransactionMsg([]transaction2.Transaction{t}, "transaction")
-//		m.BaseMessage.ChainID = 23
-//		tmm, _ := json.Marshal(m)
-//
-//		//var r = make([]byte, 100)
-//		clientrpc.InRPC <- append([]byte("TRAN"), tmm...)
-//		<-clientrpc.OutRPC
-//	}
-//}

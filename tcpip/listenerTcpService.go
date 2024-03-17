@@ -119,13 +119,16 @@ func StartNewConnection(ip string, receiveChan chan []byte, topic [2]byte) {
 		default:
 			r := Receive(topic, tcpConn)
 			if r == nil {
+				continue
+			}
+			if string(r) == "<-CLS->" {
 				tcpConn, err = net.DialTCP("tcp", nil, tcpAddr)
 				if err != nil {
 					fmt.Println("connection to ip was unsuccessful", ip, topic, err)
-					return
 				}
 				continue
 			}
+
 			if len(r) == 7 && string(r) == "QUITFOR" {
 				receiveChan <- []byte("EXIT")
 				CloseAndRemoveConnection(tcpConn)

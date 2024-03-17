@@ -1,6 +1,7 @@
 package transactionServices
 
 import (
+	"github.com/quad/quad-node/common"
 	"github.com/quad/quad-node/message"
 	"github.com/quad/quad-node/transactionsPool"
 	"log"
@@ -43,7 +44,8 @@ func OnMessage(addr string, m []byte) {
 			for _, t := range v {
 				if t.Verify() {
 					transactionsPool.PoolsTx[topic[1]].AddTransaction(t)
-					err := t.StoreToDBPoolTx(topic[:])
+					prefix := []byte{common.TransactionDBPrefix[0], topic[1]}
+					err := t.StoreToDBPoolTx(prefix)
 					if err != nil {
 						log.Println(err)
 					}

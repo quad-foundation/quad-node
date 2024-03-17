@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/quad/quad-node/crypto/blake2b"
 	"log"
 	"time"
@@ -101,6 +102,15 @@ func ContainsKey(keys []string, searchKey string) bool {
 }
 
 func ContainsKeyOfList(keys [][2]byte, searchKey [2]byte) bool {
+	for _, key := range keys {
+		if key == searchKey {
+			return true
+		}
+	}
+	return false
+}
+
+func ContainsKeyInMap(keys [][common.AddressLength]byte, searchKey [common.AddressLength]byte) bool {
 	for _, key := range keys {
 		if key == searchKey {
 			return true
