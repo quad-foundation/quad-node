@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/quad/quad-node/account"
 	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/genesis"
 )
 
 func AddBalance(address [common.AddressLength]byte, addedAmount int64) error {
@@ -25,4 +26,9 @@ func GetSupplyInAccounts() int64 {
 		sum += acc.Balance
 	}
 	return sum
+}
+
+func ResetAccountsAndBlocksSync(height int64) {
+	common.IsSyncing.Store(true)
+	genesis.InitGenesis()
 }

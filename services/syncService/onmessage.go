@@ -127,20 +127,17 @@ func OnMessage(addr string, m []byte) {
 			}
 
 			if header.Height != index {
-				common.IsSyncing.Store(true)
-				common.SetHeight(0)
+				blocks.ResetAccountsAndBlocksSync(0)
 				panic("not relevant height vs index")
 			}
 			if !common.CheckHeight(block.Chain, index) {
-				common.IsSyncing.Store(true)
-				common.SetHeight(0)
+				blocks.ResetAccountsAndBlocksSync(0)
 				panic("chain improper related to height")
 			}
 			merkleTrie, err := blocks.CheckBaseBlock(block, oldBlock)
 			defer merkleTrie.Destroy()
 			if err != nil {
-				common.IsSyncing.Store(true)
-				common.SetHeight(0)
+				blocks.ResetAccountsAndBlocksSync(0)
 				panic(err)
 			}
 			merkleTries[index] = merkleTrie
