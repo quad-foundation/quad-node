@@ -38,9 +38,23 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 	//if err != nil {
 	//	return nil, err
 	//}
-	accDel1 := account.Accounts.AllAccounts[myWallet.Address.ByteValue]
+	pubKeyOpBytes, err := hex.DecodeString(genesis.OperatorPubKey)
+	if err != nil {
+		log.Fatal("cannot decode address from string in genesis block")
+	}
+	pubKeyOp1 := common.PubKey{}
+	err = pubKeyOp1.Init(pubKeyOpBytes)
+	if err != nil {
+		log.Fatalf("cannot initialize operator pub key in genesis block %v", err)
+	}
+
+	addressOp1, err := common.PubKeyToAddress(pubKeyOp1)
+	if err != nil {
+		log.Fatalf("cannot retrieve operator address from pub key in genesis block %v", err)
+	}
+	accDel1 := account.Accounts.AllAccounts[addressOp1.ByteValue]
 	accDel1.Balance = common.InitSupply
-	account.Accounts.AllAccounts[myWallet.Address.ByteValue] = accDel1
+	account.Accounts.AllAccounts[addressOp1.ByteValue] = accDel1
 
 	walletNonce := int16(0)
 	blockTransactionsHashesBytes := [][]byte{}
