@@ -74,7 +74,8 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 		if err != nil {
 			log.Fatalf("cannot calculate hash of transaction in genesis block %v", err)
 		}
-		err = tx.StoreToDBPoolTx(common.TransactionDBPrefix[:])
+		prefix := []byte{common.TransactionDBPrefix[0], 0}
+		err = tx.StoreToDBPoolTx(prefix)
 		if err != nil {
 			log.Fatalf("cannot store transaction of genesis block %v", err)
 		}
@@ -129,7 +130,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 		BlockHeaderHash:  bhHash,
 		BlockTimeStamp:   genesis.Timestamp,
 		RewardPercentage: 0,
-		Supply:           common.InitSupply,
+		Supply:           common.InitSupply + account.GetReward(common.InitSupply),
 	}
 
 	bl := blocks.Block{
@@ -196,6 +197,11 @@ func InitGenesis() {
 	}
 
 	genesisBlock := CreateBlockFromGenesis(genesis)
+	reward := account.GetReward(common.InitSupply)
+	err = blocks.ProcessBlockTransfers(genesisBlock, reward)
+	if err != nil {
+		log.Fatalf("cannot process transactions in genesis block %v", err)
+	}
 	err = genesisBlock.StoreBlock()
 	if err != nil {
 		log.Fatal(err)
