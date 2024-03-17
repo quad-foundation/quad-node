@@ -107,7 +107,7 @@ func sendTransactions(w *wallet.Wallet) {
 			tx := SampleTransaction(w, chain)
 			txs = append(txs, tx)
 		}
-		m, err := transactionServices.GenerateTransactionMsg(txs, chain, [2]byte{'T', chain})
+		m, err := transactionServices.GenerateTransactionMsg(txs, []byte("tx"), chain, [2]byte{'T', chain})
 		if err != nil {
 			return
 		}

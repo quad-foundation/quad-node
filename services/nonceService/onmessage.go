@@ -5,6 +5,7 @@ import (
 	"github.com/quad/quad-node/common"
 	"github.com/quad/quad-node/message"
 	"github.com/quad/quad-node/services"
+	"github.com/quad/quad-node/services/transactionServices"
 	"github.com/quad/quad-node/statistics"
 	"github.com/quad/quad-node/transactionsDefinition"
 	"github.com/quad/quad-node/transactionsPool"
@@ -135,6 +136,10 @@ func OnMessage(addr string, m []byte) {
 				defer merkleTrie.Destroy()
 				if err != nil {
 					panic(err)
+				}
+				hashesMissing := blocks.IsAllTransactions(newBlock)
+				if len(hashesMissing) > 0 {
+					transactionServices.SendGT(addr, hashesMissing, newBlock.GetChain())
 				}
 				err = blocks.CheckBlockAndTransferFunds(newBlock, lastBlock, merkleTrie)
 				if err != nil {
