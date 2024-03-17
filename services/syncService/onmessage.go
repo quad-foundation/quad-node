@@ -108,6 +108,9 @@ func OnMessage(addr string, m []byte) {
 		for i := 0; i < len(blcks); i++ {
 			header := blcks[i].GetHeader()
 			index := indices[i]
+			if index <= 0 {
+				continue
+			}
 			block := blcks[i]
 			oldBlock := blocks.Block{}
 			if index > h {
