@@ -84,11 +84,11 @@ func UpdateAccountStats() {
 	uncStake := 0.0 // acc.GetUnconfirmedStakeFloat(st.Heights)
 
 	txt += fmt.Sprintln("\n\nYour Address:", MainWalllet.Address.GetHex())
-	txt += fmt.Sprintf("Your holdings: %18.8f GXY\n", conf+uncTx+stake+uncStake)
-	txt += fmt.Sprintf("Confirmed balance: %18.8f GXY\n", conf)
-	txt += fmt.Sprintf("Transactions unconfirmed balance: %18.8f GXY\n", uncTx)
-	txt += fmt.Sprintf("Staked amount: %18.8f GXY\n", stake)
-	txt += fmt.Sprintf("Unconfirmed staked amount: %18.8f GXY\n", uncStake)
+	txt += fmt.Sprintf("Your holdings: %18.8f QAD\n", conf+uncTx+stake+uncStake)
+	txt += fmt.Sprintf("Confirmed balance: %18.8f QAD\n", conf)
+	txt += fmt.Sprintf("Transactions unconfirmed balance: %18.8f QAD\n", uncTx)
+	txt += fmt.Sprintf("Staked amount: %18.8f QAD\n", stake)
+	txt += fmt.Sprintf("Unconfirmed staked amount: %18.8f QAD\n", uncStake)
 	txt += fmt.Sprintf("\nStaking details:\n")
 	for k, v := range accs.StakingDetails {
 		if v.Amount == 0 {

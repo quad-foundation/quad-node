@@ -7,6 +7,7 @@ import (
 	"github.com/quad/quad-node/common"
 	"github.com/quad/quad-node/transactionsDefinition"
 	"github.com/quad/quad-node/transactionsPool"
+	"log"
 )
 
 func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTree, error) {
@@ -84,11 +85,15 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 			return 0, fmt.Errorf("not enough funds on account")
 		}
 	}
-	lastSupply -= totalFee
+	reward := account.GetReward(lastSupply)
+	lastSupply += reward - totalFee
 	if lastSupply != block.GetBlockSupply() {
 		return 0, fmt.Errorf("block supply checking fails")
 	}
-	return totalFee, nil
+	if GetSupplyInAccounts()+reward-totalFee != block.GetBlockSupply() {
+		return 0, fmt.Errorf("block supply checking fails vs account balances")
+	}
+	return reward, nil
 }
 
 func ExtractKeysFromMapAccounts(m map[[common.AddressLength]byte]account.Account) [][common.AddressLength]byte {
@@ -104,11 +109,9 @@ func IsInKeysOfMapAccounts(m map[[common.AddressLength]byte]account.Account, sea
 	return common.ContainsKeyInMap(keys, searchKey)
 }
 
-func ProcessBlockTransfers(block Block) error {
+func ProcessBlockTransfers(block Block, reward int64) error {
 	txs := block.TransactionsHashes
 	chain := block.Chain
-	accounts := map[[common.AddressLength]byte]account.Account{}
-	recipients := map[[common.AddressLength]byte]account.Account{}
 	totalFee := int64(0)
 	for _, tx := range txs {
 		hash := tx.GetBytes()
@@ -122,34 +125,52 @@ func ProcessBlockTransfers(block Block) error {
 		amount := poolTx.TxData.Amount
 		total_amount := fee + amount
 		address := poolTx.GetSenderAddress()
-		acc := account.GetAccountByAddressBytes(address.GetBytes())
-		if bytes.Compare(acc.Address[:], address.GetBytes()) != 0 {
-			return fmt.Errorf("no account found in check block transafer")
-		}
 		addressRecipient := poolTx.TxData.Recipient
-		accRecipient := account.GetAccountByAddressBytes(addressRecipient.GetBytes())
-		if bytes.Compare(accRecipient.Address[:], addressRecipient.GetBytes()) != 0 {
-			return fmt.Errorf("no account found in check block transafer")
+		err = AddBalance(address.ByteValue, -total_amount)
+		if err != nil {
+			return err
 		}
-		if IsInKeysOfMapAccounts(accounts, acc.Address) {
-			acc = accounts[acc.Address]
-			acc.Balance -= total_amount
-			accounts[acc.Address] = acc
-		} else {
-			acc.Balance -= total_amount
-			accounts[acc.Address] = acc
-		}
-		if acc.Balance < 0 {
-			return fmt.Errorf("not enough funds on account")
-		}
-		if IsInKeysOfMapAccounts(recipients, accRecipient.Address) {
-			accRecipient = recipients[accRecipient.Address]
-			accRecipient.Balance += amount
-			recipients[accRecipient.Address] = accRecipient
-		} else {
-			accRecipient.Balance += amount
-			recipients[accRecipient.Address] = accRecipient
+
+		err = AddBalance(addressRecipient.ByteValue, amount)
+		if err != nil {
+			return err
 		}
 	}
+	addr := block.BaseBlock.BaseHeader.OperatorAccount.ByteValue
+	err := AddBalance(addr, reward)
+	if err != nil {
+		return fmt.Errorf("reward adding fails %v", err)
+	}
+
+	return nil
+}
+
+func CheckBlockAndTransferFunds(newBlock Block, lastBlock Block, merkleTrie *transactionsPool.MerkleTree) error {
+
+	reward, err := CheckBlockTransfers(newBlock, lastBlock)
+	if err != nil {
+		return err
+	}
+
+	hashes := newBlock.GetBlockTransactionsHashes()
+	log.Println("Number of transactions in block: ", len(hashes))
+	txshb := [][]byte{}
+	for _, h := range hashes {
+		tx := transactionsPool.PoolsTx[newBlock.Chain].PopTransactionByHash(h.GetBytes())
+		txshb = append(txshb, tx.GetHash().GetBytes())
+		err = tx.StoreToDBPoolTx(common.TransactionDBPrefix[:])
+		if err != nil {
+			return err
+		}
+	}
+	err = merkleTrie.StoreTree(newBlock.GetHeader().Height, txshb)
+	if err != nil {
+		panic(err)
+	}
+	err = ProcessBlockTransfers(newBlock, reward)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

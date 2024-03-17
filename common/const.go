@@ -13,6 +13,7 @@ var (
 	ValidChains                       = []uint8{0, 1, 2, 3, 4, 255}
 	Decimals                  uint8   = 8
 	MaxTotalSupply            int64   = 230000000000000000
+	InitSupply                int64   = 23000000000000000
 	RewardRatio                       = 1e-7
 	ValidationTag                     = "validationTag"
 	DifficultyMultiplier      int32   = 10

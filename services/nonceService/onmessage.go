@@ -3,7 +3,6 @@ package nonceServices
 import (
 	"github.com/quad/quad-node/blocks"
 	"github.com/quad/quad-node/common"
-	memDatabase "github.com/quad/quad-node/database"
 	"github.com/quad/quad-node/message"
 	"github.com/quad/quad-node/services"
 	"github.com/quad/quad-node/statistics"
@@ -137,20 +136,9 @@ func OnMessage(addr string, m []byte) {
 				if err != nil {
 					panic(err)
 				}
-				hashes := newBlock.GetBlockTransactionsHashes()
-				log.Println("Number of transactions in block: ", len(hashes))
-				txshb := [][]byte{}
-				for _, h := range hashes {
-					tx := transactionsPool.PoolsTx[chain].PopTransactionByHash(h.GetBytes())
-					txshb = append(txshb, tx.GetHash().GetBytes())
-					err = memDatabase.MainDB.Put(tx.GetHash().GetBytes(), tx.GetBytes())
-					if err != nil {
-						panic("Transaction not saved")
-					}
-				}
-				err = merkleTrie.StoreTree(newBlock.GetHeader().Height, txshb)
+				err = blocks.CheckBlockAndTransferFunds(newBlock, lastBlock, merkleTrie)
 				if err != nil {
-					panic(err)
+					panic("check transfer transactions in block fails")
 				}
 				err = newBlock.StoreBlock()
 				if err != nil {

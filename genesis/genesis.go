@@ -2,10 +2,13 @@
 package genesis
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/quad/quad-node/account"
 	"github.com/quad/quad-node/blocks"
 	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/transactionsDefinition"
 	"github.com/quad/quad-node/transactionsPool"
 	"github.com/quad/quad-node/wallet"
 	"log"
@@ -26,7 +29,7 @@ type Genesis struct {
 	DelegatedAccount  map[string]int   `json:"delegated_account"`
 }
 
-func CreateBlockFromGenesis(genesis Genesis) (blocks.Block, error) {
+func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 
 	myWallet := wallet.GetActiveWallet()
 
@@ -35,6 +38,50 @@ func CreateBlockFromGenesis(genesis Genesis) (blocks.Block, error) {
 	//if err != nil {
 	//	return nil, err
 	//}
+	accDel1 := account.Accounts.AllAccounts[myWallet.Address.ByteValue]
+	accDel1.Balance = common.InitSupply
+	account.Accounts.AllAccounts[myWallet.Address.ByteValue] = accDel1
+
+	walletNonce := int16(0)
+	blockTransactionsHashesBytes := [][]byte{}
+	blockTransactionsHashes := []common.Hash{}
+	genesisTxs := []transactionsDefinition.Transaction{}
+	for addr, balance := range genesis.Balances {
+		ab, err := hex.DecodeString(addr)
+		if err != nil {
+			log.Fatal("cannot decode address from string in genesis block")
+		}
+		a, err := common.BytesToAddress(ab)
+		if err != nil {
+			log.Fatal("cannot decode address from bytes in genesis block")
+		}
+		tx := GenesisTransaction(myWallet, a, balance, walletNonce, genesis)
+		err = tx.CalcHashAndSet()
+		if err != nil {
+			log.Fatalf("cannot calculate hash of transaction in genesis block %v", err)
+		}
+		err = tx.StoreToDBPoolTx(common.TransactionDBPrefix[:])
+		if err != nil {
+			log.Fatalf("cannot store transaction of genesis block %v", err)
+		}
+		genesisTxs = append(genesisTxs, tx)
+		blockTransactionsHashesBytes = append(blockTransactionsHashesBytes, tx.GetHash().GetBytes())
+		blockTransactionsHashes = append(blockTransactionsHashes, tx.GetHash())
+		walletNonce++
+	}
+
+	genesisMerkleTrie, err := transactionsPool.BuildMerkleTree(0, blockTransactionsHashesBytes)
+	if err != nil {
+		log.Fatalf("cannot generate genesis merkleTrie %v", err)
+	}
+	defer genesisMerkleTrie.Destroy()
+
+	err = genesisMerkleTrie.StoreTree(0, blockTransactionsHashesBytes)
+	if err != nil {
+		log.Fatalf("cannot store genesis merkleTrie %v", err)
+	}
+	rootHash := common.Hash{}
+	rootHash.Set(genesisMerkleTrie.GetRootHash())
 
 	bh := blocks.BaseHeader{
 		PreviousHash:     common.EmptyHash(),
@@ -42,7 +89,7 @@ func CreateBlockFromGenesis(genesis Genesis) (blocks.Block, error) {
 		Height:           0,
 		DelegatedAccount: common.GetDelegatedAccountAddress(1),
 		OperatorAccount:  myWallet.Address,
-		RootMerkleTree:   common.EmptyHash(),
+		RootMerkleTree:   rootHash,
 		Signature:        common.Signature{},
 		SignatureMessage: []byte{},
 	}
@@ -50,46 +97,77 @@ func CreateBlockFromGenesis(genesis Genesis) (blocks.Block, error) {
 	bh.SignatureMessage = signatureBlockHeaderMessage
 	hashb, err := common.CalcHashToByte(signatureBlockHeaderMessage)
 	if err != nil {
-		return blocks.Block{}, err
+		log.Fatalf("cannot calculate hash of genesis block header %v", err)
 	}
 
 	sign, err := myWallet.Sign(hashb)
 	if err != nil {
-		return blocks.Block{}, err
+		log.Fatalf("cannot sign genesis block header %v", err)
 	}
 	bh.Signature = *sign
 
 	bhHash, err := bh.CalcHash()
 	if err != nil {
-		return blocks.Block{}, err
+		log.Fatalf("cannot calculate hash of genesis block header %v", err)
 	}
 	bb := blocks.BaseBlock{
 		BaseHeader:       bh,
 		BlockHeaderHash:  bhHash,
 		BlockTimeStamp:   genesis.Timestamp,
 		RewardPercentage: 0,
+		Supply:           common.InitSupply,
 	}
-
-	tempInstance, err := transactionsPool.BuildMerkleTree(0, [][]byte{})
-	if err != nil {
-		return blocks.Block{}, err
-	}
-	defer tempInstance.Destroy()
-	rmthash := []common.Hash{}
 
 	bl := blocks.Block{
 		BaseBlock:          bb,
 		Chain:              0,
-		TransactionsHashes: rmthash,
+		TransactionsHashes: blockTransactionsHashes,
 		BlockHash:          common.EmptyHash(),
 	}
 	hash, err := bl.CalcBlockHash()
 	if err != nil {
-		return blocks.Block{}, err
+		log.Fatalf("cannot calculate hash of genesis block %v", err)
 	}
 	bl.BlockHash = hash
 
-	return bl, nil
+	return bl
+}
+
+func GenesisTransaction(w *wallet.Wallet, recipient common.Address, amount int64, walletNonce int16, genesis Genesis) transactionsDefinition.Transaction {
+
+	sender := w.Address
+
+	txdata := transactionsDefinition.TxData{
+		Recipient: recipient,
+		Amount:    amount,
+		OptData:   nil,
+	}
+	txParam := transactionsDefinition.TxParam{
+		ChainID:     common.GetChainID(),
+		Sender:      sender,
+		SendingTime: genesis.Timestamp,
+		Nonce:       walletNonce,
+		Chain:       0,
+	}
+	t := transactionsDefinition.Transaction{
+		TxData:    txdata,
+		TxParam:   txParam,
+		Hash:      common.Hash{},
+		Signature: common.Signature{},
+		Height:    0,
+		GasPrice:  0,
+		GasUsage:  0,
+	}
+
+	err := t.CalcHashAndSet()
+	if err != nil {
+		log.Fatal("calc hash error", err)
+	}
+	err = t.Sign(w)
+	if err != nil {
+		log.Fatal("Signing error", err)
+	}
+	return t
 }
 
 // InitGenesis sets initial values written in genesis conf file
@@ -103,10 +181,7 @@ func InitGenesis() {
 		log.Fatal(err)
 	}
 
-	genesisBlock, err := CreateBlockFromGenesis(genesis)
-	if err != nil {
-		log.Fatal(err)
-	}
+	genesisBlock := CreateBlockFromGenesis(genesis)
 	err = genesisBlock.StoreBlock()
 	if err != nil {
 		log.Fatal(err)

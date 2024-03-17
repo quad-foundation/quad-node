@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"github.com/quad/quad-node/blocks"
 	"github.com/quad/quad-node/common"
-	memDatabase "github.com/quad/quad-node/database"
 	"github.com/quad/quad-node/message"
 	"github.com/quad/quad-node/transactionsPool"
 	"log"
@@ -145,27 +144,25 @@ func OnMessage(addr string, m []byte) {
 		}
 		for i := 0; i < len(blcks); i++ {
 			block := blcks[i]
+			index := indices[i]
 			if block.GetHeader().Height <= lastGoodBlock {
 				continue
 			}
-			hashes := block.GetBlockTransactionsHashes()
-			log.Println("Number of transactions in block: ", len(hashes))
-			txshb := [][]byte{}
-			for _, h := range hashes {
-				tx := transactionsPool.PoolsTx[block.Chain].PopTransactionByHash(h.GetBytes())
-				txshb = append(txshb, tx.GetHash().GetBytes())
-				err = memDatabase.MainDB.Put(tx.GetHash().GetBytes(), tx.GetBytes())
+			oldBlock := blocks.Block{}
+			if i > 0 {
+				oldBlock = blcks[i-1]
+			} else {
+				oldBlock, err = blocks.LoadBlock(index - 1)
 				if err != nil {
-					panic("Transaction not saved")
+					panic("cannot load block")
 				}
 			}
-			merkleTrie := merkleTries[block.GetHeader().Height]
-			err = merkleTrie.StoreTree(block.GetHeader().Height, txshb)
+			err := blocks.CheckBlockAndTransferFunds(block, oldBlock, merkleTries[index])
 			if err != nil {
-				panic(err)
+				return
 			}
 			// storing blocks
-			err := block.StoreBlock()
+			err = block.StoreBlock()
 			if err != nil {
 				log.Println(err)
 				panic("storing block failed")
