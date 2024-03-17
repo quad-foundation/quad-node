@@ -43,10 +43,7 @@ func OnMessage(addr string, m []byte) {
 		lastOtherHeight := common.GetInt64FromByte(txn[[2]byte{'L', 'H'}][0])
 		lastOtherBlockHashBytes := txn[[2]byte{'L', 'B'}][0]
 		if lastOtherHeight == h {
-			//lastBlock, err := blocks.LoadBlock(h)
-			//if err != nil {
-			//	panic(err)
-			//}
+
 			lastBlockHashBytes, err := blocks.LoadHashOfBlock(h)
 			if err != nil {
 				panic(err)
@@ -54,13 +51,10 @@ func OnMessage(addr string, m []byte) {
 			if bytes.Compare(lastOtherBlockHashBytes, lastBlockHashBytes) != 0 {
 				SendGetHeaders(addr, lastOtherHeight)
 			}
+			common.IsSyncing.Store(false)
 			return
 		} else if lastOtherHeight < h {
-			//bHeight := h - common.NumberOfHashesInBucket
-			//if bHeight <= 0 {
-			//	bHeight = 0
-			//}
-			//SendHeaders(addr, bHeight, h)
+			common.IsSyncing.Store(false)
 			return
 		}
 		// when others have longer chain
@@ -133,14 +127,20 @@ func OnMessage(addr string, m []byte) {
 			}
 
 			if header.Height != index {
+				common.IsSyncing.Store(true)
+				common.SetHeight(0)
 				panic("not relevant height vs index")
 			}
 			if !common.CheckHeight(block.Chain, index) {
+				common.IsSyncing.Store(true)
+				common.SetHeight(0)
 				panic("chain improper related to height")
 			}
 			merkleTrie, err := blocks.CheckBaseBlock(block, oldBlock)
 			defer merkleTrie.Destroy()
 			if err != nil {
+				common.IsSyncing.Store(true)
+				common.SetHeight(0)
 				panic(err)
 			}
 			merkleTries[index] = merkleTrie
