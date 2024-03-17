@@ -123,7 +123,7 @@ func OnMessage(addr string, m []byte) {
 					continue
 				}
 			}
-			if i > 0 {
+			if i > 0 && index > 1 {
 				oldBlock = blcks[i-1]
 			} else {
 				oldBlock, err = blocks.LoadBlock(index - 1)
