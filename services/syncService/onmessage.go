@@ -6,6 +6,7 @@ import (
 	"github.com/quad/quad-node/common"
 	"github.com/quad/quad-node/genesis"
 	"github.com/quad/quad-node/message"
+	"github.com/quad/quad-node/services/transactionServices"
 	"github.com/quad/quad-node/transactionsPool"
 	"log"
 )
@@ -142,6 +143,10 @@ func OnMessage(addr string, m []byte) {
 				panic(err)
 			}
 			merkleTries[index] = merkleTrie
+			hashesMissing := blocks.IsAllTransactions(block)
+			if len(hashesMissing) > 0 {
+				transactionServices.SendGT(addr, hashesMissing, block.GetChain())
+			}
 		}
 		for i := 0; i < len(blcks); i++ {
 			block := blcks[i]

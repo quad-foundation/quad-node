@@ -51,6 +51,21 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 	return merkleTrie, nil
 }
 
+func IsAllTransactions(block Block) [][]byte {
+	txs := block.TransactionsHashes
+	chain := block.Chain
+	hashes := [][]byte{}
+	for _, tx := range txs {
+		hash := tx.GetBytes()
+		prefix := []byte{common.TransactionDBPrefix[0], chain}
+		isKey := transactionsDefinition.CheckFromDBPoolTx(prefix, hash)
+		if isKey == false {
+			hashes = append(hashes, hash)
+		}
+	}
+	return hashes
+}
+
 func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 	txs := block.TransactionsHashes
 	chain := block.Chain

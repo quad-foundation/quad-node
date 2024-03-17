@@ -96,11 +96,11 @@ func SampleTransaction(w *wallet.Wallet, chain uint8) transactionsDefinition.Tra
 
 func sendTransactions(w *wallet.Wallet) {
 
-	batchSize := 100
+	batchSize := 10
 	count := int64(0)
 	start := common.GetCurrentTimeStampInSecond()
 
-	for range time.Tick(time.Millisecond) {
+	for range time.Tick(time.Second) {
 		var txs []transactionsDefinition.Transaction
 		chain := uint8(rand2.Intn(5))
 		for i := 0; i < batchSize; i++ {

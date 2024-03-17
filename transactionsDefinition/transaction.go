@@ -163,6 +163,15 @@ func LoadFromDBPoolTx(prefix []byte, hashTransaction []byte) (Transaction, error
 	return at, nil
 }
 
+func CheckFromDBPoolTx(prefix []byte, hashTransaction []byte) bool {
+	prefix = append(prefix, hashTransaction...)
+	isKey, err := (*memDatabase.MainDB).IsKey(prefix)
+	if err != nil {
+		return false
+	}
+	return isKey
+}
+
 func (tx *Transaction) Verify() bool {
 	b := tx.GetHash().GetBytes()
 	a := tx.GetSenderAddress()

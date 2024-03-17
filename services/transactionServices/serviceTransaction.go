@@ -20,11 +20,11 @@ func InitTransactionService() {
 	go broadcastTransactionsMsgInLoop(services.SendChanTx)
 }
 
-func GenerateTransactionMsg(txs []transactionsDefinition.Transaction, chain uint8, topic [2]byte) (message.TransactionsMessage, error) {
+func GenerateTransactionMsg(txs []transactionsDefinition.Transaction, mesgHead []byte, chain uint8, topic [2]byte) (message.TransactionsMessage, error) {
 
 	topic[1] = chain
 	bm := message.BaseMessage{
-		Head:    []byte("tx"),
+		Head:    mesgHead,
 		ChainID: common.GetChainID(),
 		Chain:   chain,
 	}
@@ -37,6 +37,22 @@ func GenerateTransactionMsg(txs []transactionsDefinition.Transaction, chain uint
 	n := message.TransactionsMessage{
 		BaseMessage:       bm,
 		TransactionsBytes: map[[2]byte][][]byte{topic: bb},
+	}
+	return n, nil
+}
+
+func GenerateTransactionMsgGT(txsHashes [][]byte, mesgHead []byte, chain uint8, topic [2]byte) (message.TransactionsMessage, error) {
+
+	topic[1] = chain
+	bm := message.BaseMessage{
+		Head:    mesgHead,
+		ChainID: common.GetChainID(),
+		Chain:   chain,
+	}
+
+	n := message.TransactionsMessage{
+		BaseMessage:       bm,
+		TransactionsBytes: map[[2]byte][][]byte{topic: txsHashes},
 	}
 	return n, nil
 }
@@ -67,12 +83,21 @@ func SendTransactionMsg(ip string, chain uint8, topic [2]byte) {
 		return
 	}
 	txs := transactionsPool.PoolsTx[chain].PeekTransactions(int(common.MaxTransactionsPerBlock))
-	n, err := GenerateTransactionMsg(txs, chain, topic)
+	n, err := GenerateTransactionMsg(txs, []byte("tx"), chain, topic)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 	Send(ip, n.GetBytes())
+}
+
+func SendGT(ip string, txsHashes [][]byte, chain uint8) {
+	topic := tcpip.TransactionTopic[chain]
+	transactionMsg, err := GenerateTransactionMsgGT(txsHashes, []byte("st"), chain, topic)
+	if err != nil {
+		log.Println("cannot generate transaction msg", err)
+	}
+	Send(ip, transactionMsg.GetBytes())
 }
 
 func Send(addr string, nb []byte) {
