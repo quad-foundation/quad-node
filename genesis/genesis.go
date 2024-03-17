@@ -64,7 +64,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 		if err != nil {
 			log.Fatal("cannot decode address from bytes in genesis block")
 		}
-		tx := GenesisTransaction(myWallet, a, balance, walletNonce, genesis)
+		tx := GenesisTransaction(addressOp1, a, balance, walletNonce, genesis)
 		err = tx.CalcHashAndSet()
 		if err != nil {
 			log.Fatalf("cannot calculate hash of transaction in genesis block %v", err)
@@ -148,9 +148,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 	return bl
 }
 
-func GenesisTransaction(w *wallet.Wallet, recipient common.Address, amount int64, walletNonce int16, genesis Genesis) transactionsDefinition.Transaction {
-
-	sender := w.Address
+func GenesisTransaction(sender common.Address, recipient common.Address, amount int64, walletNonce int16, genesis Genesis) transactionsDefinition.Transaction {
 
 	txdata := transactionsDefinition.TxData{
 		Recipient: recipient,
