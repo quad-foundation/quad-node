@@ -245,3 +245,9 @@ func Load(path string) (Genesis, error) {
 	}
 	return genesis, nil
 }
+
+func ResetAccountsAndBlocksSync(height int64) {
+	common.IsSyncing.Store(true)
+	account.Accounts.AllAccounts = map[[20]byte]account.Account{}
+	InitGenesis()
+}

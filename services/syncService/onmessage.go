@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/quad/quad-node/blocks"
 	"github.com/quad/quad-node/common"
+	"github.com/quad/quad-node/genesis"
 	"github.com/quad/quad-node/message"
 	"github.com/quad/quad-node/transactionsPool"
 	"log"
@@ -127,17 +128,17 @@ func OnMessage(addr string, m []byte) {
 			}
 
 			if header.Height != index {
-				blocks.ResetAccountsAndBlocksSync(0)
+				genesis.ResetAccountsAndBlocksSync(0)
 				panic("not relevant height vs index")
 			}
 			if !common.CheckHeight(block.Chain, index) {
-				blocks.ResetAccountsAndBlocksSync(0)
+				genesis.ResetAccountsAndBlocksSync(0)
 				panic("chain improper related to height")
 			}
 			merkleTrie, err := blocks.CheckBaseBlock(block, oldBlock)
 			defer merkleTrie.Destroy()
 			if err != nil {
-				blocks.ResetAccountsAndBlocksSync(0)
+				genesis.ResetAccountsAndBlocksSync(0)
 				panic(err)
 			}
 			merkleTries[index] = merkleTrie
