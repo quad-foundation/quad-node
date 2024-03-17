@@ -107,7 +107,7 @@ func OnMessage(addr string, m []byte) {
 			}
 			block := blcks[i]
 			oldBlock := blocks.Block{}
-			if index > h {
+			if index <= h {
 				hashOfMyBlockBytes, err := blocks.LoadHashOfBlock(index)
 				if err != nil {
 					panic("cannot load block hash")
