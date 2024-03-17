@@ -17,27 +17,22 @@ import (
 
 // Genesis represents the genesis file.
 type Genesis struct {
-	Timestamp         int64            `json:"date"`
-	ChainID           int16            `json:"chain_id"`   // The chain id represents an unique id for this running instance.
-	Difficulty        int32            `json:"difficulty"` // How difficult it needs to be to solve the work problem.
-	RewardRatio       float64          `json:"reward_ratio"`
-	Decimals          uint8            `json:"decimals"`
-	BlockTimeInterval float32          `json:"block_time_interval"`
-	Balances          map[string]int64 `json:"balances"`
-	Signature         string           `json:"signature"`
-	OperatorPubKey    string           `json:"operator_pub_key"`
-	DelegatedAccount  map[string]int   `json:"delegated_account"`
+	Timestamp              int64             `json:"date"`
+	ChainID                int16             `json:"chain_id"`   // The chain id represents an unique id for this running instance.
+	Difficulty             int32             `json:"difficulty"` // How difficult it needs to be to solve the work problem.
+	RewardRatio            float64           `json:"reward_ratio"`
+	Decimals               uint8             `json:"decimals"`
+	BlockTimeInterval      float32           `json:"block_time_interval"`
+	Balances               map[string]int64  `json:"balances"`
+	TransactionsSignatures map[string]string `json:"transactions_signatures"`
+	Signature              string            `json:"signature"`
+	OperatorPubKey         string            `json:"operator_pub_key"`
 }
 
 func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 
 	myWallet := wallet.GetActiveWallet()
 
-	//signature := common.Signature{}
-	//err := signature.Set([]byte(genesis.Signature), myWallet.Address)
-	//if err != nil {
-	//	return nil, err
-	//}
 	pubKeyOpBytes, err := hex.DecodeString(genesis.OperatorPubKey)
 	if err != nil {
 		log.Fatal("cannot decode address from string in genesis block")
@@ -110,17 +105,22 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 	}
 	signatureBlockHeaderMessage := bh.GetBytesWithoutSignature()
 	bh.SignatureMessage = signatureBlockHeaderMessage
-	hashb, err := common.CalcHashToByte(signatureBlockHeaderMessage)
+	_, err = common.CalcHashToByte(signatureBlockHeaderMessage)
 	if err != nil {
 		log.Fatalf("cannot calculate hash of genesis block header %v", err)
 	}
 
-	sign, err := myWallet.Sign(hashb)
+	//sign, err := myWallet.Sign(hashb)
+	//if err != nil {
+	//	log.Fatalf("cannot sign genesis block header %v", err)
+	//}
+	//bh.Signature = *sign
+	//log.Println("Block Signature:", bh.Signature.GetHex())
+	signature, err := common.GetSignatureFromString(genesis.Signature, addressOp1)
 	if err != nil {
-		log.Fatalf("cannot sign genesis block header %v", err)
+		log.Fatal(err)
 	}
-	bh.Signature = *sign
-
+	bh.Signature = signature
 	bhHash, err := bh.CalcHash()
 	if err != nil {
 		log.Fatalf("cannot calculate hash of genesis block header %v", err)
@@ -178,10 +178,17 @@ func GenesisTransaction(w *wallet.Wallet, recipient common.Address, amount int64
 	if err != nil {
 		log.Fatal("calc hash error", err)
 	}
-	err = t.Sign(w)
+	signature, err := common.GetSignatureFromString(genesis.TransactionsSignatures[recipient.GetHex()], sender)
+
 	if err != nil {
-		log.Fatal("Signing error", err)
+		log.Fatal(err)
 	}
+	t.Signature = signature
+	//err = t.Sign(w)
+	//if err != nil {
+	//	log.Fatal("Signing error", err)
+	//}
+	log.Println("transaction signature: ", t.Signature.GetHex())
 	return t
 }
 
