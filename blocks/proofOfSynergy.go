@@ -9,7 +9,7 @@ import (
 func CheckProofOfSynergy(block BaseBlock) bool {
 	head := block.BaseHeader
 	h := block.BlockHeaderHash
-	return validProof(h, head.Difficulty)
+	return head.Verify() && validProof(h, head.Difficulty)
 }
 
 func validProof(hash common.Hash, difficulty int32) bool {

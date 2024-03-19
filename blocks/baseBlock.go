@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/quad/quad-node/common"
 	memDatabase "github.com/quad/quad-node/database"
@@ -34,7 +35,7 @@ func (b *BaseHeader) GetBytesWithoutSignature() []byte {
 	rb = append(rb, b.DelegatedAccount.GetBytes()...)
 	rb = append(rb, b.OperatorAccount.GetBytes()...)
 	rb = append(rb, b.RootMerkleTree.GetBytes()...)
-	rb = append(rb, b.SignatureMessage...)
+	//rb = append(rb, b.SignatureMessage...)
 	return rb
 }
 
@@ -51,8 +52,11 @@ func (b *BaseHeader) GetBytes() []byte {
 	return rb
 }
 
-func (bh *BaseHeader) VerifyTransaction() bool {
+func (bh *BaseHeader) Verify() bool {
 	signatureBlockHeaderMessage := bh.GetBytesWithoutSignature()
+	if bytes.Compare(signatureBlockHeaderMessage, bh.SignatureMessage) != 0 {
+		return false
+	}
 	calcHash, err := common.CalcHashToByte(signatureBlockHeaderMessage)
 	if err != nil {
 		return false
