@@ -53,10 +53,10 @@ func OnMessage(addr string, m []byte) {
 			if bytes.Compare(lastOtherBlockHashBytes, lastBlockHashBytes) != 0 {
 				SendGetHeaders(addr, lastOtherHeight)
 			}
-			common.IsSyncing.Store(false)
+			//common.IsSyncing.Store(false)
 			return
 		} else if lastOtherHeight < h {
-			common.IsSyncing.Store(false)
+			//common.IsSyncing.Store(false)
 			return
 		}
 		// when others have longer chain
