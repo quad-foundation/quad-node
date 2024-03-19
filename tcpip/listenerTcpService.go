@@ -107,7 +107,9 @@ func StartNewConnection(ip string, receiveChan chan []byte, topic [2]byte) {
 	}
 	defer func() {
 		if r := recover(); r != nil {
-			//debug.PrintStack()
+			peersMutex.Lock()
+			defer peersMutex.Unlock()
+			tcpConn.Close()
 			log.Println("recover (receive Msg)", r)
 		}
 		return
