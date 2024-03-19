@@ -40,7 +40,10 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 	if err != nil {
 		log.Fatalf("cannot initialize operator pub key in genesis block %v", err)
 	}
-
+	err = pubKeyOp1.Store()
+	if err != nil {
+		log.Fatal("cannot store genesis operator pubkey", err)
+	}
 	addressOp1, err := common.PubKeyToAddress(pubKeyOp1)
 	if err != nil {
 		log.Fatalf("cannot retrieve operator address from pub key in genesis block %v", err)

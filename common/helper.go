@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/quad/quad-node/crypto/blake2b"
+	memDatabase "github.com/quad/quad-node/database"
 	"log"
 	"time"
 )
@@ -169,4 +170,10 @@ func BytesWithLenToBytes(b []byte) ([]byte, []byte, error) {
 		return nil, nil, fmt.Errorf("length value in byte slice is incorrect")
 	}
 	return b[4 : 4+lb], b[4+lb:], nil
+}
+
+func (pk PubKey) Store() error {
+	a := pk.Address.GetBytes()
+	err := memDatabase.MainDB.Put(append(PubKeyDBPrefix[:], a...), pk.GetBytes())
+	return err
 }
