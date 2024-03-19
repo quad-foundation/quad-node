@@ -99,6 +99,7 @@ func OnMessage(addr string, m []byte) {
 			return
 		}
 		// check blocks
+		was := false
 		lastGoodBlock := indices[0]
 		merkleTries := map[int64]*transactionsPool.MerkleTree{}
 		for i := 0; i < len(blcks); i++ {
@@ -119,13 +120,14 @@ func OnMessage(addr string, m []byte) {
 					continue
 				}
 			}
-			if i > 0 && index > 1 {
+			if was == true {
 				oldBlock = blcks[i-1]
 			} else {
 				oldBlock, err = blocks.LoadBlock(index - 1)
 				if err != nil {
 					panic("cannot load block")
 				}
+				was = true
 			}
 
 			if header.Height != index {
@@ -148,6 +150,7 @@ func OnMessage(addr string, m []byte) {
 				transactionServices.SendGT(addr, hashesMissing, block.GetChain())
 			}
 		}
+		was = false
 		for i := 0; i < len(blcks); i++ {
 			block := blcks[i]
 			index := indices[i]
@@ -155,13 +158,14 @@ func OnMessage(addr string, m []byte) {
 				continue
 			}
 			oldBlock := blocks.Block{}
-			if i > 0 {
+			if was == true {
 				oldBlock = blcks[i-1]
 			} else {
 				oldBlock, err = blocks.LoadBlock(index - 1)
 				if err != nil {
 					panic("cannot load block")
 				}
+				was = true
 			}
 			err := blocks.CheckBlockAndTransferFunds(block, oldBlock, merkleTries[index])
 			if err != nil {
