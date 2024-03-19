@@ -177,3 +177,16 @@ func (pk PubKey) Store() error {
 	err := memDatabase.MainDB.Put(append(PubKeyDBPrefix[:], a...), pk.GetBytes())
 	return err
 }
+
+// LoadPubKey : a - address in bytes of pubkey
+func LoadPubKey(a []byte) (pk *PubKey, err error) {
+	pkb, err := memDatabase.MainDB.Get(append(PubKeyDBPrefix[:], a...))
+	if err != nil {
+		return &PubKey{}, err
+	}
+	err = pk.Init(pkb)
+	if err != nil {
+		return &PubKey{}, err
+	}
+	return pk, nil
+}
