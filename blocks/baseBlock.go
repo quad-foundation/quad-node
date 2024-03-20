@@ -6,7 +6,6 @@ import (
 	"github.com/quad/quad-node/common"
 	memDatabase "github.com/quad/quad-node/database"
 	"github.com/quad/quad-node/wallet"
-	"log"
 )
 
 type BaseHeader struct {
@@ -48,7 +47,7 @@ func (b *BaseHeader) GetBytes() []byte {
 	rb = append(rb, b.RootMerkleTree.GetBytes()...)
 	rb = append(rb, common.BytesToLenAndBytes(b.SignatureMessage)...)
 	rb = append(rb, common.BytesToLenAndBytes(b.Signature.GetBytes())...)
-	log.Println("block ", b.Height, " len bytes ", len(rb))
+	//log.Println("block ", b.Height, " len bytes ", len(rb))
 	return rb
 }
 
@@ -87,7 +86,7 @@ func (bh *BaseHeader) GetFromBytes(b []byte) ([]byte, error) {
 	if len(b) < 116+common.SignatureLength {
 		return nil, fmt.Errorf("not enough bytes to decode BaseHeader")
 	}
-	log.Println("block decompile len bytes ", len(b))
+	//log.Println("block decompile len bytes ", len(b))
 
 	bh.PreviousHash = common.GetHashFromBytes(b[:32])
 	bh.Difficulty = common.GetInt32FromByte(b[32:36])

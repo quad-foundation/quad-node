@@ -22,6 +22,7 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 	}
 
 	if bytes.Compare(lastBlock.BlockHash.GetBytes(), newBlock.GetHeader().PreviousHash.GetBytes()) != 0 {
+		log.Println("lastBlock.BlockHash", lastBlock.BlockHash.GetHex(), newBlock.GetHeader().PreviousHash.GetHex())
 		return nil, fmt.Errorf("last block hash not match to one stored in new block")
 	}
 	// needs to check block and process
