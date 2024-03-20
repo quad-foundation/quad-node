@@ -10,6 +10,7 @@ import (
 	"github.com/quad/quad-node/transactionsDefinition"
 	"github.com/quad/quad-node/transactionsPool"
 	"log"
+	"runtime/debug"
 )
 
 func OnMessage(addr string, m []byte) {
@@ -19,7 +20,7 @@ func OnMessage(addr string, m []byte) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			//debug.PrintStack()
+			debug.PrintStack()
 			log.Println("recover (nonce Msg)", r)
 		}
 
