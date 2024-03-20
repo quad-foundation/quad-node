@@ -134,7 +134,6 @@ func Receive(topic [2]byte, conn *net.TCPConn) []byte {
 	const bufSize = 1048576
 
 	if conn == nil {
-		handleConnectionError(fmt.Errorf("conn is nil"), topic, conn)
 		return []byte("<-CLS->")
 	}
 
