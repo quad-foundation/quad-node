@@ -59,17 +59,20 @@ func OnMessage(addr string, m []byte) {
 		nonceHeight := transaction.GetHeight()
 		chain := transaction.GetChain()
 		if common.CheckHeight(chain, nonceHeight) == false {
-			panic("improper height value in nonceTransaction")
+			log.Println("improper height value in nonceTransaction")
+			return
 		}
 		h := common.GetHeight()
 
 		if nonceHeight < 1 || nonceHeight != h+1 {
-			panic("nonce height invalid")
+			log.Print("nonce height invalid")
+			return
 		}
 
 		isValid = transaction.Verify()
 		if isValid == false {
-			panic("nonce signature is invalid")
+			log.Println("nonce signature is invalid")
+			return
 		}
 		lastBlock, err := blocks.LoadBlock(h)
 		if err != nil {
