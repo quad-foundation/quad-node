@@ -65,7 +65,7 @@ func OnMessage(addr string, m []byte) {
 		h := common.GetHeight()
 
 		if nonceHeight < 1 || nonceHeight != h+1 {
-			log.Print("nonce height invalid")
+			//log.Print("nonce height invalid")
 			return
 		}
 
@@ -87,10 +87,10 @@ func OnMessage(addr string, m []byte) {
 			txsBytes = append(txsBytes, hash)
 		}
 		merkleTrie, err := transactionsPool.BuildMerkleTree(h+1, txsBytes)
+		defer merkleTrie.Destroy()
 		if err != nil {
 			panic("cannot build merkleTrie")
 		}
-		defer merkleTrie.Destroy()
 
 		newBlock, err := services.CreateBlockFromNonceMessage([]transactionsDefinition.Transaction{transaction},
 			lastBlock,
@@ -104,7 +104,7 @@ func OnMessage(addr string, m []byte) {
 		if newBlock.CheckProofOfSynergy() {
 			services.BroadcastBlock(newBlock)
 		} else {
-			log.Println("new block is not valid")
+			//log.Println("new block is not valid")
 		}
 
 		return
@@ -136,7 +136,7 @@ func OnMessage(addr string, m []byte) {
 					return
 				}
 				if newBlock.GetHeader().Height != h+1 {
-					log.Println("block of too short chain")
+					//log.Println("block of too short chain")
 					return
 				}
 				merkleTrie, err := blocks.CheckBaseBlock(newBlock, lastBlock)
