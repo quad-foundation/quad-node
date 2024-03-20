@@ -127,19 +127,23 @@ func OnMessage(addr string, m []byte) {
 				newBlock := bls[k]
 				if err != nil {
 					log.Println(err)
-					panic("cannot load blocks from bytes")
+					log.Println("cannot load blocks from bytes")
+					return
 				}
 				chain := newBlock.GetChain()
 				if chain != k[1] {
-					panic("improper chain vs topic")
+					log.Println("improper chain vs topic")
+					return
 				}
 				if newBlock.GetHeader().Height != h+1 {
-					panic("block of too short chain")
+					log.Println("block of too short chain")
+					return
 				}
 				merkleTrie, err := blocks.CheckBaseBlock(newBlock, lastBlock)
 				defer merkleTrie.Destroy()
 				if err != nil {
-					panic(err)
+					log.Println(err)
+					return
 				}
 				hashesMissing := blocks.IsAllTransactions(newBlock)
 				if len(hashesMissing) > 0 {
@@ -147,7 +151,8 @@ func OnMessage(addr string, m []byte) {
 				}
 				err = blocks.CheckBlockAndTransferFunds(newBlock, lastBlock, merkleTrie)
 				if err != nil {
-					panic("check transfer transactions in block fails")
+					log.Println("check transfer transactions in block fails", err)
+					return
 				}
 				err = newBlock.StoreBlock()
 				if err != nil {
