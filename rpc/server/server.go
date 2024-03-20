@@ -101,8 +101,9 @@ func handleACCT(line []byte, reply *[]byte) {
 
 	byt := [common.AddressLength]byte{}
 	copy(byt[:], line[:common.AddressLength])
-
+	account.AccountsRWMutex.RLock()
 	acc := account.Accounts.AllAccounts[byt]
+	account.AccountsRWMutex.RUnlock()
 	am := acc.Marshal()
 	*reply = am
 }

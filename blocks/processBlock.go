@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/quad/quad-node/account"
 	"github.com/quad/quad-node/common"
-	memDatabase "github.com/quad/quad-node/database"
 	"github.com/quad/quad-node/transactionsDefinition"
 	"github.com/quad/quad-node/transactionsPool"
 	"log"
@@ -129,6 +128,7 @@ func IsInKeysOfMapAccounts(m map[[common.AddressLength]byte]account.Account, sea
 func ProcessBlockTransfers(block Block, reward int64) error {
 	txs := block.TransactionsHashes
 	chain := block.Chain
+
 	totalFee := int64(0)
 	for _, tx := range txs {
 		hash := tx.GetBytes()
@@ -181,9 +181,14 @@ func CheckBlockAndTransferFunds(newBlock Block, lastBlock Block, merkleTrie *tra
 			return err
 		}
 	}
+
+	err = ProcessBlockPubKey(newBlock)
+	if err != nil {
+		return err
+	}
 	err = merkleTrie.StoreTree(newBlock.GetHeader().Height, txshb)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	err = ProcessBlockTransfers(newBlock, reward)
 	if err != nil {
@@ -191,23 +196,4 @@ func CheckBlockAndTransferFunds(newBlock Block, lastBlock Block, merkleTrie *tra
 	}
 
 	return nil
-}
-
-func StorePubKey(pk common.PubKey) error {
-	a := pk.Address.GetBytes()
-	err := memDatabase.MainDB.Put(append(common.PubKeyDBPrefix[:], a...), pk.GetBytes())
-	return err
-}
-
-// LoadPubKey : a - address in bytes of pubkey
-func LoadPubKey(a []byte) (pk *common.PubKey, err error) {
-	pkb, err := memDatabase.MainDB.Get(append(common.PubKeyDBPrefix[:], a...))
-	if err != nil {
-		return &common.PubKey{}, err
-	}
-	err = pk.Init(pkb)
-	if err != nil {
-		return &common.PubKey{}, err
-	}
-	return pk, nil
 }

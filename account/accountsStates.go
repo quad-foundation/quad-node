@@ -6,6 +6,7 @@ import (
 	"github.com/quad/quad-node/common"
 	memDatabase "github.com/quad/quad-node/database"
 	"log"
+	"sync"
 )
 
 type AccountsType struct {
@@ -13,9 +14,12 @@ type AccountsType struct {
 }
 
 var Accounts AccountsType
+var AccountsRWMutex sync.RWMutex
 
 // error is not checked one should do the checking before
 func SetBalance(address [common.AddressLength]byte, balance int64) {
+	AccountsRWMutex.Lock()
+	defer AccountsRWMutex.Unlock()
 	acc := Accounts.AllAccounts[address]
 	acc.Balance = balance
 	Accounts.AllAccounts[address] = acc
@@ -23,13 +27,16 @@ func SetBalance(address [common.AddressLength]byte, balance int64) {
 
 // error is not checked one should do the checking before
 func GetBalance(address [common.AddressLength]byte) int64 {
+	AccountsRWMutex.RLock()
+	defer AccountsRWMutex.RUnlock()
 	return Accounts.AllAccounts[address].Balance
 }
 
 // Marshal converts AccountsType to a binary format.
 func (at AccountsType) Marshal() []byte {
 	var buffer bytes.Buffer
-
+	AccountsRWMutex.Lock()
+	defer AccountsRWMutex.Unlock()
 	// Number of accounts
 	accountCount := len(at.AllAccounts)
 	buffer.Write(common.GetByteInt64(int64(accountCount)))
@@ -46,7 +53,8 @@ func (at AccountsType) Marshal() []byte {
 // Unmarshal decodes AccountsType from a binary format.
 func (at *AccountsType) Unmarshal(data []byte) error {
 	buffer := bytes.NewBuffer(data)
-
+	AccountsRWMutex.Lock()
+	defer AccountsRWMutex.Unlock()
 	// Number of accounts
 	accountCount := common.GetInt64FromByte(buffer.Next(8))
 
@@ -80,6 +88,8 @@ func (at *AccountsType) Unmarshal(data []byte) error {
 
 func StoreAccounts() error {
 	k := Accounts.Marshal()
+	AccountsRWMutex.RLock()
+	defer AccountsRWMutex.RUnlock()
 	err := memDatabase.MainDB.Put(common.AccountsDBPrefix[:], k[:])
 	if err != nil {
 		log.Println("cannot store accounts", err)
@@ -89,11 +99,13 @@ func StoreAccounts() error {
 }
 
 func LoadAccounts() error {
+	AccountsRWMutex.Lock()
 	b, err := memDatabase.MainDB.Get(common.AccountsDBPrefix[:])
 	if err != nil {
 		log.Println("cannot load accounts", err)
 		return err
 	}
+	AccountsRWMutex.Unlock()
 	err = Accounts.Unmarshal(b)
 	if err != nil {
 		log.Println("cannot unmarshal accounts")

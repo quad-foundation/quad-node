@@ -47,7 +47,7 @@ func SampleTransaction(w *wallet.Wallet, chain uint8) transactionsDefinition.Tra
 		Recipient: recv,
 		Amount:    int64(rand2.Intn(1000000000000)),
 		OptData:   nil,
-		Pubkey:    common.PubKey{},
+		Pubkey:    w.PublicKey,
 	}
 	txParam := transactionsDefinition.TxParam{
 		ChainID:     common.GetChainID(),

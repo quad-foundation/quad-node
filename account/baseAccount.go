@@ -12,6 +12,8 @@ type Account struct {
 }
 
 func GetAccountByAddressBytes(address []byte) Account {
+	AccountsRWMutex.RLock()
+	defer AccountsRWMutex.RUnlock()
 	addrb := [common.AddressLength]byte{}
 	copy(addrb[:], address[:common.AddressLength])
 	return Accounts.AllAccounts[addrb]
