@@ -216,8 +216,10 @@ func (tree *MerkleTree) LoadHashMerkleTreeByHeight(height int64) ([]byte, error)
 }
 
 func (t *MerkleTree) Destroy() {
-	t.Root = nil
-	t.DB = nil
+	if t != nil {
+		t.Root = nil
+		t.DB = nil
+	}
 }
 
 //func (tree *MerkleTree) LoadWholeMerkleTreeByHeight(height int64) ([][]byte, error) {
