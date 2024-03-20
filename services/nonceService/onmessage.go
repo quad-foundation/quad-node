@@ -39,6 +39,9 @@ func OnMessage(addr string, m []byte) {
 
 	switch string(amsg.GetHead()) {
 	case "nn": // nonce
+		if common.IsSyncing.Load() {
+			return
+		}
 		//fmt.Printf("%v", nonceTransaction)
 		//var topic [2]byte
 		txn, err := amsg.(message.TransactionsMessage).GetTransactionsFromBytes()
