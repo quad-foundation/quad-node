@@ -151,6 +151,7 @@ func OnMessage(addr string, m []byte) {
 				hashesMissing := blocks.IsAllTransactions(newBlock)
 				if len(hashesMissing) > 0 {
 					transactionServices.SendGT(addr, hashesMissing, newBlock.GetChain())
+					continue
 				}
 				err = blocks.CheckBlockAndTransferFunds(newBlock, lastBlock, merkleTrie)
 				if err != nil {
