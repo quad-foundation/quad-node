@@ -73,9 +73,8 @@ func (db *BlockchainDB) Put(k []byte, v []byte) error {
 	// Put a key-value pair into the database
 	err := db.ldb.Put(k, v, nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-
 	return nil
 }
 
@@ -132,7 +131,7 @@ func (db *BlockchainDB) Get(k []byte) ([]byte, error) {
 		if err == leveldb.ErrNotFound {
 			return []byte{}, fmt.Errorf("key not found %s", k)
 		}
-		log.Fatalf("Error getting value for key: %v, key %s", err, k)
+		return []byte{}, fmt.Errorf("Error getting value for key: %v, key %s", err, k)
 	}
 	return value, nil
 }

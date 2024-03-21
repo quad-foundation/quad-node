@@ -5,10 +5,12 @@ import (
 	"github.com/quad/quad-node/common"
 	"github.com/quad/quad-node/message"
 	"github.com/quad/quad-node/services"
+	"github.com/quad/quad-node/services/transactionServices"
 	"github.com/quad/quad-node/statistics"
 	"github.com/quad/quad-node/transactionsDefinition"
 	"github.com/quad/quad-node/transactionsPool"
 	"log"
+	"runtime/debug"
 )
 
 func OnMessage(addr string, m []byte) {
@@ -18,7 +20,7 @@ func OnMessage(addr string, m []byte) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			//debug.PrintStack()
+			debug.PrintStack()
 			log.Println("recover (nonce Msg)", r)
 		}
 
@@ -37,6 +39,9 @@ func OnMessage(addr string, m []byte) {
 
 	switch string(amsg.GetHead()) {
 	case "nn": // nonce
+		if common.IsSyncing.Load() {
+			return
+		}
 		//fmt.Printf("%v", nonceTransaction)
 		//var topic [2]byte
 		txn, err := amsg.(message.TransactionsMessage).GetTransactionsFromBytes()
@@ -57,17 +62,20 @@ func OnMessage(addr string, m []byte) {
 		nonceHeight := transaction.GetHeight()
 		chain := transaction.GetChain()
 		if common.CheckHeight(chain, nonceHeight) == false {
-			panic("improper height value in nonceTransaction")
+			log.Println("improper height value in nonceTransaction")
+			return
 		}
 		h := common.GetHeight()
 
 		if nonceHeight < 1 || nonceHeight != h+1 {
-			panic("nonce height invalid")
+			//log.Print("nonce height invalid")
+			return
 		}
 
 		isValid = transaction.Verify()
 		if isValid == false {
-			panic("nonce signature is invalid")
+			log.Println("nonce signature is invalid")
+			return
 		}
 		lastBlock, err := blocks.LoadBlock(h)
 		if err != nil {
@@ -82,10 +90,10 @@ func OnMessage(addr string, m []byte) {
 			txsBytes = append(txsBytes, hash)
 		}
 		merkleTrie, err := transactionsPool.BuildMerkleTree(h+1, txsBytes)
+		defer merkleTrie.Destroy()
 		if err != nil {
 			panic("cannot build merkleTrie")
 		}
-		defer merkleTrie.Destroy()
 
 		newBlock, err := services.CreateBlockFromNonceMessage([]transactionsDefinition.Transaction{transaction},
 			lastBlock,
@@ -99,7 +107,7 @@ func OnMessage(addr string, m []byte) {
 		if newBlock.CheckProofOfSynergy() {
 			services.BroadcastBlock(newBlock)
 		} else {
-			log.Println("new block is not valid")
+			//log.Println("new block is not valid")
 		}
 
 		return
@@ -122,23 +130,33 @@ func OnMessage(addr string, m []byte) {
 				newBlock := bls[k]
 				if err != nil {
 					log.Println(err)
-					panic("cannot load blocks from bytes")
+					log.Println("cannot load blocks from bytes")
+					return
 				}
 				chain := newBlock.GetChain()
 				if chain != k[1] {
-					panic("improper chain vs topic")
+					log.Println("improper chain vs topic")
+					return
 				}
 				if newBlock.GetHeader().Height != h+1 {
-					panic("block of too short chain")
+					//log.Println("block of too short chain")
+					return
 				}
 				merkleTrie, err := blocks.CheckBaseBlock(newBlock, lastBlock)
 				defer merkleTrie.Destroy()
 				if err != nil {
-					panic(err)
+					log.Println(err)
+					return
+				}
+				hashesMissing := blocks.IsAllTransactions(newBlock)
+				if len(hashesMissing) > 0 {
+					transactionServices.SendGT(addr, hashesMissing, newBlock.GetChain())
+					continue
 				}
 				err = blocks.CheckBlockAndTransferFunds(newBlock, lastBlock, merkleTrie)
 				if err != nil {
-					panic("check transfer transactions in block fails")
+					log.Println("check transfer transactions in block fails", err)
+					return
 				}
 				err = newBlock.StoreBlock()
 				if err != nil {

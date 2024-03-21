@@ -3,6 +3,7 @@ package transactionServices
 import (
 	"github.com/quad/quad-node/common"
 	"github.com/quad/quad-node/message"
+	"github.com/quad/quad-node/transactionsDefinition"
 	"github.com/quad/quad-node/transactionsPool"
 	"log"
 )
@@ -49,13 +50,35 @@ func OnMessage(addr string, m []byte) {
 					if err != nil {
 						log.Println(err)
 					}
+				} else {
+					log.Println("transaction verification fails")
 				}
 			}
-
-			//log.Println("No of Tx in SendToPool: ", topic, " = ",
-			//	transactionsPool.PoolsTx[topic[1]].NumberOfTransactions())
 		}
-
+	case "st":
+		txn := amsg.(message.TransactionsMessage).GetTransactionsBytes()
+		chain := amsg.GetChain()
+		for topic, v := range txn {
+			txs := []transactionsDefinition.Transaction{}
+			for _, hs := range v {
+				prefix := []byte{common.TransactionDBPrefix[0], topic[1]}
+				t, err := transactionsDefinition.LoadFromDBPoolTx(prefix, hs)
+				if err != nil {
+					log.Println("cannot load transaction", err)
+					continue
+				}
+				if t.GetChain() == chain {
+					txs = append(txs, t)
+				} else {
+					panic("wrong transaction chain")
+				}
+			}
+			transactionMsg, err := GenerateTransactionMsg(txs, []byte("tx"), chain, topic)
+			if err != nil {
+				log.Println("cannot generate transaction msg", err)
+			}
+			Send(addr, transactionMsg.GetBytes())
+		}
 	default:
 	}
 }

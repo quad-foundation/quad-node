@@ -6,6 +6,7 @@ import (
 	"github.com/quad/quad-node/common"
 	"github.com/quad/quad-node/genesis"
 	"github.com/quad/quad-node/message"
+	"github.com/quad/quad-node/services/transactionServices"
 	"github.com/quad/quad-node/transactionsPool"
 	"log"
 )
@@ -52,10 +53,10 @@ func OnMessage(addr string, m []byte) {
 			if bytes.Compare(lastOtherBlockHashBytes, lastBlockHashBytes) != 0 {
 				SendGetHeaders(addr, lastOtherHeight)
 			}
-			common.IsSyncing.Store(false)
+			//common.IsSyncing.Store(false)
 			return
 		} else if lastOtherHeight < h {
-			common.IsSyncing.Store(false)
+			//common.IsSyncing.Store(false)
 			return
 		}
 		// when others have longer chain
@@ -98,6 +99,7 @@ func OnMessage(addr string, m []byte) {
 			return
 		}
 		// check blocks
+		was := false
 		lastGoodBlock := indices[0]
 		merkleTries := map[int64]*transactionsPool.MerkleTree{}
 		for i := 0; i < len(blcks); i++ {
@@ -118,13 +120,14 @@ func OnMessage(addr string, m []byte) {
 					continue
 				}
 			}
-			if i > 0 && index > 1 {
+			if was == true {
 				oldBlock = blcks[i-1]
 			} else {
 				oldBlock, err = blocks.LoadBlock(index - 1)
 				if err != nil {
 					panic("cannot load block")
 				}
+				was = true
 			}
 
 			if header.Height != index {
@@ -142,7 +145,12 @@ func OnMessage(addr string, m []byte) {
 				panic(err)
 			}
 			merkleTries[index] = merkleTrie
+			hashesMissing := blocks.IsAllTransactions(block)
+			if len(hashesMissing) > 0 {
+				transactionServices.SendGT(addr, hashesMissing, block.GetChain())
+			}
 		}
+		was = false
 		for i := 0; i < len(blcks); i++ {
 			block := blcks[i]
 			index := indices[i]
@@ -150,13 +158,14 @@ func OnMessage(addr string, m []byte) {
 				continue
 			}
 			oldBlock := blocks.Block{}
-			if i > 0 {
+			if was == true {
 				oldBlock = blcks[i-1]
 			} else {
 				oldBlock, err = blocks.LoadBlock(index - 1)
 				if err != nil {
 					panic("cannot load block")
 				}
+				was = true
 			}
 			err := blocks.CheckBlockAndTransferFunds(block, oldBlock, merkleTries[index])
 			if err != nil {

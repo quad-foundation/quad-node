@@ -21,6 +21,7 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 	}
 
 	if bytes.Compare(lastBlock.BlockHash.GetBytes(), newBlock.GetHeader().PreviousHash.GetBytes()) != 0 {
+		log.Println("lastBlock.BlockHash", lastBlock.BlockHash.GetHex(), newBlock.GetHeader().PreviousHash.GetHex())
 		return nil, fmt.Errorf("last block hash not match to one stored in new block")
 	}
 	// needs to check block and process
@@ -49,6 +50,21 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 		return nil, fmt.Errorf("root merkleTrie hash check fails")
 	}
 	return merkleTrie, nil
+}
+
+func IsAllTransactions(block Block) [][]byte {
+	txs := block.TransactionsHashes
+	chain := block.Chain
+	hashes := [][]byte{}
+	for _, tx := range txs {
+		hash := tx.GetBytes()
+		prefix := []byte{common.TransactionDBPrefix[0], chain}
+		isKey := transactionsDefinition.CheckFromDBPoolTx(prefix, hash)
+		if isKey == false {
+			hashes = append(hashes, hash)
+		}
+	}
+	return hashes
 }
 
 func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
@@ -112,6 +128,7 @@ func IsInKeysOfMapAccounts(m map[[common.AddressLength]byte]account.Account, sea
 func ProcessBlockTransfers(block Block, reward int64) error {
 	txs := block.TransactionsHashes
 	chain := block.Chain
+
 	totalFee := int64(0)
 	for _, tx := range txs {
 		hash := tx.GetBytes()
@@ -164,9 +181,14 @@ func CheckBlockAndTransferFunds(newBlock Block, lastBlock Block, merkleTrie *tra
 			return err
 		}
 	}
+
+	err = ProcessBlockPubKey(newBlock)
+	if err != nil {
+		return err
+	}
 	err = merkleTrie.StoreTree(newBlock.GetHeader().Height, txshb)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	err = ProcessBlockTransfers(newBlock, reward)
 	if err != nil {

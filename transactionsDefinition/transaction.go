@@ -1,6 +1,7 @@
 package transactionsDefinition
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/quad/quad-node/common"
 	memDatabase "github.com/quad/quad-node/database"
@@ -163,8 +164,26 @@ func LoadFromDBPoolTx(prefix []byte, hashTransaction []byte) (Transaction, error
 	return at, nil
 }
 
+func CheckFromDBPoolTx(prefix []byte, hashTransaction []byte) bool {
+	prefix = append(prefix, hashTransaction...)
+	isKey, err := (*memDatabase.MainDB).IsKey(prefix)
+	if err != nil {
+		return false
+	}
+	return isKey
+}
+
+// Verify - checking if hash is correct and signature
 func (tx *Transaction) Verify() bool {
 	b := tx.GetHash().GetBytes()
+	err := tx.CalcHashAndSet()
+	if err != nil {
+		return false
+	}
+	if bytes.Compare(b, tx.GetHash().GetBytes()) != 0 {
+		log.Println("check transaction hash fails")
+		return false
+	}
 	a := tx.GetSenderAddress()
 	pk, err := (*memDatabase.MainDB).Get(append(common.PubKeyDBPrefix[:], a.GetBytes()...))
 	if err != nil {

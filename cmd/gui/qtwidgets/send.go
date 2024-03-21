@@ -45,6 +45,10 @@ func ShowSendPage() *widgets.QTabWidget {
 	SmartContractData.SetPlaceholderText("Smart Contract Data")
 	widget.Layout().AddWidget(SmartContractData)
 
+	pubkeyInclude := widgets.NewQCheckBox(nil)
+	pubkeyInclude.SetText("Public key include in transaction")
+	widget.Layout().AddWidget(pubkeyInclude)
+
 	// connect the clicked signal
 	// and add it to the central widgets layout
 	button := widgets.NewQPushButton2("Send", nil)
@@ -111,10 +115,16 @@ func ShowSendPage() *widgets.QTabWidget {
 				scData = []byte{}
 			}
 		}
+
+		pk := common.PubKey{}
+		if pubkeyInclude.IsChecked() {
+			pk = MainWalllet.PublicKey
+		}
 		txd := transactionsDefinition.TxData{
 			Recipient: ar,
 			Amount:    am,
 			OptData:   scData,
+			Pubkey:    pk,
 		}
 		par := transactionsDefinition.TxParam{
 			ChainID:     ChainID,
@@ -155,7 +165,7 @@ func ShowSendPage() *widgets.QTabWidget {
 			info = &v
 			return
 		}
-		msg, err := transactionServices.GenerateTransactionMsg([]transactionsDefinition.Transaction{tx}, 0, [2]byte{'T', 0})
+		msg, err := transactionServices.GenerateTransactionMsg([]transactionsDefinition.Transaction{tx}, []byte("tx"), 0, [2]byte{'T', 0})
 		if err != nil {
 			v = fmt.Sprint(err)
 			info = &v
@@ -169,95 +179,5 @@ func ShowSendPage() *widgets.QTabWidget {
 	})
 	widget.Layout().AddWidget(button)
 
-	pubkey := widgets.NewQTextEdit(nil)
-	pubkey.SetPlaceholderText("Public key")
-	widget.Layout().AddWidget(pubkey)
-
-	register := widgets.NewQPushButton2("Register public key", nil)
-	register.ConnectClicked(func(bool) {
-		var info *string
-		v := "Transaction sent"
-		info = &v
-		defer func(nfo *string) {
-			widgets.QMessageBox_Information(nil, "Info", *nfo, widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-		}(info)
-		if !MainWalllet.Check() {
-			v = fmt.Sprint("Load wallet first")
-			info = &v
-			return
-		}
-		pk := common.PubKey{}
-		bpk, err := hex.DecodeString(pubkey.ToPlainText())
-		if err != nil {
-			v = fmt.Sprint(err)
-			info = &v
-			return
-		}
-		err = pk.Init(bpk)
-		if err != nil {
-			v = fmt.Sprint(err)
-			info = &v
-			return
-		}
-		chain := uint8(1)
-		txd := transactionsDefinition.TxData{
-			Recipient: common.EmptyAddress(),
-			Amount:    0,
-			OptData:   []byte{},
-			Pubkey:    pk,
-		}
-		par := transactionsDefinition.TxParam{
-			ChainID:     ChainID,
-			Sender:      MainWalllet.Address,
-			SendingTime: common.GetCurrentTimeStampInSecond(),
-			Nonce:       int16(rand.Intn(0xffff)),
-			Chain:       chain,
-		}
-		tx := transactionsDefinition.Transaction{
-			TxData:    txd,
-			TxParam:   par,
-			Hash:      common.Hash{},
-			Signature: common.Signature{},
-			Height:    0,
-			GasPrice:  int64(rand.Intn(0xffffffff)),
-			GasUsage:  0,
-		}
-		clientrpc.InRPC <- []byte("STAT")
-		var reply []byte
-		reply = <-clientrpc.OutRPC
-		st := statistics.MainStats{}
-		err = common.Unmarshal(reply, common.StatDBPrefix, &st)
-		if err != nil {
-			v = fmt.Sprint("Can not unmarshal statistics", err)
-			info = &v
-			return
-		}
-		tx.Height = st.Heights
-		err = tx.CalcHashAndSet()
-		if err != nil {
-			v = fmt.Sprint("can not generate hash transaction", err)
-			info = &v
-			return
-		}
-		err = tx.Sign(MainWalllet)
-		if err != nil {
-			v = fmt.Sprint(err)
-			info = &v
-			return
-		}
-		msg, err := transactionServices.GenerateTransactionMsg([]transactionsDefinition.Transaction{tx}, chain, [2]byte{'T', chain})
-		if err != nil {
-			v = fmt.Sprint(err)
-			info = &v
-			return
-		}
-		tmm := msg.GetBytes()
-		clientrpc.InRPC <- append([]byte("TRAN"), tmm...)
-		<-clientrpc.OutRPC
-		v = string(reply)
-		info = &v
-
-	})
-	widget.Layout().AddWidget(register)
 	return widget
 }

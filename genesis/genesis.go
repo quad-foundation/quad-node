@@ -31,8 +31,6 @@ type Genesis struct {
 
 func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 
-	//myWallet := wallet.GetActiveWallet()
-
 	pubKeyOpBytes, err := hex.DecodeString(genesis.OperatorPubKey)
 	if err != nil {
 		log.Fatal("cannot decode address from string in genesis block")
@@ -42,7 +40,10 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 	if err != nil {
 		log.Fatalf("cannot initialize operator pub key in genesis block %v", err)
 	}
-
+	err = blocks.StorePubKey(pubKeyOp1)
+	if err != nil {
+		log.Fatal("cannot store genesis operator pubkey", err)
+	}
 	addressOp1, err := common.PubKeyToAddress(pubKeyOp1)
 	if err != nil {
 		log.Fatalf("cannot retrieve operator address from pub key in genesis block %v", err)
@@ -110,6 +111,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 		log.Fatalf("cannot calculate hash of genesis block header %v", err)
 	}
 
+	//myWallet := wallet.GetActiveWallet()
 	//sign, err := myWallet.Sign(hashb)
 	//if err != nil {
 	//	log.Fatalf("cannot sign genesis block header %v", err)
@@ -125,6 +127,9 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 	bhHash, err := bh.CalcHash()
 	if err != nil {
 		log.Fatalf("cannot calculate hash of genesis block header %v", err)
+	}
+	if bh.Verify() == false {
+		log.Fatal("Block Header signature fails to verify")
 	}
 	bb := blocks.BaseBlock{
 		BaseHeader:       bh,
