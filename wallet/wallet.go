@@ -235,8 +235,8 @@ func Load(walletNumber uint8, password string) (*Wallet, error) {
 
 	w := EmptyWallet(walletNumber)
 	// Open the database with the provided options
-	w.mutexDb.RLock()
-	defer w.mutexDb.RUnlock()
+	w.mutexDb.Lock()
+	defer w.mutexDb.Unlock()
 	walletDB, err := leveldb.OpenFile(w.HomePath, nil)
 	if err != nil {
 		return nil, err
