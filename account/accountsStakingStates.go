@@ -7,13 +7,15 @@ import (
 	"github.com/quad/quad-node/common"
 	memDatabase "github.com/quad/quad-node/database"
 	"log"
+	"sync"
 )
 
 type StakingAccountsType struct {
 	AllStakingAccounts map[[20]byte]stake.StakingAccount `json:"all_staking_accounts"`
 }
 
-var StakingAccounts StakingAccountsType
+var StakingAccounts [256]StakingAccountsType
+var StakingRWMutex sync.RWMutex
 
 // Marshal converts AccountsType to a binary format.
 func (at StakingAccountsType) Marshal() []byte {
@@ -66,27 +68,35 @@ func (at *StakingAccountsType) Unmarshal(data []byte) error {
 }
 
 func StoreStakingAccounts() error {
-
-	k := StakingAccounts.Marshal()
-	err := memDatabase.MainDB.Put(common.StakingAccountsDBPrefix[:], k[:])
-	if err != nil {
-		log.Println("cannot store accounts", err)
-		return err
+	StakingRWMutex.RLock()
+	defer StakingRWMutex.RUnlock()
+	for i, stakeAccount := range StakingAccounts {
+		k := stakeAccount.Marshal()
+		prefix := [2]byte{byte(i / 16), byte(i % 16)}
+		err := memDatabase.MainDB.Put(prefix[:], k[:])
+		if err != nil {
+			log.Println("cannot store accounts", err)
+			return err
+		}
 	}
-
 	return nil
 }
 
 func LoadStakingAccounts() error {
-	b, err := memDatabase.MainDB.Get(common.StakingAccountsDBPrefix[:])
-	if err != nil {
-		log.Println("cannot load accounts", err)
-		return err
-	}
-	err = StakingAccounts.Unmarshal(b)
-	if err != nil {
-		log.Println("cannot unmarshal accounts")
-		return err
+	StakingRWMutex.Lock()
+	defer StakingRWMutex.Unlock()
+	for i := 0; i < 256; i++ {
+		prefix := [2]byte{byte(i / 16), byte(i % 16)}
+		b, err := memDatabase.MainDB.Get(prefix[:])
+		if err != nil {
+			log.Println("cannot load accounts", err)
+			return err
+		}
+		err = (&StakingAccounts[i]).Unmarshal(b)
+		if err != nil {
+			log.Println("cannot unmarshal accounts")
+			return err
+		}
 	}
 	return nil
 }

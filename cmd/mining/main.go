@@ -44,16 +44,21 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	sa := stake.StakingAccount{
-		StakedBalance:  0,
-		StakingRewards: 0,
-		Address:        addrbytes,
-		StakingDetails: nil,
-	}
-	allStakingAccounts := map[[20]byte]stake.StakingAccount{}
-	allStakingAccounts[addrbytes] = sa
-	account.StakingAccounts = account.StakingAccountsType{AllStakingAccounts: allStakingAccounts}
 
+	for i := 0; i < 256; i++ {
+		del := common.GetDelegatedAccountAddress(int16(i))
+		delbytes := [common.AddressLength]byte{}
+		copy(delbytes[:], del.GetBytes())
+		sa := stake.StakingAccount{
+			StakedBalance:    0,
+			StakingRewards:   0,
+			DelegatedAccount: delbytes,
+			StakingDetails:   nil,
+		}
+		allStakingAccounts := map[[20]byte]stake.StakingAccount{}
+		allStakingAccounts[addrbytes] = sa
+		account.StakingAccounts[i] = account.StakingAccountsType{AllStakingAccounts: allStakingAccounts}
+	}
 	err = account.StoreStakingAccounts()
 	if err != nil {
 		log.Fatal(err)
