@@ -70,8 +70,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 		if err != nil {
 			log.Fatalf("cannot calculate hash of transaction in genesis block %v", err)
 		}
-		prefix := []byte{common.TransactionDBPrefix[0], 0}
-		err = tx.StoreToDBPoolTx(prefix)
+		err = tx.StoreToDBPoolTx(common.TransactionDBPrefix[:])
 		if err != nil {
 			log.Fatalf("cannot store transaction of genesis block %v", err)
 		}
@@ -124,6 +123,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 		log.Fatal(err)
 	}
 	bh.Signature = signature
+
 	bhHash, err := bh.CalcHash()
 	if err != nil {
 		log.Fatalf("cannot calculate hash of genesis block header %v", err)
@@ -141,7 +141,6 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 
 	bl := blocks.Block{
 		BaseBlock:          bb,
-		Chain:              0,
 		TransactionsHashes: blockTransactionsHashes,
 		BlockHash:          common.EmptyHash(),
 	}
@@ -166,7 +165,6 @@ func GenesisTransaction(sender common.Address, recipient common.Address, amount 
 		Sender:      sender,
 		SendingTime: genesis.Timestamp,
 		Nonce:       walletNonce,
-		Chain:       0,
 	}
 	t := transactionsDefinition.Transaction{
 		TxData:    txdata,
@@ -182,16 +180,20 @@ func GenesisTransaction(sender common.Address, recipient common.Address, amount 
 	if err != nil {
 		log.Fatal("calc hash error", err)
 	}
+
 	signature, err := common.GetSignatureFromString(genesis.TransactionsSignatures[recipient.GetHex()], sender)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 	t.Signature = signature
-	//err = t.Sign(w)
+
+	//myWallet := wallet.GetActiveWallet()
+	//err = t.Sign(myWallet)
 	//if err != nil {
 	//	log.Fatal("Signing error", err)
 	//}
+
 	log.Println("transaction signature: ", t.Signature.GetHex())
 	return t
 }

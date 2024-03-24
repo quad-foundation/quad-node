@@ -20,10 +20,6 @@ type Transaction struct {
 	GasUsage  int64            `json:"gas_usage"`
 }
 
-func (mt *Transaction) GetChain() uint8 {
-	return mt.TxParam.Chain
-}
-
 func (mt *Transaction) GetData() TxData {
 	return mt.TxData
 }
@@ -215,7 +211,6 @@ func EmptyTransaction() Transaction {
 			Sender:      common.EmptyAddress(),
 			SendingTime: 0,
 			Nonce:       0,
-			Chain:       0,
 		},
 		Hash:      common.EmptyHash(),
 		Signature: common.Signature{},

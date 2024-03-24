@@ -12,13 +12,11 @@ type TxParam struct {
 	Sender      common.Address `json:"sender"`
 	SendingTime int64          `json:"sending_time"`
 	Nonce       int16          `json:"nonce"`
-	Chain       uint8          `json:"chain"`
 }
 
 func (tp TxParam) GetBytes() []byte {
 
-	b := []byte{tp.Chain}
-	b = append(b, common.GetByteInt16(tp.ChainID)...)
+	b := common.GetByteInt16(tp.ChainID)
 	b = append(b, tp.Sender.GetBytes()...)
 	b = append(b, common.GetByteInt64(tp.SendingTime)...)
 	b = append(b, common.GetByteInt16(tp.Nonce)...)
@@ -27,18 +25,17 @@ func (tp TxParam) GetBytes() []byte {
 
 func (tp TxParam) GetFromBytes(b []byte) (TxParam, []byte, error) {
 	var err error
-	if len(b) < 33 {
+	if len(b) < 32 {
 		return TxParam{}, []byte{}, fmt.Errorf("not enough bytes in TxParam unmarshaling")
 	}
-	tp.Chain = b[0]
-	tp.ChainID = common.GetInt16FromByte(b[1:3])
-	tp.Sender, err = common.BytesToAddress(b[3:23])
+	tp.ChainID = common.GetInt16FromByte(b[:2])
+	tp.Sender, err = common.BytesToAddress(b[2:22])
 	if err != nil {
 		return TxParam{}, []byte{}, err
 	}
-	tp.SendingTime = common.GetInt64FromByte(b[23:31])
-	tp.Nonce = common.GetInt16FromByte(b[31:33])
-	return tp, b[33:], nil
+	tp.SendingTime = common.GetInt64FromByte(b[22:30])
+	tp.Nonce = common.GetInt16FromByte(b[30:32])
+	return tp, b[32:], nil
 }
 
 func (tp TxParam) GetString() string {
@@ -47,6 +44,5 @@ func (tp TxParam) GetString() string {
 	t += "ChainID: " + strconv.Itoa(int(tp.ChainID)) + "\n"
 	t += "Nonce: " + strconv.Itoa(int(tp.Nonce)) + "\n"
 	t += "Sender Address: " + tp.Sender.GetHex() + "\n"
-	t += "Chain: " + string(tp.Chain) + "\n"
 	return t
 }

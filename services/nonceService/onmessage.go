@@ -55,16 +55,11 @@ func OnMessage(addr string, m []byte) {
 		}
 		var transaction transactionsDefinition.Transaction
 		for _, v := range nonceTransaction {
-			//topic = k
 			transaction = v
 			break
 		}
 		nonceHeight := transaction.GetHeight()
-		chain := transaction.GetChain()
-		if common.CheckHeight(chain, nonceHeight) == false {
-			log.Println("improper height value in nonceTransaction")
-			return
-		}
+
 		h := common.GetHeight()
 
 		if nonceHeight < 1 || nonceHeight != h+1 {
@@ -81,7 +76,7 @@ func OnMessage(addr string, m []byte) {
 		if err != nil {
 			panic(err)
 		}
-		txs := transactionsPool.PoolsTx[transaction.GetChain()].PeekTransactions(int(common.MaxTransactionsPerBlock))
+		txs := transactionsPool.PoolsTx.PeekTransactions(int(common.MaxTransactionsPerBlock))
 		txsBytes := make([][]byte, len(txs))
 		transactionsHashes := []common.Hash{}
 		for _, tx := range txs {
@@ -133,11 +128,7 @@ func OnMessage(addr string, m []byte) {
 					log.Println("cannot load blocks from bytes")
 					return
 				}
-				chain := newBlock.GetChain()
-				if chain != k[1] {
-					log.Println("improper chain vs topic")
-					return
-				}
+
 				if newBlock.GetHeader().Height != h+1 {
 					//log.Println("block of too short chain")
 					return
@@ -150,7 +141,7 @@ func OnMessage(addr string, m []byte) {
 				}
 				hashesMissing := blocks.IsAllTransactions(newBlock)
 				if len(hashesMissing) > 0 {
-					transactionServices.SendGT(addr, hashesMissing, newBlock.GetChain())
+					transactionServices.SendGT(addr, hashesMissing)
 					continue
 				}
 				err = blocks.CheckBlockAndTransferFunds(newBlock, lastBlock, merkleTrie)
@@ -164,32 +155,25 @@ func OnMessage(addr string, m []byte) {
 					panic("cannot store block")
 				}
 				common.SetHeight(h + 1)
-				log.Println("New Block success -------------------------------------", h+1, "-------chain", chain)
+				log.Println("New Block success -------------------------------------", h+1)
 				if statistics.GmsMutex.Mutex.TryLock() {
 					defer statistics.GmsMutex.Mutex.Unlock()
 					stats, _ := statistics.LoadStats()
 					stats.MainStats.Heights = common.GetHeight()
-					stats.MainStats.Chain = chain
 					stats.MainStats.Difficulty = newBlock.BaseBlock.BaseHeader.Difficulty
 					stats.MainStats.Syncing = common.IsSyncing.Load()
 					stats.MainStats.TimeInterval = newBlock.BaseBlock.BlockTimeStamp - lastBlock.BaseBlock.BlockTimeStamp
 					empt := transactionsDefinition.EmptyTransaction()
-					ntxs := 0
-					for i := uint8(0); i < 5; i++ {
-						if chain == i {
-							hs, _ := newBlock.GetTransactionsHashes(merkleTrie, h+1)
-							stats.MainStats.Transactions[i] = len(hs)
-							stats.MainStats.TransactionsSize[i] = len(hs) * len(empt.GetBytes())
-							ntxs += len(hs)
-						}
-					}
+
+					hs, _ := newBlock.GetTransactionsHashes(merkleTrie, h+1)
+					stats.MainStats.Transactions = len(hs)
+					stats.MainStats.TransactionsSize = len(hs) * len(empt.GetBytes())
+					ntxs := len(hs)
 					stats.MainStats.Tps = float32(ntxs) / float32(stats.MainStats.TimeInterval)
 
-					for i := uint8(0); i < 5; i++ {
-						nt := transactionsPool.PoolsTx[i].NumberOfTransactions()
-						stats.MainStats.TransactionsPending[i] = nt
-						stats.MainStats.TransactionsPendingSize[i] = nt * len(empt.GetBytes())
-					}
+					nt := transactionsPool.PoolsTx.NumberOfTransactions()
+					stats.MainStats.TransactionsPending = nt
+					stats.MainStats.TransactionsPendingSize = nt * len(empt.GetBytes())
 
 					err = stats.MainStats.SaveStats()
 					if err != nil {

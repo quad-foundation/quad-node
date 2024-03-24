@@ -41,12 +41,11 @@ func OnMessage(addr string, m []byte) {
 	case "tx":
 
 		// need to check transactions
-		for topic, v := range txn {
+		for _, v := range txn {
 			for _, t := range v {
 				if t.Verify() {
-					transactionsPool.PoolsTx[topic[1]].AddTransaction(t)
-					prefix := []byte{common.TransactionDBPrefix[0], topic[1]}
-					err := t.StoreToDBPoolTx(prefix)
+					transactionsPool.PoolsTx.AddTransaction(t)
+					err := t.StoreToDBPoolTx(common.TransactionDBPrefix[:])
 					if err != nil {
 						log.Println(err)
 					}
@@ -57,23 +56,17 @@ func OnMessage(addr string, m []byte) {
 		}
 	case "st":
 		txn := amsg.(message.TransactionsMessage).GetTransactionsBytes()
-		chain := amsg.GetChain()
 		for topic, v := range txn {
 			txs := []transactionsDefinition.Transaction{}
 			for _, hs := range v {
-				prefix := []byte{common.TransactionDBPrefix[0], topic[1]}
-				t, err := transactionsDefinition.LoadFromDBPoolTx(prefix, hs)
+				t, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], hs)
 				if err != nil {
 					log.Println("cannot load transaction", err)
 					continue
 				}
-				if t.GetChain() == chain {
-					txs = append(txs, t)
-				} else {
-					panic("wrong transaction chain")
-				}
+				txs = append(txs, t)
 			}
-			transactionMsg, err := GenerateTransactionMsg(txs, []byte("tx"), chain, topic)
+			transactionMsg, err := GenerateTransactionMsg(txs, []byte("tx"), topic)
 			if err != nil {
 				log.Println("cannot generate transaction msg", err)
 			}

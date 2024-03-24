@@ -131,7 +131,6 @@ func ShowSendPage() *widgets.QTabWidget {
 			Sender:      MainWalllet.Address,
 			SendingTime: common.GetCurrentTimeStampInSecond(),
 			Nonce:       int16(rand.Intn(0xffff)),
-			Chain:       0,
 		}
 		tx := transactionsDefinition.Transaction{
 			TxData:    txd,
@@ -165,7 +164,7 @@ func ShowSendPage() *widgets.QTabWidget {
 			info = &v
 			return
 		}
-		msg, err := transactionServices.GenerateTransactionMsg([]transactionsDefinition.Transaction{tx}, []byte("tx"), 0, [2]byte{'T', 0})
+		msg, err := transactionServices.GenerateTransactionMsg([]transactionsDefinition.Transaction{tx}, []byte("tx"), [2]byte{'T', 0})
 		if err != nil {
 			v = fmt.Sprint(err)
 			info = &v

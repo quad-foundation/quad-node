@@ -32,17 +32,12 @@ func UpdateAccountStats() {
 		return
 	}
 	txt := fmt.Sprintln("Height:", st.Heights)
-	txt += fmt.Sprintln("Chain:", st.Chain, " : ", common.NamesOfChains[st.Chain])
 	txt += fmt.Sprintln("Heights max:", st.HeightMax)
 	txt += fmt.Sprintln("Time interval [sec.]:", st.TimeInterval)
 	txt += fmt.Sprintln("Difficulty:", st.Difficulty)
 
-	for i := uint8(0); i < 5; i++ {
-		txt += fmt.Sprintln("Number of transactions in ", common.NamesOfChains[i], " : ", st.Transactions[i], "/", st.TransactionsPending[i])
-	}
-	for i := uint8(0); i < 5; i++ {
-		txt += fmt.Sprintln("Size of transactions [kB] in ", common.NamesOfChains[i], " : ", st.TransactionsSize[i]/1024, "/", st.TransactionsPendingSize[i]/1024)
-	}
+	txt += fmt.Sprintln("Number of transactions : ", st.Transactions, "/", st.TransactionsPending)
+	txt += fmt.Sprintln("Size of transactions [kB] : ", st.TransactionsSize/1024, "/", st.TransactionsPendingSize/1024)
 	txt += fmt.Sprintln("TPS:", st.Tps)
 	if st.Syncing {
 		txt += fmt.Sprintln("Syncing...")

@@ -27,10 +27,8 @@ func LoadPubKey(a []byte) (pk *common.PubKey, err error) {
 
 // ProcessBlockPubKey : store pubkey on each transaction
 func ProcessBlockPubKey(block Block) error {
-	chain := block.GetChain()
-	prefix := []byte{common.TransactionDBPrefix[0], chain}
 	for _, txh := range block.TransactionsHashes {
-		t, err := transactionsDefinition.LoadFromDBPoolTx(prefix, txh.GetBytes())
+		t, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], txh.GetBytes())
 		if err != nil {
 			return err
 		}

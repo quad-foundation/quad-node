@@ -33,7 +33,7 @@ func main() {
 	<-chanPeer
 }
 
-func SampleTransaction(w *wallet.Wallet, chain uint8) transactionsDefinition.Transaction {
+func SampleTransaction(w *wallet.Wallet) transactionsDefinition.Transaction {
 
 	sender := w.Address
 	recv := common.Address{}
@@ -54,7 +54,6 @@ func SampleTransaction(w *wallet.Wallet, chain uint8) transactionsDefinition.Tra
 		Sender:      sender,
 		SendingTime: common.GetCurrentTimeStampInSecond(),
 		Nonce:       int16(rand2.Intn(65000)),
-		Chain:       chain,
 	}
 	t := transactionsDefinition.Transaction{
 		TxData:    txdata,
@@ -102,12 +101,11 @@ func sendTransactions(w *wallet.Wallet) {
 
 	for range time.Tick(time.Second) {
 		var txs []transactionsDefinition.Transaction
-		chain := uint8(rand2.Intn(5))
 		for i := 0; i < batchSize; i++ {
-			tx := SampleTransaction(w, chain)
+			tx := SampleTransaction(w)
 			txs = append(txs, tx)
 		}
-		m, err := transactionServices.GenerateTransactionMsg(txs, []byte("tx"), chain, [2]byte{'T', chain})
+		m, err := transactionServices.GenerateTransactionMsg(txs, []byte("tx"), [2]byte{'T', 'T'})
 		if err != nil {
 			return
 		}

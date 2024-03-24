@@ -9,12 +9,12 @@ import (
 )
 
 var (
-	PoolsTx [5]*TransactionPool
+	PoolsTx *TransactionPool
 )
 
 func init() {
 	for c := 0; c < 5; c++ {
-		PoolsTx[c] = NewTransactionPool(common.MaxTransactionInPool)
+		PoolsTx = NewTransactionPool(common.MaxTransactionInPool)
 	}
 }
 

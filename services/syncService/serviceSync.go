@@ -25,7 +25,6 @@ func generateSyncMsgHeight() []byte {
 	bm := message.BaseMessage{
 		Head:    []byte("hi"),
 		ChainID: common.GetChainID(),
-		Chain:   255,
 	}
 	n := message.TransactionsMessage{
 		BaseMessage:       bm,
@@ -62,7 +61,6 @@ func generateSyncMsgGetHeaders(height int64) []byte {
 	bm := message.BaseMessage{
 		Head:    []byte("gh"),
 		ChainID: common.GetChainID(),
-		Chain:   255,
 	}
 	n := message.TransactionsMessage{
 		BaseMessage:       bm,
@@ -91,7 +89,6 @@ func generateSyncMsgSendHeaders(bHeight int64, height int64) []byte {
 	bm := message.BaseMessage{
 		Head:    []byte("sh"),
 		ChainID: common.GetChainID(),
-		Chain:   255,
 	}
 	n := message.TransactionsMessage{
 		BaseMessage:       bm,
@@ -142,15 +139,14 @@ func sendSyncMsgInLoop() {
 }
 
 func startPublishingSyncMsg() {
-	for i := 0; i < 5; i++ {
-		go tcpip.StartNewListener(services.SendChanSync, tcpip.SyncTopic[i])
-	}
+
+	go tcpip.StartNewListener(services.SendChanSync, tcpip.SyncTopic)
 }
 
-func StartSubscribingSyncMsg(ip string, chain uint8) {
+func StartSubscribingSyncMsg(ip string) {
 	recvChan := make(chan []byte)
 
-	go tcpip.StartNewConnection(ip, recvChan, tcpip.SyncTopic[chain])
+	go tcpip.StartNewConnection(ip, recvChan, tcpip.SyncTopic)
 	log.Println("Enter connection receiving loop (sync msg)", ip)
 Q:
 

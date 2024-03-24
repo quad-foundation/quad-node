@@ -37,9 +37,7 @@ func OnMessage(addr string, m []byte) {
 
 	switch string(amsg.GetHead()) {
 	case "hi": // getheader
-		if amsg.GetChain() != 255 {
-			panic("not adequate chain for hi")
-		}
+
 		txn := amsg.(message.TransactionsMessage).GetTransactionsBytes()
 		h := common.GetHeight()
 		lastOtherHeight := common.GetInt64FromByte(txn[[2]byte{'L', 'H'}][0])
@@ -63,9 +61,7 @@ func OnMessage(addr string, m []byte) {
 		SendGetHeaders(addr, lastOtherHeight)
 		return
 	case "sh":
-		if amsg.GetChain() != 255 {
-			panic("not adequate chain for hi")
-		}
+
 		txn := amsg.(message.TransactionsMessage).GetTransactionsBytes()
 		blcks := []blocks.Block{}
 		indices := []int64{}
@@ -77,7 +73,6 @@ func OnMessage(addr string, m []byte) {
 				} else if k == [2]byte{'H', 'V'} {
 					block := blocks.Block{
 						BaseBlock:          blocks.BaseBlock{},
-						Chain:              0,
 						TransactionsHashes: nil,
 						BlockHash:          common.Hash{},
 					}
@@ -134,10 +129,7 @@ func OnMessage(addr string, m []byte) {
 				genesis.ResetAccountsAndBlocksSync(0)
 				panic("not relevant height vs index")
 			}
-			if !common.CheckHeight(block.Chain, index) {
-				genesis.ResetAccountsAndBlocksSync(0)
-				panic("chain improper related to height")
-			}
+
 			merkleTrie, err := blocks.CheckBaseBlock(block, oldBlock)
 			defer merkleTrie.Destroy()
 			if err != nil {
@@ -147,7 +139,7 @@ func OnMessage(addr string, m []byte) {
 			merkleTries[index] = merkleTrie
 			hashesMissing := blocks.IsAllTransactions(block)
 			if len(hashesMissing) > 0 {
-				transactionServices.SendGT(addr, hashesMissing, block.GetChain())
+				transactionServices.SendGT(addr, hashesMissing)
 			}
 		}
 		was = false
@@ -178,13 +170,11 @@ func OnMessage(addr string, m []byte) {
 				panic("storing block failed")
 			}
 			common.SetHeight(block.GetHeader().Height)
-			log.Println("New Block success -------------------------------------", block.GetHeader().Height, "-------chain", block.Chain)
+			log.Println("New Block success -------------------------------------", block.GetHeader().Height)
 		}
 
 	case "gh":
-		if amsg.GetChain() != 255 {
-			panic("not adequate chain for hi")
-		}
+
 		txn := amsg.(message.TransactionsMessage).GetTransactionsBytes()
 
 		bHeight := common.GetInt64FromByte(txn[[2]byte{'B', 'H'}][0])

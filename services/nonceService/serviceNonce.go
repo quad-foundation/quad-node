@@ -23,7 +23,7 @@ func InitNonceService() {
 	go sendNonceMsgInLoop()
 }
 
-func generateNonceMsg(chain uint8, topic [2]byte) (message.TransactionsMessage, error) {
+func generateNonceMsg(topic [2]byte) (message.TransactionsMessage, error) {
 	h := common.GetHeight()
 
 	var nonceTransaction transactionsDefinition.Transaction
@@ -32,7 +32,6 @@ func generateNonceMsg(chain uint8, topic [2]byte) (message.TransactionsMessage, 
 		Sender:      wallet.GetActiveWallet().Address,
 		SendingTime: common.GetCurrentTimeStampInSecond(),
 		Nonce:       0,
-		Chain:       chain,
 	}
 	lastBlockHash, err := blocks.LoadHashOfBlock(h)
 	if err != nil {
@@ -55,7 +54,6 @@ func generateNonceMsg(chain uint8, topic [2]byte) (message.TransactionsMessage, 
 		GasPrice:  0,
 		GasUsage:  0,
 	}
-	topic[1] = chain
 
 	err = (&nonceTransaction).CalcHashAndSet()
 	if err != nil {
@@ -70,7 +68,6 @@ func generateNonceMsg(chain uint8, topic [2]byte) (message.TransactionsMessage, 
 	bm := message.BaseMessage{
 		Head:    []byte("nn"),
 		ChainID: common.GetChainID(),
-		Chain:   chain,
 	}
 	bb := nonceTransaction.GetBytes()
 	n := message.TransactionsMessage{
@@ -82,12 +79,10 @@ func generateNonceMsg(chain uint8, topic [2]byte) (message.TransactionsMessage, 
 }
 
 func sendNonceMsgInLoopSelf(chanRecv chan []byte) {
-	var topic = [2]byte{'S', '0'}
+	var topic = [2]byte{'S', 'S'}
 Q:
 	for range time.Tick(time.Second) {
-		chain := common.GetChainForHeight(common.GetHeight() + 1)
-		topic[1] = chain
-		sendNonceMsg(tcpip.MyIP, chain, topic)
+		sendNonceMsg(tcpip.MyIP, topic)
 		select {
 		case s := <-chanRecv:
 			if len(s) == 4 && string(s) == "EXIT" {
@@ -98,12 +93,12 @@ Q:
 	}
 }
 
-func sendNonceMsg(ip string, chain uint8, topic [2]byte) {
+func sendNonceMsg(ip string, topic [2]byte) {
 	isync := common.IsSyncing.Load()
 	if isync == true {
 		return
 	}
-	n, err := generateNonceMsg(chain, topic)
+	n, err := generateNonceMsg(topic)
 	if err != nil {
 		log.Println(err)
 		return
@@ -123,25 +118,22 @@ func Send(addr string, nb []byte) {
 
 func sendNonceMsgInLoop() {
 	for range time.Tick(time.Second * 10) {
-		chain := common.GetChainForHeight(common.GetHeight() + 1)
-		var topic = [2]byte{'N', chain}
-		sendNonceMsg("0.0.0.0", chain, topic)
+		var topic = [2]byte{'N', 'N'}
+		sendNonceMsg("0.0.0.0", topic)
 	}
 }
 
 func startPublishingNonceMsg() {
 
-	for i := 0; i < 5; i++ {
-		go tcpip.StartNewListener(services.SendChanNonce, tcpip.NonceTopic[i])
-		go tcpip.StartNewListener(services.SendChanSelfNonce, tcpip.SelfNonceTopic[i])
-	}
+	go tcpip.StartNewListener(services.SendChanNonce, tcpip.NonceTopic)
+	go tcpip.StartNewListener(services.SendChanSelfNonce, tcpip.SelfNonceTopic)
 
 }
 
-func StartSubscribingNonceMsg(ip string, chain uint8) {
+func StartSubscribingNonceMsg(ip string) {
 	recvChan := make(chan []byte)
 
-	go tcpip.StartNewConnection(ip, recvChan, tcpip.NonceTopic[chain])
+	go tcpip.StartNewConnection(ip, recvChan, tcpip.NonceTopic)
 	log.Println("Enter connection receiving loop (nonce msg)", ip)
 Q:
 
@@ -169,11 +161,11 @@ Q:
 	log.Println("Exit connection receiving loop (nonce msg)", ip)
 }
 
-func StartSubscribingNonceMsgSelf(chain uint8) {
+func StartSubscribingNonceMsgSelf() {
 	recvChanSelf := make(chan []byte)
 	recvChanExit := make(chan []byte)
 
-	go tcpip.StartNewConnection(tcpip.MyIP, recvChanSelf, tcpip.SelfNonceTopic[chain])
+	go tcpip.StartNewConnection(tcpip.MyIP, recvChanSelf, tcpip.SelfNonceTopic)
 	go sendNonceMsgInLoopSelf(recvChanExit)
 	log.Println("Enter connection receiving loop (nonce msg self)")
 Q:

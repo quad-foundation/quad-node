@@ -50,7 +50,7 @@ var (
 	TransactionToSendHashesDBPrefix    = [2]byte{'E', '0'}
 	TransactionSyncingHashesDBPrefix   = [2]byte{'S', '0'}
 	AccountsDBPrefix                   = [2]byte{'A', 'C'}
-	StakingAccountsDBPrefix            = [2]byte{0, 0} // 2 x 0123456789abcdf
+	//StakingAccountsDBPrefix            = [2]byte{0, 0} // 2 x 0123456789abcdf
 )
 
 var chainID = int16(23)
