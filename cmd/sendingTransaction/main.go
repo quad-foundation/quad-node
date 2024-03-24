@@ -45,9 +45,9 @@ func SampleTransaction(w *wallet.Wallet) transactionsDefinition.Transaction {
 
 	txdata := transactionsDefinition.TxData{
 		Recipient: recv,
-		Amount:    int64(rand2.Intn(1000000000000)),
+		Amount:    int64(rand2.Intn(1000000000)),
 		OptData:   nil,
-		Pubkey:    w.PublicKey,
+		Pubkey:    common.PubKey{},
 	}
 	txParam := transactionsDefinition.TxParam{
 		ChainID:     common.GetChainID(),
@@ -99,7 +99,7 @@ func sendTransactions(w *wallet.Wallet) {
 	count := int64(0)
 	start := common.GetCurrentTimeStampInSecond()
 
-	for range time.Tick(time.Second) {
+	for range time.Tick(time.Millisecond) {
 		var txs []transactionsDefinition.Transaction
 		for i := 0; i < batchSize; i++ {
 			tx := SampleTransaction(w)

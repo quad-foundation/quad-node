@@ -121,7 +121,7 @@ func UpdateAccountStats() {
 	//		}
 	//	}
 	//}
-	//AddNewHistoryItem(txt)
+	AddNewHistoryItem(txt)
 	//lastSt = st
 }
 

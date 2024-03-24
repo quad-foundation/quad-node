@@ -27,6 +27,18 @@ type BaseBlock struct {
 	Supply           int64       `json:"supply"`
 }
 
+// GetString returns a string representation of BaseHeader.
+func (b *BaseHeader) GetString() string {
+	return fmt.Sprintf("PreviousHash: %s\nDifficulty: %d\nHeight: %d\nDelegatedAccount: %s\nOperatorAccount: %s\nRootMerkleTree: %s\nSignature: %s\nSignatureMessage: %x",
+		b.PreviousHash.GetHex(), b.Difficulty, b.Height, b.DelegatedAccount.GetHex(), b.OperatorAccount.GetHex(), b.RootMerkleTree.GetHex(), b.Signature.GetHex(), b.SignatureMessage)
+}
+
+// GetString returns a string representation of BaseBlock.
+func (b *BaseBlock) GetString() string {
+	return fmt.Sprintf("Header: {%s}\nBlockHeaderHash: %s\nBlockTimeStamp: %d\nRewardPercentage: %d\nSupply: %d",
+		b.BaseHeader.GetString(), b.BlockHeaderHash.GetHex(), b.BlockTimeStamp, b.RewardPercentage, b.Supply)
+}
+
 func (b *BaseHeader) GetBytesWithoutSignature() []byte {
 	rb := b.PreviousHash.GetBytes()
 	rb = append(rb, common.GetByteInt32(b.Difficulty)...)

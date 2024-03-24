@@ -3,10 +3,12 @@ package serverrpc
 import (
 	"encoding/json"
 	"github.com/quad/quad-node/account"
+	"github.com/quad/quad-node/blocks"
 	"github.com/quad/quad-node/common"
 	"github.com/quad/quad-node/services/transactionServices"
 	"github.com/quad/quad-node/statistics"
 	"github.com/quad/quad-node/tcpip"
+	"github.com/quad/quad-node/transactionsDefinition"
 	"github.com/quad/quad-node/wallet"
 	"log"
 	"net"
@@ -56,8 +58,8 @@ func (l *Listener) Send(line []byte, reply *[]byte) error {
 		handleACCT(byt, reply)
 	//case "ACCS":
 	//	handleACCS(byt, reply)
-	//case "DETS":
-	//	handleDETS(byt, reply)
+	case "DETS":
+		handleDETS(byt, reply)
 	//case "STAK":
 	//	handleSTAK(byt, reply)
 	//case "ACCS":
@@ -72,20 +74,6 @@ func (l *Listener) Send(line []byte, reply *[]byte) error {
 	return nil
 }
 
-//	func handleSTAT(reply *[]byte) {
-//		st := statistics.MainStats{}
-//		st, err := st.LoadStats()
-//		if err != nil {
-//			log.Println("Cannot update stats")
-//			return
-//		}
-//		r, err := json.Marshal(st)
-//		if err != nil {
-//			log.Println("Cannot marshal stat's struct")
-//			return
-//		}
-//		*reply = r
-//	}
 func handleWALL(line []byte, reply *[]byte) {
 	log.Println(string(line))
 	w := wallet.GetActiveWallet()
@@ -95,6 +83,44 @@ func handleWALL(line []byte, reply *[]byte) {
 		return
 	}
 	*reply = r
+}
+
+func handleDETS(line []byte, reply *[]byte) {
+
+	switch len(line) {
+	case common.AddressLength:
+		byt := [common.AddressLength]byte{}
+		copy(byt[:], line)
+		account.AccountsRWMutex.RLock()
+		acc := account.Accounts.AllAccounts[byt]
+		account.AccountsRWMutex.RUnlock()
+		am := acc.Marshal()
+		*reply = append([]byte("AC"), am...)
+		break
+	case common.HashLength:
+		tx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], line)
+		if err != nil {
+			log.Println(err)
+			*reply = []byte("TX")
+			return
+		}
+		txb := tx.GetBytes()
+		*reply = append([]byte("TX"), txb...)
+		break
+	case 8:
+		height := common.GetInt64FromByte(line)
+		block, err := blocks.LoadBlock(height)
+		if err != nil {
+			log.Println(err)
+			*reply = []byte("BL")
+			return
+		}
+		bb := block.GetBytes()
+		*reply = append([]byte("BL"), bb...)
+		break
+	default:
+		*reply = []byte("NO")
+	}
 }
 
 func handleACCT(line []byte, reply *[]byte) {

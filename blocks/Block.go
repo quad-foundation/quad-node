@@ -5,12 +5,28 @@ import (
 	"github.com/quad/quad-node/common"
 	memDatabase "github.com/quad/quad-node/database"
 	"github.com/quad/quad-node/transactionsPool"
+	"strings"
 )
 
 type Block struct {
 	BaseBlock          BaseBlock     `json:"base_block"`
 	TransactionsHashes []common.Hash `json:"transactions_hashes"`
 	BlockHash          common.Hash   `json:"block_hash"`
+}
+
+// GetString returns a string representation of Block.
+func (b Block) GetString() string {
+	// Convert transaction hashes to a slice of strings
+	var txHashesStrings []string
+	for _, hash := range b.TransactionsHashes {
+		txHashesStrings = append(txHashesStrings, hash.GetHex())
+	}
+	// Join the slice of transaction hash strings with a separator
+	transactionsHashesString := strings.Join(txHashesStrings, ", ")
+
+	// Use the GetString method of BaseBlock to get its string representation
+	return fmt.Sprintf("BaseBlock: {%s}\nTransactionsHashes: [%s]\nBlockHash: %s",
+		b.BaseBlock.GetString(), transactionsHashesString, b.BlockHash.GetHex())
 }
 
 func (tb Block) GetBaseBlock() BaseBlock {
