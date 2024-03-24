@@ -7,7 +7,7 @@ import (
 	"log"
 )
 
-var validTopics = [][2]byte{{'N', 0}, {'S', 0}, {'T', 0}, {'B', 0}}
+var validTopics = [][2]byte{{'N', 'N'}, {'S', 'S'}, {'T', 'T'}, {'B', 'B'}}
 
 type TransactionsMessage struct {
 	BaseMessage       BaseMessage          `json:"base_message"`
@@ -21,8 +21,6 @@ func (a TransactionsMessage) GetTransactionsBytes() map[[2]byte][][]byte {
 func (a TransactionsMessage) GetTransactionsFromBytes() (map[[2]byte][]transactionsDefinition.Transaction, error) {
 	txn := map[[2]byte][]transactionsDefinition.Transaction{}
 	for _, topic := range validTopics {
-		chain := a.GetChain()
-		topic[1] = chain
 		if common.IsInKeysOfList(a.TransactionsBytes, topic) {
 			for _, tb := range a.TransactionsBytes[topic] {
 				tx := transactionsDefinition.Transaction{}
@@ -36,10 +34,6 @@ func (a TransactionsMessage) GetTransactionsFromBytes() (map[[2]byte][]transacti
 	}
 
 	return txn, nil
-}
-
-func (b TransactionsMessage) GetChain() uint8 {
-	return b.BaseMessage.Chain
 }
 
 func (b TransactionsMessage) GetHead() []byte {
@@ -65,17 +59,17 @@ func (a TransactionsMessage) GetBytes() []byte {
 }
 
 func (a TransactionsMessage) GetFromBytes(b []byte) (AnyMessage, error) {
-	if len(b) < 5 {
+	if len(b) < 4 {
 		return nil, fmt.Errorf("insufficient bytes for base message")
 	}
 
 	var err error
-	a.BaseMessage.GetFromBytes(b[:5])
+	a.BaseMessage.GetFromBytes(b[:4])
 	if err != nil {
 		return nil, err
 	}
 
-	b = b[5:]
+	b = b[4:]
 
 	if len(b) < 4 {
 		return nil, fmt.Errorf("insufficient bytes for transactions length")

@@ -44,16 +44,21 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	sa := stake.StakingAccount{
-		StakedBalance:  0,
-		StakingRewards: 0,
-		Address:        addrbytes,
-		StakingDetails: nil,
-	}
-	allStakingAccounts := map[[20]byte]stake.StakingAccount{}
-	allStakingAccounts[addrbytes] = sa
-	account.StakingAccounts = account.StakingAccountsType{AllStakingAccounts: allStakingAccounts}
 
+	for i := 0; i < 256; i++ {
+		del := common.GetDelegatedAccountAddress(int16(i))
+		delbytes := [common.AddressLength]byte{}
+		copy(delbytes[:], del.GetBytes())
+		sa := stake.StakingAccount{
+			StakedBalance:    0,
+			StakingRewards:   0,
+			DelegatedAccount: delbytes,
+			StakingDetails:   nil,
+		}
+		allStakingAccounts := map[[20]byte]stake.StakingAccount{}
+		allStakingAccounts[addrbytes] = sa
+		account.StakingAccounts[i] = account.StakingAccountsType{AllStakingAccounts: allStakingAccounts}
+	}
 	err = account.StoreStakingAccounts()
 	if err != nil {
 		log.Fatal(err)
@@ -90,20 +95,17 @@ func main() {
 
 	go serverrpc.ListenRPC()
 
-	for i := uint8(0); i < 5; i++ {
-		go nonceService.StartSubscribingNonceMsgSelf(i)
-		go nonceService.StartSubscribingNonceMsg(tcpip.MyIP, i)
-		go transactionServices.StartSubscribingTransactionMsg(tcpip.MyIP, i)
-		go syncServices.StartSubscribingSyncMsg(tcpip.MyIP, i)
-	}
+	go nonceService.StartSubscribingNonceMsgSelf()
+	go nonceService.StartSubscribingNonceMsg(tcpip.MyIP)
+	go transactionServices.StartSubscribingTransactionMsg(tcpip.MyIP)
+	go syncServices.StartSubscribingSyncMsg(tcpip.MyIP)
 	time.Sleep(time.Second)
 	if len(os.Args) > 1 {
 		ip := os.Args[1]
-		for i := uint8(0); i < 5; i++ {
-			go transactionServices.StartSubscribingTransactionMsg(ip, i)
-			go nonceService.StartSubscribingNonceMsg(ip, i)
-			go syncServices.StartSubscribingSyncMsg(ip, i)
-		}
+
+		go transactionServices.StartSubscribingTransactionMsg(ip)
+		go nonceService.StartSubscribingNonceMsg(ip)
+		go syncServices.StartSubscribingSyncMsg(ip)
 	}
 	time.Sleep(time.Second)
 
@@ -116,18 +118,17 @@ QF:
 		case topicip := <-chanPeer:
 			copy(topic[:], topicip[:2])
 			ip := topicip[2:]
-			chain := topic[1]
 			if topic[0] == 'T' {
-				go transactionServices.StartSubscribingTransactionMsg(ip, chain)
+				go transactionServices.StartSubscribingTransactionMsg(ip)
 			}
 			if topic[0] == 'N' {
-				go nonceService.StartSubscribingNonceMsg(ip, chain)
+				go nonceService.StartSubscribingNonceMsg(ip)
 			}
 			if topic[0] == 'S' {
-				go nonceService.StartSubscribingNonceMsgSelf(chain)
+				go nonceService.StartSubscribingNonceMsgSelf()
 			}
 			if topic[0] == 'B' {
-				go syncServices.StartSubscribingSyncMsg(ip, chain)
+				go syncServices.StartSubscribingSyncMsg(ip)
 			}
 
 		case <-tcpip.Quit:

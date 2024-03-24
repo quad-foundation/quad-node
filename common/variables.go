@@ -23,11 +23,3 @@ func SetHeight(h int64) {
 	defer heightMutex.Unlock()
 	height = h
 }
-
-func CheckHeight(chain uint8, heightToCheck int64) bool {
-	return GetChainForHeight(heightToCheck) == chain
-}
-
-func GetChainForHeight(heightToCheck int64) uint8 {
-	return uint8(heightToCheck % 5)
-}

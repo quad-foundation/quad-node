@@ -7,10 +7,10 @@ import (
 )
 
 type StakingAccount struct {
-	StakedBalance  int64                      `json:"staked_balance"`
-	StakingRewards int64                      `json:"staking_rewards"`
-	Address        [common.AddressLength]byte `json:"address"`
-	StakingDetails map[string]StakingDetail   `json:"staking_details,omitempty"`
+	StakedBalance    int64                      `json:"staked_balance"`
+	StakingRewards   int64                      `json:"staking_rewards"`
+	DelegatedAccount [common.AddressLength]byte `json:"delegated_account"`
+	StakingDetails   map[string]StakingDetail   `json:"staking_details,omitempty"`
 }
 
 type StakingDetail struct {
@@ -33,7 +33,7 @@ func (sa StakingAccount) Marshal() []byte {
 	buffer.Write(common.GetByteInt64(sa.StakingRewards))
 
 	// Address length and Address
-	buffer.Write(sa.Address[:])
+	buffer.Write(sa.DelegatedAccount[:])
 
 	// StakingDetails count
 	buffer.Write(common.GetByteInt64(int64(len(sa.StakingDetails))))
@@ -61,7 +61,7 @@ func (sa *StakingAccount) Unmarshal(data []byte) error {
 	sa.StakingRewards = common.GetInt64FromByte(buffer.Next(8))
 
 	// Address
-	copy(sa.Address[:], buffer.Next(common.AddressLength))
+	copy(sa.DelegatedAccount[:], buffer.Next(common.AddressLength))
 
 	// StakingDetails
 	detailsCount := common.GetInt64FromByte(buffer.Next(8))

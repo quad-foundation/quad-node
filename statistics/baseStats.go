@@ -9,17 +9,16 @@ import (
 )
 
 type MainStats struct {
-	Heights                 int64         `json:"heights"`
-	HeightMax               int64         `json:"heightMax"`
-	Chain                   uint8         `json:"chain"`
-	TimeInterval            int64         `json:"timeInterval"`
-	Transactions            map[uint8]int `json:"transactions"`
-	TransactionsPending     map[uint8]int `json:"transactions_pending"`
-	TransactionsSize        map[uint8]int `json:"transaction_size"`
-	TransactionsPendingSize map[uint8]int `json:"transactions_pending_size"`
-	Tps                     float32       `json:"tps"`
-	Syncing                 bool          `json:"syncing"`
-	Difficulty              int32         `json:"difficulty"`
+	Heights                 int64   `json:"heights"`
+	HeightMax               int64   `json:"heightMax"`
+	TimeInterval            int64   `json:"timeInterval"`
+	Transactions            int     `json:"transactions"`
+	TransactionsPending     int     `json:"transactions_pending"`
+	TransactionsSize        int     `json:"transaction_size"`
+	TransactionsPendingSize int     `json:"transactions_pending_size"`
+	Tps                     float32 `json:"tps"`
+	Syncing                 bool    `json:"syncing"`
+	Difficulty              int32   `json:"difficulty"`
 	db                      memDatabase.AnyBlockchainDB
 }
 
@@ -43,12 +42,11 @@ func InitGlobalMainStats() {
 		MainStats: &MainStats{
 			Heights:                 int64(0),
 			HeightMax:               int64(0),
-			Chain:                   uint8(0),
 			TimeInterval:            int64(0),
-			Transactions:            map[uint8]int{0: 0, 1: 0, 2: 0, 3: 0, 4: 0},
-			TransactionsSize:        map[uint8]int{0: 0, 1: 0, 2: 0, 3: 0, 4: 0},
-			TransactionsPending:     map[uint8]int{0: 0, 1: 0, 2: 0, 3: 0, 4: 0},
-			TransactionsPendingSize: map[uint8]int{0: 0, 1: 0, 2: 0, 3: 0, 4: 0},
+			Transactions:            0,
+			TransactionsSize:        0,
+			TransactionsPending:     0,
+			TransactionsPendingSize: 0,
 			Tps:                     float32(0),
 			Syncing:                 true,
 			Difficulty:              int32(0),

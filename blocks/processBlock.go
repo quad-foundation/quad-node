@@ -11,13 +11,9 @@ import (
 )
 
 func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTree, error) {
-	chain := newBlock.GetChain()
 	blockHeight := newBlock.GetHeader().Height
 	if newBlock.GetBlockSupply() > common.MaxTotalSupply {
 		return nil, fmt.Errorf("supply is too high")
-	}
-	if common.CheckHeight(chain, blockHeight) == false {
-		return nil, fmt.Errorf("improper height value in block")
 	}
 
 	if bytes.Compare(lastBlock.BlockHash.GetBytes(), newBlock.GetHeader().PreviousHash.GetBytes()) != 0 {
@@ -54,12 +50,10 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 
 func IsAllTransactions(block Block) [][]byte {
 	txs := block.TransactionsHashes
-	chain := block.Chain
 	hashes := [][]byte{}
 	for _, tx := range txs {
 		hash := tx.GetBytes()
-		prefix := []byte{common.TransactionDBPrefix[0], chain}
-		isKey := transactionsDefinition.CheckFromDBPoolTx(prefix, hash)
+		isKey := transactionsDefinition.CheckFromDBPoolTx(common.TransactionDBPrefix[:], hash)
 		if isKey == false {
 			hashes = append(hashes, hash)
 		}
@@ -69,14 +63,12 @@ func IsAllTransactions(block Block) [][]byte {
 
 func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 	txs := block.TransactionsHashes
-	chain := block.Chain
 	lastSupply := lastBlock.GetBlockSupply()
 	accounts := map[[common.AddressLength]byte]account.Account{}
 	totalFee := int64(0)
 	for _, tx := range txs {
 		hash := tx.GetBytes()
-		prefix := []byte{common.TransactionDBPrefix[0], chain}
-		poolTx, err := transactionsDefinition.LoadFromDBPoolTx(prefix, hash)
+		poolTx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], hash)
 		if err != nil {
 			return 0, err
 		}
@@ -127,13 +119,10 @@ func IsInKeysOfMapAccounts(m map[[common.AddressLength]byte]account.Account, sea
 
 func ProcessBlockTransfers(block Block, reward int64) error {
 	txs := block.TransactionsHashes
-	chain := block.Chain
-
 	totalFee := int64(0)
 	for _, tx := range txs {
 		hash := tx.GetBytes()
-		prefix := []byte{common.TransactionDBPrefix[0], chain}
-		poolTx, err := transactionsDefinition.LoadFromDBPoolTx(prefix, hash)
+		poolTx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], hash)
 		if err != nil {
 			return err
 		}
@@ -173,10 +162,9 @@ func CheckBlockAndTransferFunds(newBlock Block, lastBlock Block, merkleTrie *tra
 	log.Println("Number of transactions in block: ", len(hashes))
 	txshb := [][]byte{}
 	for _, h := range hashes {
-		tx := transactionsPool.PoolsTx[newBlock.Chain].PopTransactionByHash(h.GetBytes())
+		tx := transactionsPool.PoolsTx.PopTransactionByHash(h.GetBytes())
 		txshb = append(txshb, tx.GetHash().GetBytes())
-		prefix := []byte{common.TransactionDBPrefix[0], newBlock.GetChain()}
-		err = tx.StoreToDBPoolTx(prefix)
+		err = tx.StoreToDBPoolTx(common.TransactionDBPrefix[:])
 		if err != nil {
 			return err
 		}

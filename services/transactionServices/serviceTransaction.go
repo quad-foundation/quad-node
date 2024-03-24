@@ -20,13 +20,11 @@ func InitTransactionService() {
 	go broadcastTransactionsMsgInLoop(services.SendChanTx)
 }
 
-func GenerateTransactionMsg(txs []transactionsDefinition.Transaction, mesgHead []byte, chain uint8, topic [2]byte) (message.TransactionsMessage, error) {
+func GenerateTransactionMsg(txs []transactionsDefinition.Transaction, mesgHead []byte, topic [2]byte) (message.TransactionsMessage, error) {
 
-	topic[1] = chain
 	bm := message.BaseMessage{
 		Head:    mesgHead,
 		ChainID: common.GetChainID(),
-		Chain:   chain,
 	}
 	bb := [][]byte{}
 	for _, tx := range txs {
@@ -41,13 +39,11 @@ func GenerateTransactionMsg(txs []transactionsDefinition.Transaction, mesgHead [
 	return n, nil
 }
 
-func GenerateTransactionMsgGT(txsHashes [][]byte, mesgHead []byte, chain uint8, topic [2]byte) (message.TransactionsMessage, error) {
+func GenerateTransactionMsgGT(txsHashes [][]byte, mesgHead []byte, topic [2]byte) (message.TransactionsMessage, error) {
 
-	topic[1] = chain
 	bm := message.BaseMessage{
 		Head:    mesgHead,
 		ChainID: common.GetChainID(),
-		Chain:   chain,
 	}
 
 	n := message.TransactionsMessage{
@@ -61,12 +57,11 @@ func broadcastTransactionsMsgInLoop(chanRecv chan []byte) {
 
 Q:
 	for range time.Tick(time.Second) {
-		//chain := common.GetChainForHeight(common.GetHeight() + 1)
-		for chain := uint8(0); chain < 5; chain++ {
-			topic := [2]byte{'T', chain}
 
-			SendTransactionMsg(tcpip.MyIP, chain, topic)
-		}
+		topic := [2]byte{'T', 'T'}
+
+		SendTransactionMsg(tcpip.MyIP, topic)
+
 		select {
 		case s := <-chanRecv:
 			if len(s) == 4 && string(s) == "EXIT" {
@@ -77,13 +72,13 @@ Q:
 	}
 }
 
-func SendTransactionMsg(ip string, chain uint8, topic [2]byte) {
+func SendTransactionMsg(ip string, topic [2]byte) {
 	isync := common.IsSyncing.Load()
 	if isync == true {
 		return
 	}
-	txs := transactionsPool.PoolsTx[chain].PeekTransactions(int(common.MaxTransactionsPerBlock))
-	n, err := GenerateTransactionMsg(txs, []byte("tx"), chain, topic)
+	txs := transactionsPool.PoolsTx.PeekTransactions(int(common.MaxTransactionsPerBlock))
+	n, err := GenerateTransactionMsg(txs, []byte("tx"), topic)
 	if err != nil {
 		log.Println(err)
 		return
@@ -91,9 +86,9 @@ func SendTransactionMsg(ip string, chain uint8, topic [2]byte) {
 	Send(ip, n.GetBytes())
 }
 
-func SendGT(ip string, txsHashes [][]byte, chain uint8) {
-	topic := tcpip.TransactionTopic[chain]
-	transactionMsg, err := GenerateTransactionMsgGT(txsHashes, []byte("st"), chain, topic)
+func SendGT(ip string, txsHashes [][]byte) {
+	topic := tcpip.TransactionTopic
+	transactionMsg, err := GenerateTransactionMsgGT(txsHashes, []byte("st"), topic)
 	if err != nil {
 		log.Println("cannot generate transaction msg", err)
 	}
@@ -111,16 +106,13 @@ func Send(addr string, nb []byte) {
 }
 
 func startPublishingTransactionMsg() {
-	for i := 0; i < 5; i++ {
-		go tcpip.StartNewListener(services.SendChanTx, tcpip.TransactionTopic[i])
-	}
-
+	go tcpip.StartNewListener(services.SendChanTx, tcpip.TransactionTopic)
 }
 
-func StartSubscribingTransactionMsg(ip string, chain uint8) {
+func StartSubscribingTransactionMsg(ip string) {
 	recvChan := make(chan []byte)
 
-	go tcpip.StartNewConnection(ip, recvChan, tcpip.TransactionTopic[chain])
+	go tcpip.StartNewConnection(ip, recvChan, tcpip.TransactionTopic)
 	log.Println("Enter connection receiving loop (nonce msg)", ip)
 Q:
 

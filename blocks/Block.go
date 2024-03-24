@@ -5,13 +5,28 @@ import (
 	"github.com/quad/quad-node/common"
 	memDatabase "github.com/quad/quad-node/database"
 	"github.com/quad/quad-node/transactionsPool"
+	"strings"
 )
 
 type Block struct {
 	BaseBlock          BaseBlock     `json:"base_block"`
-	Chain              uint8         `json:"chain"`
 	TransactionsHashes []common.Hash `json:"transactions_hashes"`
 	BlockHash          common.Hash   `json:"block_hash"`
+}
+
+// GetString returns a string representation of Block.
+func (b Block) GetString() string {
+	// Convert transaction hashes to a slice of strings
+	var txHashesStrings []string
+	for _, hash := range b.TransactionsHashes {
+		txHashesStrings = append(txHashesStrings, hash.GetHex())
+	}
+	// Join the slice of transaction hash strings with a separator
+	transactionsHashesString := strings.Join(txHashesStrings, ", ")
+
+	// Use the GetString method of BaseBlock to get its string representation
+	return fmt.Sprintf("BaseBlock: {%s}\nTransactionsHashes: [%s]\nBlockHash: %s",
+		b.BaseBlock.GetString(), transactionsHashesString, b.BlockHash.GetHex())
 }
 
 func (tb Block) GetBaseBlock() BaseBlock {
@@ -29,9 +44,6 @@ func (tb Block) GetBlockSupply() int64 {
 func (tb Block) GetRewardPercentage() int16 {
 	return tb.BaseBlock.RewardPercentage
 }
-func (tb Block) GetChain() uint8 {
-	return tb.Chain
-}
 func (tb Block) GetHeader() BaseHeader {
 	return tb.GetBaseBlock().BaseHeader
 }
@@ -43,7 +55,6 @@ func (tb Block) GetBlockHash() common.Hash {
 }
 func (tb Block) GetBytes() []byte {
 	b := tb.BaseBlock.GetBytes()
-	b = append(b, tb.Chain)
 	b = append(b, tb.BlockHash.GetBytes()...)
 	for _, tx := range tb.TransactionsHashes {
 		b = append(b, tx.GetBytes()...)
@@ -61,9 +72,8 @@ func (tb Block) GetFromBytes(b []byte) (Block, error) {
 	if err != nil {
 		return Block{}, err
 	}
-	tb.Chain = b[0]
-	tb.BlockHash = common.GetHashFromBytes(b[1:33])
-	b = b[33:]
+	tb.BlockHash = common.GetHashFromBytes(b[0:32])
+	b = b[32:]
 	if len(b)%32 != 0 {
 		return Block{}, fmt.Errorf("wrongly decompile block")
 	}

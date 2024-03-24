@@ -30,7 +30,6 @@ func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 	txs []common.Hash) (blocks.Block, error) {
 
 	myWallet := wallet.GetActiveWallet()
-	transactionChain := nonceTx[0].GetChain()
 	heightTransaction := nonceTx[0].GetHeight()
 	totalFee := int64(0)
 	for _, at := range nonceTx {
@@ -92,7 +91,6 @@ func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 	}
 	bl := blocks.Block{
 		BaseBlock:          bb,
-		Chain:              transactionChain,
 		TransactionsHashes: txs,
 		BlockHash:          common.Hash{},
 	}
@@ -110,10 +108,9 @@ func GenerateBlockMessage(bl blocks.Block) message.TransactionsMessage {
 	bm := message.BaseMessage{
 		Head:    []byte("bl"),
 		ChainID: common.GetChainID(),
-		Chain:   bl.GetChain(),
 	}
 	txm := [2]byte{}
-	copy(txm[:], append([]byte("N"), bm.Chain))
+	copy(txm[:], append([]byte("N"), 0))
 	atm := message.TransactionsMessage{
 		BaseMessage:       bm,
 		TransactionsBytes: map[[2]byte][][]byte{},

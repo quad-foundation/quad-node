@@ -33,7 +33,7 @@ func main() {
 	<-chanPeer
 }
 
-func SampleTransaction(w *wallet.Wallet, chain uint8) transactionsDefinition.Transaction {
+func SampleTransaction(w *wallet.Wallet) transactionsDefinition.Transaction {
 
 	sender := w.Address
 	recv := common.Address{}
@@ -45,16 +45,15 @@ func SampleTransaction(w *wallet.Wallet, chain uint8) transactionsDefinition.Tra
 
 	txdata := transactionsDefinition.TxData{
 		Recipient: recv,
-		Amount:    int64(rand2.Intn(1000000000000)),
+		Amount:    int64(rand2.Intn(1000000000)),
 		OptData:   nil,
-		Pubkey:    w.PublicKey,
+		Pubkey:    common.PubKey{},
 	}
 	txParam := transactionsDefinition.TxParam{
 		ChainID:     common.GetChainID(),
 		Sender:      sender,
 		SendingTime: common.GetCurrentTimeStampInSecond(),
 		Nonce:       int16(rand2.Intn(65000)),
-		Chain:       chain,
 	}
 	t := transactionsDefinition.Transaction{
 		TxData:    txdata,
@@ -100,14 +99,13 @@ func sendTransactions(w *wallet.Wallet) {
 	count := int64(0)
 	start := common.GetCurrentTimeStampInSecond()
 
-	for range time.Tick(time.Second) {
+	for range time.Tick(time.Millisecond) {
 		var txs []transactionsDefinition.Transaction
-		chain := uint8(rand2.Intn(5))
 		for i := 0; i < batchSize; i++ {
-			tx := SampleTransaction(w, chain)
+			tx := SampleTransaction(w)
 			txs = append(txs, tx)
 		}
-		m, err := transactionServices.GenerateTransactionMsg(txs, []byte("tx"), chain, [2]byte{'T', chain})
+		m, err := transactionServices.GenerateTransactionMsg(txs, []byte("tx"), [2]byte{'T', 'T'})
 		if err != nil {
 			return
 		}

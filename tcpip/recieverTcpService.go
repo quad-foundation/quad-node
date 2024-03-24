@@ -23,34 +23,18 @@ var (
 	tcpConnections   = make(map[[2]byte]map[string]*net.TCPConn)
 	peersMutex       = &sync.RWMutex{}
 	Quit             chan os.Signal
-	TransactionTopic = [5][2]byte{{'T', 0}, {'T', 1}, {'T', 2}, {'T', 3}, {'T', 4}}
-	NonceTopic       = [5][2]byte{{'N', 0}, {'N', 1}, {'N', 2}, {'N', 3}, {'N', 4}}
-	SelfNonceTopic   = [5][2]byte{{'S', 0}, {'S', 1}, {'S', 2}, {'S', 3}, {'S', 4}}
-	SyncTopic        = [5][2]byte{{'B', 0}, {'B', 1}, {'B', 2}, {'B', 3}, {'B', 4}}
+	TransactionTopic = [2]byte{'T', 'T'}
+	NonceTopic       = [2]byte{'N', 'N'}
+	SelfNonceTopic   = [2]byte{'S', 'S'}
+	SyncTopic        = [2]byte{'B', 'B'}
 	RPCTopic         = [2]byte{'R', 'P'}
 )
 var Ports = map[[2]byte]int{
-	TransactionTopic[0]: 9091,
-	TransactionTopic[1]: 9092,
-	TransactionTopic[2]: 9093,
-	TransactionTopic[3]: 9094,
-	TransactionTopic[4]: 9095,
-	NonceTopic[0]:       8091,
-	NonceTopic[1]:       8092,
-	NonceTopic[2]:       8093,
-	NonceTopic[3]:       8094,
-	NonceTopic[4]:       8095,
-	SelfNonceTopic[0]:   7091,
-	SelfNonceTopic[1]:   7092,
-	SelfNonceTopic[2]:   7093,
-	SelfNonceTopic[3]:   7094,
-	SelfNonceTopic[4]:   7095,
-	SyncTopic[0]:        6091,
-	SyncTopic[1]:        6092,
-	SyncTopic[2]:        6093,
-	SyncTopic[3]:        6094,
-	SyncTopic[4]:        6095,
-	RPCTopic:            9009,
+	TransactionTopic: 9091,
+	NonceTopic:       8091,
+	SelfNonceTopic:   7091,
+	SyncTopic:        6091,
+	RPCTopic:         9009,
 }
 var MyIP string
 
