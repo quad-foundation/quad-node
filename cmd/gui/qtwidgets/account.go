@@ -1,10 +1,8 @@
 package qtwidgets
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/quad/quad-node/account"
-	stake2 "github.com/quad/quad-node/account/stake"
 	"github.com/quad/quad-node/common"
 	clientrpc "github.com/quad/quad-node/rpc/client"
 	"github.com/quad/quad-node/statistics"
@@ -66,21 +64,21 @@ func UpdateAccountStats() {
 	conf := acc.GetBalanceConfirmedFloat()
 	uncTx := 0.0 //acc.GetUnconfirmedTransactionFloat(st.Heights)
 
-	inb = append([]byte("ACCS"), MainWalllet.Address.GetBytes()...)
-	clientrpc.InRPC <- inb
-	var accs stake2.StakingAccount
+	//inb = append([]byte("ACCS"), MainWalllet.Address.GetBytes()...)
+	//clientrpc.InRPC <- inb
+	//var accs stake2.StakingAccount
+	//
+	//re = <-clientrpc.OutRPC
+	//if string(reply) == "Timeout" {
+	//	return
+	//}
+	//err = accs.Unmarshal(re)
+	//if err != nil {
+	//	log.Println("cannot unmarshal stake account")
+	//	return
+	//}
 
-	re = <-clientrpc.OutRPC
-	if string(reply) == "Timeout" {
-		return
-	}
-	err = accs.Unmarshal(re)
-	if err != nil {
-		log.Println("cannot unmarshal stake account")
-		return
-	}
-
-	stake := accs.GetBalanceConfirmedFloat()
+	stake := 0.0    //accs.GetBalanceConfirmedFloat()
 	uncStake := 0.0 // acc.GetUnconfirmedStakeFloat(st.Heights)
 
 	txt += fmt.Sprintln("\n\nYour Address:", MainWalllet.Address.GetHex())
@@ -90,21 +88,21 @@ func UpdateAccountStats() {
 	txt += fmt.Sprintf("Staked amount: %18.8f QAD\n", stake)
 	txt += fmt.Sprintf("Unconfirmed staked amount: %18.8f QAD\n", uncStake)
 	txt += fmt.Sprintf("\nStaking details:\n")
-	for k, v := range accs.StakingDetails {
-		if v.Amount == 0 {
-			continue
-		}
-		ab, _ := hex.DecodeString(k)
-		a := common.Address{}
-		a.Init(ab[:])
-		if n := common.NumericalDelegatedAccountAddress(a); n > 0 {
-
-			txt += fmt.Sprintf("Delegated Address: %v\n", a.GetHex())
-			txt += fmt.Sprintf("Delegated Account Number: %v = %v\n", n, account.Int64toFloat64(v.Amount))
-
-		}
-	}
-	fmt.Println(txt)
+	//for k, v := range accs.StakingDetails {
+	//	if v.Amount == 0 {
+	//		continue
+	//	}
+	//	ab, _ := hex.DecodeString(k)
+	//	a := common.Address{}
+	//	a.Init(ab[:])
+	//	if n := common.NumericalDelegatedAccountAddress(a); n > 0 {
+	//
+	//		txt += fmt.Sprintf("Delegated Address: %v\n", a.GetHex())
+	//		txt += fmt.Sprintf("Delegated Account Number: %v = %v\n", n, account.Int64toFloat64(v.Amount))
+	//
+	//	}
+	//}
+	//fmt.Println(txt)
 	StatsLabel.SetText(txt)
 	//txt2 := ""
 	//if lastSt.Heights == 0 {
