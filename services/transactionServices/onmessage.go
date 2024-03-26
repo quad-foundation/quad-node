@@ -31,15 +31,14 @@ func OnMessage(addr string, m []byte) {
 		log.Println("message is invalid")
 		panic("message is invalid")
 	}
-	msg = amsg.(message.TransactionsMessage)
-	txn, err := msg.GetTransactionsFromBytes()
-	if err != nil {
-		return
-	}
 
 	switch string(msg.GetHead()) {
 	case "tx":
-
+		msg = amsg.(message.TransactionsMessage)
+		txn, err := msg.GetTransactionsFromBytes()
+		if err != nil {
+			return
+		}
 		// need to check transactions
 		for _, v := range txn {
 			for _, t := range v {
