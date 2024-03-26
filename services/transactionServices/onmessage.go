@@ -32,7 +32,7 @@ func OnMessage(addr string, m []byte) {
 		panic("message is invalid")
 	}
 
-	switch string(msg.GetHead()) {
+	switch string(amsg.GetHead()) {
 	case "tx":
 		msg = amsg.(message.TransactionsMessage)
 		txn, err := msg.GetTransactionsFromBytes()
