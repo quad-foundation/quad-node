@@ -12,7 +12,7 @@ func AddBalance(address [common.AddressLength]byte, addedAmount int64) error {
 	if IsInKeysOfMapAccounts(account.Accounts.AllAccounts, address) {
 		balance = account.Accounts.AllAccounts[address].Balance
 	} else {
-		acc := account.Accounts.AllAccounts[address]
+		acc := account.Account{}
 		acc.Balance = balance
 		acc.Address = address
 		account.Accounts.AllAccounts[address] = acc

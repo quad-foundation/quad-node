@@ -164,7 +164,7 @@ func ShowSendPage() *widgets.QTabWidget {
 			info = &v
 			return
 		}
-		msg, err := transactionServices.GenerateTransactionMsg([]transactionsDefinition.Transaction{tx}, []byte("tx"), [2]byte{'T', 0})
+		msg, err := transactionServices.GenerateTransactionMsg([]transactionsDefinition.Transaction{tx}, []byte("tx"), [2]byte{'T', 'T'})
 		if err != nil {
 			v = fmt.Sprint(err)
 			info = &v
