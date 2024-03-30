@@ -8,7 +8,7 @@ import (
 
 func AddBalance(address [common.AddressLength]byte, addedAmount int64) error {
 	balance := int64(0)
-	account.AccountsRWMutex.RLock()
+	account.AccountsRWMutex.Lock()
 	if IsInKeysOfMapAccounts(account.Accounts.AllAccounts, address) {
 		balance = account.Accounts.AllAccounts[address].Balance
 	} else {
@@ -18,10 +18,11 @@ func AddBalance(address [common.AddressLength]byte, addedAmount int64) error {
 		account.Accounts.AllAccounts[address] = acc
 	}
 	if balance+addedAmount < 0 {
+		account.AccountsRWMutex.Unlock()
 		return fmt.Errorf("Not enough funds on account")
 	}
 	balance += addedAmount
-	account.AccountsRWMutex.RUnlock()
+	account.AccountsRWMutex.Unlock()
 	account.SetBalance(address, balance)
 	return nil
 }
