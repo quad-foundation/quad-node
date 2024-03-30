@@ -50,6 +50,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 	}
 	accDel1 := account.Accounts.AllAccounts[addressOp1.ByteValue]
 	accDel1.Balance = common.InitSupply
+	accDel1.Address = addressOp1.ByteValue
 	account.Accounts.AllAccounts[addressOp1.ByteValue] = accDel1
 
 	walletNonce := int16(0)

@@ -11,6 +11,11 @@ func AddBalance(address [common.AddressLength]byte, addedAmount int64) error {
 	account.AccountsRWMutex.RLock()
 	if IsInKeysOfMapAccounts(account.Accounts.AllAccounts, address) {
 		balance = account.Accounts.AllAccounts[address].Balance
+	} else {
+		acc := account.Accounts.AllAccounts[address]
+		acc.Balance = balance
+		acc.Address = address
+		account.Accounts.AllAccounts[address] = acc
 	}
 	if balance+addedAmount < 0 {
 		return fmt.Errorf("Not enough funds on account")
