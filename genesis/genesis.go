@@ -235,6 +235,10 @@ func InitGenesis() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	err = account.StoreAccounts(0)
+	if err != nil {
+		log.Fatal(err)
+	}
 	common.SetHeight(0)
 	common.SetChainID(genesis.ChainID)
 
