@@ -9,13 +9,13 @@ import (
 
 func AdjustShiftInPastInReset(height int64) {
 	h := common.GetHeight()
-	if height-h <= 0 || h <= 1 {
+	if height-h <= 0 {
 		common.ShiftToPastInReset = 1
 		return
 	}
 	common.ShiftToPastInReset *= 2
-	if common.ShiftToPastInReset < 1 {
-		common.ShiftToPastInReset = 1
+	if common.ShiftToPastInReset > h {
+		common.ShiftToPastInReset = h
 	}
 }
 
