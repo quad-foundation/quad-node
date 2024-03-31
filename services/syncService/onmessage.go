@@ -127,14 +127,14 @@ func OnMessage(addr string, m []byte) {
 			}
 
 			if header.Height != index {
-				genesis.ResetAccountsAndBlocksSync(0)
+				genesis.ResetAccountsAndBlocksSync(index - 3)
 				panic("not relevant height vs index")
 			}
 
 			merkleTrie, err := blocks.CheckBaseBlock(block, oldBlock)
 			defer merkleTrie.Destroy()
 			if err != nil {
-				genesis.ResetAccountsAndBlocksSync(0)
+				genesis.ResetAccountsAndBlocksSync(index - 3)
 				panic(err)
 			}
 			merkleTries[index] = merkleTrie
