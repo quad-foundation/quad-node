@@ -7,6 +7,7 @@ import (
 	"github.com/quad/quad-node/genesis"
 	"github.com/quad/quad-node/message"
 	"github.com/quad/quad-node/services/transactionServices"
+	"github.com/quad/quad-node/statistics"
 	"github.com/quad/quad-node/transactionsPool"
 	"log"
 )
@@ -171,6 +172,7 @@ func OnMessage(addr string, m []byte) {
 			}
 			common.SetHeight(block.GetHeader().Height)
 			log.Println("New Block success -------------------------------------", block.GetHeader().Height)
+			statistics.UpdateStatistics(block, merkleTries[index], oldBlock)
 		}
 
 	case "gh":

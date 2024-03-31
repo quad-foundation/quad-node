@@ -156,30 +156,7 @@ func OnMessage(addr string, m []byte) {
 				}
 				common.SetHeight(h + 1)
 				log.Println("New Block success -------------------------------------", h+1)
-				if statistics.GmsMutex.Mutex.TryLock() {
-					defer statistics.GmsMutex.Mutex.Unlock()
-					stats, _ := statistics.LoadStats()
-					stats.MainStats.Heights = common.GetHeight()
-					stats.MainStats.Difficulty = newBlock.BaseBlock.BaseHeader.Difficulty
-					stats.MainStats.Syncing = common.IsSyncing.Load()
-					stats.MainStats.TimeInterval = newBlock.BaseBlock.BlockTimeStamp - lastBlock.BaseBlock.BlockTimeStamp
-					empt := transactionsDefinition.EmptyTransaction()
-
-					hs, _ := newBlock.GetTransactionsHashes(merkleTrie, h+1)
-					stats.MainStats.Transactions = len(hs)
-					stats.MainStats.TransactionsSize = len(hs) * len(empt.GetBytes())
-					ntxs := len(hs)
-					stats.MainStats.Tps = float32(ntxs) / float32(stats.MainStats.TimeInterval)
-
-					nt := transactionsPool.PoolsTx.NumberOfTransactions()
-					stats.MainStats.TransactionsPending = nt
-					stats.MainStats.TransactionsPendingSize = nt * len(empt.GetBytes())
-
-					err = stats.MainStats.SaveStats()
-					if err != nil {
-						log.Println(err)
-					}
-				}
+				statistics.UpdateStatistics(newBlock, merkleTrie, lastBlock)
 			}
 		}
 	default:
