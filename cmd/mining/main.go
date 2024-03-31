@@ -112,25 +112,16 @@ func main() {
 	chanPeer := make(chan string)
 	go tcpip.LookUpForNewPeersToConnect(chanPeer)
 	topic := [2]byte{}
-	reconectionTries := make(map[string]int)
-	resetNumber := 0
+
 QF:
 	for {
-		resetNumber++
-		if resetNumber%1000 == 0 {
-			reconectionTries = make(map[string]int)
-		}
+
 		select {
 
 		case topicip := <-chanPeer:
 			copy(topic[:], topicip[:2])
 			ip := topicip[2:]
-			ipStr := string(ip)
-			if reconectionTries[ipStr] > 3 {
-				continue
-			} else {
-				reconectionTries[ipStr]++
-			}
+
 			if topic[0] == 'T' {
 				go transactionServices.StartSubscribingTransactionMsg(ip)
 			}
