@@ -2,10 +2,11 @@ package syncServices
 
 import (
 	"bytes"
+	"github.com/quad/quad-node/account"
 	"github.com/quad/quad-node/blocks"
 	"github.com/quad/quad-node/common"
-	"github.com/quad/quad-node/genesis"
 	"github.com/quad/quad-node/message"
+	"github.com/quad/quad-node/services"
 	"github.com/quad/quad-node/services/transactionServices"
 	"github.com/quad/quad-node/statistics"
 	"github.com/quad/quad-node/transactionsPool"
@@ -41,10 +42,12 @@ func OnMessage(addr string, m []byte) {
 
 		txn := amsg.(message.TransactionsMessage).GetTransactionsBytes()
 		h := common.GetHeight()
+
 		lastOtherHeight := common.GetInt64FromByte(txn[[2]byte{'L', 'H'}][0])
+		common.SetHeightMax(lastOtherHeight)
 		lastOtherBlockHashBytes := txn[[2]byte{'L', 'B'}][0]
 		if lastOtherHeight == h {
-
+			services.AdjustShiftInPastInReset(lastOtherHeight)
 			lastBlockHashBytes, err := blocks.LoadHashOfBlock(h)
 			if err != nil {
 				panic(err)
@@ -55,7 +58,8 @@ func OnMessage(addr string, m []byte) {
 			common.IsSyncing.Store(false)
 			return
 		} else if lastOtherHeight < h {
-			//common.IsSyncing.Store(false)
+			services.AdjustShiftInPastInReset(lastOtherHeight)
+			common.IsSyncing.Store(false)
 			return
 		}
 		// when others have longer chain
@@ -86,6 +90,7 @@ func OnMessage(addr string, m []byte) {
 			}
 		}
 		h := common.GetHeight()
+		hmax := common.GetHeightMax()
 		if indices[len(indices)-1] <= h {
 			log.Println("shorter other chain")
 			return
@@ -127,14 +132,16 @@ func OnMessage(addr string, m []byte) {
 			}
 
 			if header.Height != index {
-				genesis.ResetAccountsAndBlocksSync(index - 3)
+				services.ResetAccountsAndBlocksSync(index - common.ShiftToPastInReset)
+				services.AdjustShiftInPastInReset(hmax)
 				panic("not relevant height vs index")
 			}
 
 			merkleTrie, err := blocks.CheckBaseBlock(block, oldBlock)
 			defer merkleTrie.Destroy()
 			if err != nil {
-				genesis.ResetAccountsAndBlocksSync(index - 3)
+				services.ResetAccountsAndBlocksSync(index - common.ShiftToPastInReset)
+				services.AdjustShiftInPastInReset(hmax)
 				panic(err)
 			}
 			merkleTries[index] = merkleTrie
@@ -172,6 +179,10 @@ func OnMessage(addr string, m []byte) {
 			}
 			common.SetHeight(block.GetHeader().Height)
 			log.Println("New Block success -------------------------------------", block.GetHeader().Height)
+			err = account.StoreAccounts(block.GetHeader().Height)
+			if err != nil {
+				log.Println(err)
+			}
 			statistics.UpdateStatistics(block, merkleTries[index], oldBlock)
 		}
 

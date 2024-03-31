@@ -58,6 +58,7 @@ var delegatedAccount Address
 var rewardPercentage int16
 var genesisAccounts []Address
 var genesisAccountsStake []Address
+var ShiftToPastInReset int64
 
 func GetChainID() int16 {
 	return chainID
@@ -75,7 +76,7 @@ func GetRewardPercentage() int16 {
 }
 func init() {
 	//log.SetOutput(io.Discard)
-
+	ShiftToPastInReset = 1
 	homePath, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)

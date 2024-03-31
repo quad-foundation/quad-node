@@ -86,11 +86,16 @@ func (at *AccountsType) Unmarshal(data []byte) error {
 	return nil
 }
 
-func StoreAccounts() error {
+func StoreAccounts(height int64) error {
+	if height < 0 {
+		height = common.GetHeight()
+	}
 	k := Accounts.Marshal()
 	AccountsRWMutex.RLock()
 	defer AccountsRWMutex.RUnlock()
-	err := memDatabase.MainDB.Put(common.AccountsDBPrefix[:], k[:])
+	hb := common.GetByteInt64(height)
+	prefix := append(common.AccountsDBPrefix[:], hb...)
+	err := memDatabase.MainDB.Put(prefix, k[:])
 	if err != nil {
 		log.Println("cannot store accounts", err)
 		return err
@@ -98,9 +103,26 @@ func StoreAccounts() error {
 	return nil
 }
 
-func LoadAccounts() error {
+func RemoveAccountsFromDB(height int64) error {
+	hb := common.GetByteInt64(height)
+	prefix := append(common.AccountsDBPrefix[:], hb...)
+	err := memDatabase.MainDB.Delete(prefix)
+	if err != nil {
+		log.Println("cannot remove account", err)
+		return err
+	}
+	return nil
+}
+
+func LoadAccounts(height int64) error {
+	height, err := LastHeightStoredInAccounts()
+	if err != nil {
+		log.Println(err)
+	}
 	AccountsRWMutex.Lock()
-	b, err := memDatabase.MainDB.Get(common.AccountsDBPrefix[:])
+	hb := common.GetByteInt64(height)
+	prefix := append(common.AccountsDBPrefix[:], hb...)
+	b, err := memDatabase.MainDB.Get(prefix)
 	if err != nil {
 		log.Println("cannot load accounts", err)
 		return err
@@ -112,4 +134,21 @@ func LoadAccounts() error {
 		return err
 	}
 	return nil
+}
+
+func LastHeightStoredInAccounts() (int64, error) {
+	i := int64(0)
+	for {
+		ib := common.GetByteInt64(i)
+		prefix := append(common.AccountsDBPrefix[:], ib...)
+		isKey, err := memDatabase.MainDB.IsKey(prefix)
+		if err != nil {
+			return i - 1, err
+		}
+		if isKey == false {
+			break
+		}
+		i++
+	}
+	return i - 1, nil
 }

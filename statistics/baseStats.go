@@ -110,6 +110,7 @@ func UpdateStatistics(newBlock blocks.Block, merkleTrie *transactionsPool.Merkle
 		defer GmsMutex.Mutex.Unlock()
 		stats, _ := LoadStats()
 		stats.MainStats.Heights = common.GetHeight()
+		stats.MainStats.HeightMax = common.GetHeightMax()
 		stats.MainStats.Difficulty = newBlock.BaseBlock.BaseHeader.Difficulty
 		stats.MainStats.Syncing = common.IsSyncing.Load()
 		stats.MainStats.TimeInterval = newBlock.BaseBlock.BlockTimeStamp - lastBlock.BaseBlock.BlockTimeStamp

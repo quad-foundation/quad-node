@@ -1,6 +1,7 @@
 package nonceServices
 
 import (
+	"github.com/quad/quad-node/account"
 	"github.com/quad/quad-node/blocks"
 	"github.com/quad/quad-node/common"
 	"github.com/quad/quad-node/message"
@@ -156,6 +157,10 @@ func OnMessage(addr string, m []byte) {
 				}
 				common.SetHeight(h + 1)
 				log.Println("New Block success -------------------------------------", h+1)
+				err = account.StoreAccounts(newBlock.GetHeader().Height)
+				if err != nil {
+					log.Println(err)
+				}
 				statistics.UpdateStatistics(newBlock, merkleTrie, lastBlock)
 			}
 		}

@@ -25,6 +25,7 @@ type Genesis struct {
 	BlockTimeInterval      float32           `json:"block_time_interval"`
 	Balances               map[string]int64  `json:"balances"`
 	TransactionsSignatures map[string]string `json:"transactions_signatures"`
+	PubKeys                map[string]string `json:"pub_keys"`
 	Signature              string            `json:"signature"`
 	OperatorPubKey         string            `json:"operator_pub_key"`
 }
@@ -155,11 +156,20 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 }
 
 func GenesisTransaction(sender common.Address, recipient common.Address, amount int64, walletNonce int16, genesis Genesis) transactionsDefinition.Transaction {
-
+	pkb, err := hex.DecodeString(genesis.PubKeys[recipient.GetHex()])
+	if err != nil {
+		log.Fatal(err)
+	}
+	pk := common.PubKey{}
+	err = pk.Init(pkb)
+	if err != nil {
+		log.Fatal(err)
+	}
 	txdata := transactionsDefinition.TxData{
 		Recipient: recipient,
 		Amount:    amount,
 		OptData:   nil,
+		Pubkey:    pk,
 	}
 	txParam := transactionsDefinition.TxParam{
 		ChainID:     common.GetChainID(),
@@ -177,7 +187,7 @@ func GenesisTransaction(sender common.Address, recipient common.Address, amount 
 		GasUsage:  0,
 	}
 
-	err := t.CalcHashAndSet()
+	err = t.CalcHashAndSet()
 	if err != nil {
 		log.Fatal("calc hash error", err)
 	}
@@ -194,7 +204,9 @@ func GenesisTransaction(sender common.Address, recipient common.Address, amount 
 	//if err != nil {
 	//	log.Fatal("Signing error", err)
 	//}
-
+	if t.Verify() == false {
+		log.Fatal("genesis transaction cannot be verified")
+	}
 	log.Println("transaction signature: ", t.Signature.GetHex())
 	return t
 }
@@ -252,10 +264,4 @@ func Load(path string) (Genesis, error) {
 		log.Fatal("Main Wallet address should be the same as in config genesis.json file")
 	}
 	return genesis, nil
-}
-
-func ResetAccountsAndBlocksSync(height int64) {
-	common.IsSyncing.Store(true)
-	account.Accounts.AllAccounts = map[[20]byte]account.Account{}
-	InitGenesis()
 }
