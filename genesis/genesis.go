@@ -165,11 +165,14 @@ func GenesisTransaction(sender common.Address, recipient common.Address, amount 
 	if err != nil {
 		log.Fatal(err)
 	}
+	err = blocks.StorePubKey(pk)
+	if err != nil {
+		log.Fatal(err)
+	}
 	txdata := transactionsDefinition.TxData{
 		Recipient: recipient,
 		Amount:    amount,
 		OptData:   nil,
-		Pubkey:    pk,
 	}
 	txParam := transactionsDefinition.TxParam{
 		ChainID:     common.GetChainID(),
