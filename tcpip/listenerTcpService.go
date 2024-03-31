@@ -123,7 +123,7 @@ func StartNewConnection(ip string, receiveChan chan []byte, topic [2]byte) {
 
 	for {
 		resetNumber++
-		if resetNumber%1000 == 0 {
+		if resetNumber%100 == 0 {
 			reconectionTries = 0
 		}
 		select {
@@ -138,7 +138,7 @@ func StartNewConnection(ip string, receiveChan chan []byte, topic [2]byte) {
 				continue
 			}
 			if string(r) == "<-CLS->" {
-				if reconectionTries > 10 {
+				if reconectionTries > 50 {
 					CloseAndRemoveConnection(tcpConn)
 					fmt.Println("Closing connection (receive)", ip)
 					return
