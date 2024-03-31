@@ -45,7 +45,7 @@ var (
 	MerkleTreeDBPrefix                 = [2]byte{'M', 'M'}
 	MerkleNodeDBPrefix                 = [2]byte{'N', 'N'}
 	RootHashMerkleTreeDBPrefix         = [2]byte{'R', 'R'}
-	TransactionDBPrefix                = [2]byte{'T', '0'}
+	TransactionDBPrefix                = [2]byte{'T', 'T'}
 	TransactionPoolHashesDBPrefix      = [2]byte{'D', '0'}
 	TransactionToSendHashesDBPrefix    = [2]byte{'E', '0'}
 	TransactionSyncingHashesDBPrefix   = [2]byte{'S', '0'}
