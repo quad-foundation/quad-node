@@ -167,6 +167,12 @@ func RegisterPeer(topic [2]byte, tcpConn *net.TCPConn) {
 	}
 }
 
+func GetPeersConnected() map[string]string {
+	peersMutex.RLock()
+	defer peersMutex.RUnlock()
+	return peersConnected
+}
+
 func LookUpForNewPeersToConnect(chanPeer chan string) {
 	for {
 		peersMutex.RLock()

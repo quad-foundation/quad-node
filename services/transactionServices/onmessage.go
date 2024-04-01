@@ -53,6 +53,9 @@ func OnMessage(addr string, m []byte) {
 				}
 			}
 		}
+
+		Spread(addr, m)
+
 	case "st":
 		txn := amsg.(message.TransactionsMessage).GetTransactionsBytes()
 		for topic, v := range txn {
