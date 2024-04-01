@@ -118,7 +118,14 @@ func StartNewConnection(ip string, receiveChan chan []byte, topic [2]byte) {
 	fmt.Println("New connection from address", raddr, topic)
 	lastBytes := []byte{}
 	lastBytesNum := 0
+	reconectionTries := 0
+	resetNumber := 0
+
 	for {
+		resetNumber++
+		if resetNumber%100 == 0 {
+			reconectionTries = 0
+		}
 		select {
 		case <-Quit:
 			receiveChan <- []byte("EXIT")
@@ -131,6 +138,13 @@ func StartNewConnection(ip string, receiveChan chan []byte, topic [2]byte) {
 				continue
 			}
 			if string(r) == "<-CLS->" {
+				if reconectionTries > 50 {
+					CloseAndRemoveConnection(tcpConn)
+					fmt.Println("Closing connection (receive)", ip)
+					return
+				} else {
+					reconectionTries++
+				}
 				tcpConn, err = net.DialTCP("tcp", nil, tcpAddr)
 				if err != nil {
 					fmt.Println("connection to ip was unsuccessful", ip, topic, err)

@@ -154,11 +154,14 @@ func handleTRAN(byt []byte, reply *[]byte) {
 
 }
 func handleSTAT(byt []byte, reply *[]byte) {
+	statistics.GmsMutex.Mutex.Lock()
+	defer statistics.GmsMutex.Mutex.Unlock()
 	st, err := statistics.LoadStats()
 	if err != nil {
 		log.Println("Can't update stats")
 		return
 	}
+
 	msb, err := common.Marshal(st.MainStats, common.StatDBPrefix)
 	if err != nil {
 		log.Println(err)

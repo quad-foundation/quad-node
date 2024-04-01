@@ -124,6 +124,41 @@ func (bl Block) StoreBlock() error {
 
 	return nil
 }
+
+func RemoveBlockFromDB(height int64) error {
+	bh := common.GetByteInt64(height)
+	hb, err := memDatabase.MainDB.Get(append(common.BlockByHeightDBPrefix[:], bh...))
+	if err != nil {
+		return err
+	}
+	err = memDatabase.MainDB.Delete(append(common.BlocksDBPrefix[:], hb...))
+	if err != nil {
+		return err
+	}
+	err = memDatabase.MainDB.Delete(append(common.BlockByHeightDBPrefix[:], bh...))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func LastHeightStoredInBlocks() (int64, error) {
+	i := int64(0)
+	for {
+		ib := common.GetByteInt64(i)
+		prefix := append(common.BlockByHeightDBPrefix[:], ib...)
+		isKey, err := memDatabase.MainDB.IsKey(prefix)
+		if err != nil {
+			return i - 1, err
+		}
+		if isKey == false {
+			break
+		}
+		i++
+	}
+	return i - 1, nil
+}
+
 func LoadHashOfBlock(height int64) ([]byte, error) {
 	bh := common.GetByteInt64(height)
 	hashb, err := memDatabase.MainDB.Get(append(common.BlockByHeightDBPrefix[:], bh...))

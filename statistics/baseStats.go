@@ -2,8 +2,11 @@ package statistics
 
 import (
 	"fmt"
+	"github.com/quad/quad-node/blocks"
 	"github.com/quad/quad-node/common"
 	memDatabase "github.com/quad/quad-node/database"
+	"github.com/quad/quad-node/transactionsDefinition"
+	"github.com/quad/quad-node/transactionsPool"
 	"log"
 	"sync"
 )
@@ -100,4 +103,32 @@ func LoadStats() (*GlobalMainStats, error) {
 		return globalMainStats, nil
 	}
 	return nil, fmt.Errorf("try Lock fails")
+}
+
+func UpdateStatistics(newBlock blocks.Block, merkleTrie *transactionsPool.MerkleTree, lastBlock blocks.Block) {
+	if GmsMutex.Mutex.TryLock() {
+		defer GmsMutex.Mutex.Unlock()
+		stats, _ := LoadStats()
+		stats.MainStats.Heights = common.GetHeight()
+		stats.MainStats.HeightMax = common.GetHeightMax()
+		stats.MainStats.Difficulty = newBlock.BaseBlock.BaseHeader.Difficulty
+		stats.MainStats.Syncing = common.IsSyncing.Load()
+		stats.MainStats.TimeInterval = newBlock.BaseBlock.BlockTimeStamp - lastBlock.BaseBlock.BlockTimeStamp
+		empt := transactionsDefinition.EmptyTransaction()
+
+		hs, _ := newBlock.GetTransactionsHashes(merkleTrie, newBlock.GetHeader().Height)
+		stats.MainStats.Transactions = len(hs)
+		stats.MainStats.TransactionsSize = len(hs) * len(empt.GetBytes())
+		ntxs := len(hs)
+		stats.MainStats.Tps = float32(ntxs) / float32(stats.MainStats.TimeInterval)
+
+		nt := transactionsPool.PoolsTx.NumberOfTransactions()
+		stats.MainStats.TransactionsPending = nt
+		stats.MainStats.TransactionsPendingSize = nt * len(empt.GetBytes())
+
+		err := stats.MainStats.SaveStats()
+		if err != nil {
+			log.Println(err)
+		}
+	}
 }

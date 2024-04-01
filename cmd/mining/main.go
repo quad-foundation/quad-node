@@ -40,7 +40,7 @@ func main() {
 	allAccounts := map[[20]byte]account.Account{}
 	allAccounts[addrbytes] = a
 	account.Accounts = account.AccountsType{AllAccounts: allAccounts}
-	err = account.StoreAccounts()
+	err = account.StoreAccounts(0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -67,11 +67,11 @@ func main() {
 	defer transactionsPool.GlobalMerkleTree.Destroy()
 	statistics.InitGlobalMainStats()
 	defer statistics.DestroyGlobalMainStats()
-	err = account.LoadAccounts()
+	err = account.LoadAccounts(-1)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer account.StoreAccounts()
+	defer account.StoreAccounts(-1)
 	err = account.LoadStakingAccounts()
 	if err != nil {
 		log.Fatal(err)
@@ -112,12 +112,16 @@ func main() {
 	chanPeer := make(chan string)
 	go tcpip.LookUpForNewPeersToConnect(chanPeer)
 	topic := [2]byte{}
+
 QF:
 	for {
+
 		select {
+
 		case topicip := <-chanPeer:
 			copy(topic[:], topicip[:2])
 			ip := topicip[2:]
+
 			if topic[0] == 'T' {
 				go transactionServices.StartSubscribingTransactionMsg(ip)
 			}
