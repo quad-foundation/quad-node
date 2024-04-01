@@ -133,6 +133,10 @@ func SendNonce(ip string, nb []byte) {
 func BroadcastBlock(bl blocks.Block) {
 	atm := GenerateBlockMessage(bl)
 	nb := atm.GetBytes()
-	SendNonce("0.0.0.0", nb)
-	SendNonce(tcpip.MyIP, nb)
+	var peers = tcpip.GetPeersConnected()
+	for topicip, _ := range peers {
+		ip := topicip[2:]
+		SendNonce(ip, nb)
+	}
+
 }

@@ -105,6 +105,16 @@ func Send(addr string, nb []byte) {
 	services.SendMutexTx.Unlock()
 }
 
+func Spread(ignoreAddr string, nb []byte) {
+	var peers = tcpip.GetPeersConnected()
+	for topicip, _ := range peers {
+		ip := topicip[2:]
+		if ip != ignoreAddr && ip != tcpip.MyIP {
+			Send(ip, nb)
+		}
+	}
+}
+
 func startPublishingTransactionMsg() {
 	go tcpip.StartNewListener(services.SendChanTx, tcpip.TransactionTopic)
 }
