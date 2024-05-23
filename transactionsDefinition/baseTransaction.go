@@ -2,7 +2,7 @@ package transactionsDefinition
 
 import (
 	"fmt"
-	"github.com/quad/quad-node/common"
+	"github.com/quad-foundation/quad-node/common"
 	"strconv"
 	"time"
 )

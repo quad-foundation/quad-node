@@ -1,4 +1,4 @@
-module github.com/quad/quad-node
+module github.com/quad-foundation/quad-node
 
 go 1.20
 

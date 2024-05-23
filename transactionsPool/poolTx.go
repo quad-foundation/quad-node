@@ -3,8 +3,8 @@ package transactionsPool
 import (
 	"bytes"
 	"container/heap"
-	"github.com/quad/quad-node/common"
-	"github.com/quad/quad-node/transactionsDefinition"
+	"github.com/quad-foundation/quad-node/common"
+	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"sync"
 )
 

@@ -46,10 +46,11 @@ var (
 	MerkleNodeDBPrefix                 = [2]byte{'N', 'N'}
 	RootHashMerkleTreeDBPrefix         = [2]byte{'R', 'R'}
 	TransactionDBPrefix                = [2]byte{'T', 'T'}
-	TransactionPoolHashesDBPrefix      = [2]byte{'D', '0'}
-	TransactionToSendHashesDBPrefix    = [2]byte{'E', '0'}
-	TransactionSyncingHashesDBPrefix   = [2]byte{'S', '0'}
-	AccountsDBPrefix                   = [2]byte{'A', 'C'}
+	//StakingDBPrefix                    = [2]byte{'S', 'S'}
+	TransactionPoolHashesDBPrefix    = [2]byte{'D', '0'}
+	TransactionToSendHashesDBPrefix  = [2]byte{'E', '0'}
+	TransactionSyncingHashesDBPrefix = [2]byte{'S', '0'}
+	AccountsDBPrefix                 = [2]byte{'A', 'C'}
 	//StakingAccountsDBPrefix            = [2]byte{0, 0} // 2 x 0123456789abcdf
 )
 

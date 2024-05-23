@@ -1,11 +1,11 @@
 package syncServices
 
 import (
-	"github.com/quad/quad-node/blocks"
-	"github.com/quad/quad-node/common"
-	"github.com/quad/quad-node/message"
-	"github.com/quad/quad-node/services"
-	"github.com/quad/quad-node/tcpip"
+	"github.com/quad-foundation/quad-node/blocks"
+	"github.com/quad-foundation/quad-node/common"
+	"github.com/quad-foundation/quad-node/message"
+	"github.com/quad-foundation/quad-node/services"
+	"github.com/quad-foundation/quad-node/tcpip"
 	"log"
 	"time"
 )

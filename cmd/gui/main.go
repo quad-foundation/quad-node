@@ -1,11 +1,11 @@
 package main
 
 import (
-	"github.com/quad/quad-node/cmd/gui/qtwidgets"
-	"github.com/quad/quad-node/common"
-	clientrpc "github.com/quad/quad-node/rpc/client"
-	"github.com/quad/quad-node/statistics"
-	"github.com/quad/quad-node/wallet"
+	"github.com/quad-foundation/quad-node/cmd/gui/qtwidgets"
+	"github.com/quad-foundation/quad-node/common"
+	clientrpc "github.com/quad-foundation/quad-node/rpc/client"
+	"github.com/quad-foundation/quad-node/statistics"
+	"github.com/quad-foundation/quad-node/wallet"
 	"github.com/therecipe/qt/widgets"
 	"os"
 	"strconv"
@@ -34,7 +34,7 @@ func main() {
 		" Node Account: " +
 		strconv.Itoa(int(common.NumericalDelegatedAccountAddress(common.GetDelegatedAccount()))))
 
-	qtwidgets.MainWalllet = wallet.EmptyWallet(0)
+	qtwidgets.MainWallet = wallet.EmptyWallet(0)
 	//var reply []byte
 	//
 	//for {
@@ -45,7 +45,7 @@ func main() {
 	//	}
 	//	time.Sleep(time.Second)
 	//}
-	//err := json.Unmarshal(reply, MainWalllet)
+	//err := json.Unmarshal(reply, MainWallet)
 	//if err != nil {
 	//	log.Println("Can not unmarshal wallet")
 	//}
@@ -54,13 +54,13 @@ func main() {
 	sendWidget := qtwidgets.ShowSendPage()
 	historyWidget := qtwidgets.ShowHistoryPage()
 	detailsWidget := qtwidgets.ShowDetailsPage()
-	//stakingWidget := qtwidgets.ShowStakingPage(&MainWalllet)
+	stakingWidget := qtwidgets.ShowStakingPage()
 	//smartContractWidget := qtwidgets.ShowSmartContractPage()
-	//dexWidget := qtwidgets.ShowDexPage(&MainWalllet)
+	//dexWidget := qtwidgets.ShowDexPage(&MainWallet)
 	window.AddTab(walletWidget, "Wallet")
 	window.AddTab(accountWidget, "Account")
 	window.AddTab(sendWidget, "Send/Register")
-	//window.AddTab(stakingWidget, "Staking/Unstaking")
+	window.AddTab(stakingWidget, "Staking/Unstaking")
 	window.AddTab(historyWidget, "Transactions history")
 	window.AddTab(detailsWidget, "Details")
 	//window.AddTab(smartContractWidget, "Smart Contract")

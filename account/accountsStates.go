@@ -3,8 +3,8 @@ package account
 import (
 	"bytes"
 	"fmt"
-	"github.com/quad/quad-node/common"
-	memDatabase "github.com/quad/quad-node/database"
+	"github.com/quad-foundation/quad-node/common"
+	memDatabase "github.com/quad-foundation/quad-node/database"
 	"log"
 	"sync"
 )

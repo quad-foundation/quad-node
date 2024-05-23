@@ -3,9 +3,9 @@ package account
 import (
 	"bytes"
 	"fmt"
-	"github.com/quad/quad-node/account/stake"
-	"github.com/quad/quad-node/common"
-	memDatabase "github.com/quad/quad-node/database"
+	"github.com/quad-foundation/quad-node/account/stake"
+	"github.com/quad-foundation/quad-node/common"
+	memDatabase "github.com/quad-foundation/quad-node/database"
 	"log"
 	"sync"
 )

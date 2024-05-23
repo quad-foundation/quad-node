@@ -2,11 +2,11 @@ package statistics
 
 import (
 	"fmt"
-	"github.com/quad/quad-node/blocks"
-	"github.com/quad/quad-node/common"
-	memDatabase "github.com/quad/quad-node/database"
-	"github.com/quad/quad-node/transactionsDefinition"
-	"github.com/quad/quad-node/transactionsPool"
+	"github.com/quad-foundation/quad-node/blocks"
+	"github.com/quad-foundation/quad-node/common"
+	memDatabase "github.com/quad-foundation/quad-node/database"
+	"github.com/quad-foundation/quad-node/transactionsDefinition"
+	"github.com/quad-foundation/quad-node/transactionsPool"
 	"log"
 	"sync"
 )

@@ -3,10 +3,10 @@ package blocks
 import (
 	"bytes"
 	"fmt"
-	"github.com/quad/quad-node/account"
-	"github.com/quad/quad-node/common"
-	"github.com/quad/quad-node/transactionsDefinition"
-	"github.com/quad/quad-node/transactionsPool"
+	"github.com/quad-foundation/quad-node/account"
+	"github.com/quad-foundation/quad-node/common"
+	"github.com/quad-foundation/quad-node/transactionsDefinition"
+	"github.com/quad-foundation/quad-node/transactionsPool"
 	"log"
 )
 

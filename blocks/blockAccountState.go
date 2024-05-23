@@ -2,8 +2,8 @@ package blocks
 
 import (
 	"fmt"
-	"github.com/quad/quad-node/account"
-	"github.com/quad/quad-node/common"
+	"github.com/quad-foundation/quad-node/account"
+	"github.com/quad-foundation/quad-node/common"
 )
 
 func AddBalance(address [common.AddressLength]byte, addedAmount int64) error {

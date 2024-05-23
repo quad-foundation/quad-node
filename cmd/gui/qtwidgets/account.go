@@ -2,18 +2,18 @@ package qtwidgets
 
 import (
 	"fmt"
-	"github.com/quad/quad-node/account"
-	"github.com/quad/quad-node/common"
-	clientrpc "github.com/quad/quad-node/rpc/client"
-	"github.com/quad/quad-node/statistics"
-	"github.com/quad/quad-node/wallet"
+	"github.com/quad-foundation/quad-node/account"
+	"github.com/quad-foundation/quad-node/common"
+	clientrpc "github.com/quad-foundation/quad-node/rpc/client"
+	"github.com/quad-foundation/quad-node/statistics"
+	"github.com/quad-foundation/quad-node/wallet"
 	"github.com/therecipe/qt/widgets"
 
 	"log"
 )
 
 var StatsLabel *widgets.QLabel
-var MainWalllet *wallet.Wallet
+var MainWallet *wallet.Wallet
 
 func UpdateAccountStats() {
 	clientrpc.InRPC <- []byte("STAT")
@@ -42,7 +42,7 @@ func UpdateAccountStats() {
 	if st.Syncing {
 		txt += fmt.Sprintln("Syncing...")
 	}
-	inb := append([]byte("ACCT"), MainWalllet.Address.GetBytes()...)
+	inb := append([]byte("ACCT"), MainWallet.Address.GetBytes()...)
 	clientrpc.InRPC <- inb
 	var re []byte
 	var acc account.Account
@@ -59,7 +59,7 @@ func UpdateAccountStats() {
 	conf := acc.GetBalanceConfirmedFloat()
 	uncTx := 0.0 //acc.GetUnconfirmedTransactionFloat(st.Heights)
 
-	//inb = append([]byte("ACCS"), MainWalllet.Address.GetBytes()...)
+	//inb = append([]byte("ACCS"), MainWallet.Address.GetBytes()...)
 	//clientrpc.InRPC <- inb
 	//var accs stake2.StakingAccount
 	//
@@ -76,7 +76,7 @@ func UpdateAccountStats() {
 	stake := 0.0    //accs.GetBalanceConfirmedFloat()
 	uncStake := 0.0 // acc.GetUnconfirmedStakeFloat(st.Heights)
 
-	txt += fmt.Sprintln("\n\nYour Address:", MainWalllet.Address.GetHex())
+	txt += fmt.Sprintln("\n\nYour Address:", MainWallet.Address.GetHex())
 	txt += fmt.Sprintf("Your holdings: %18.8f QAD\n", conf+uncTx+stake+uncStake)
 	txt += fmt.Sprintf("Confirmed balance: %18.8f QAD\n", conf)
 	txt += fmt.Sprintf("Transactions unconfirmed balance: %18.8f QAD\n", uncTx)

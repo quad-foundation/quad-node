@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/quad/quad-node/crypto/blake2b"
+	"github.com/quad-foundation/quad-node/crypto/blake2b"
 	"log"
 	"time"
 )

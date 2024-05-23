@@ -3,6 +3,7 @@ package qtwidgets
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/common"
 	clientrpc "github.com/quad-foundation/quad-node/rpc/client"
 	"github.com/quad-foundation/quad-node/services/transactionServices"
@@ -14,36 +15,47 @@ import (
 	"strconv"
 )
 
-var ChainID = int16(23)
-var TPS float32
-var quitChan chan []byte
-var SmartContractData *widgets.QTextEdit
-var Recipient *widgets.QLineEdit
-var Amount *widgets.QLineEdit
+func ShowStakingPage() *widgets.QTabWidget {
 
-func ShowSendPage() *widgets.QTabWidget {
-
-	quitChan = make(chan []byte)
+	var amount *widgets.QLineEdit
+	var operator *widgets.QCheckBox
+	var button *widgets.QPushButton
 	// create a regular widget
 	// give it a QVBoxLayout
 	// and make it the central widget of the window
 	widget := widgets.NewQTabWidget(nil)
 	widget.SetLayout(widgets.NewQVBoxLayout())
 
+	stakeButton := widgets.NewQRadioButton2("STAKE", nil)
+
+	widget.Layout().AddWidget(stakeButton)
+	stakeButton.ConnectClicked(func(bool) {
+		amount.SetPlaceholderText("TransactionsStaking amount")
+		button.SetText("STAKE")
+		//operator.SetEnabled(true)
+	})
+	unstakeButton := widgets.NewQRadioButton2("UNSTAKE", nil)
+	widget.Layout().AddWidget(unstakeButton)
+	unstakeButton.ConnectClicked(func(bool) {
+		amount.SetPlaceholderText("Unstaking amount")
+		button.SetText("UNSTAKE")
+		//operator.SetEnabled(false)
+	})
+	stakeButton.SetChecked(true)
 	// create a line edit
 	// with a custom placeholder text
 	// and add it to the central widgets layout
-	Recipient = widgets.NewQLineEdit(nil)
-	Recipient.SetPlaceholderText("Address")
-	widget.Layout().AddWidget(Recipient)
+	delegatedEdit := widgets.NewQLineEdit(nil)
+	delegatedEdit.SetPlaceholderText("Delegated account")
+	widget.Layout().AddWidget(delegatedEdit)
 
-	Amount = widgets.NewQLineEdit(nil)
-	Amount.SetPlaceholderText("Amount")
-	widget.Layout().AddWidget(Amount)
+	amount = widgets.NewQLineEdit(nil)
+	amount.SetPlaceholderText("TransactionsStaking amount")
+	widget.Layout().AddWidget(amount)
 
-	SmartContractData = widgets.NewQTextEdit(nil)
-	SmartContractData.SetPlaceholderText("Smart Contract Data")
-	widget.Layout().AddWidget(SmartContractData)
+	operator = widgets.NewQCheckBox2("Intend to be an Operator", nil)
+	operator.SetChecked(false)
+	widget.Layout().AddWidget(operator)
 
 	pubkeyInclude := widgets.NewQCheckBox(nil)
 	pubkeyInclude.SetText("Public key include in transaction")
@@ -51,7 +63,7 @@ func ShowSendPage() *widgets.QTabWidget {
 
 	// connect the clicked signal
 	// and add it to the central widgets layout
-	button := widgets.NewQPushButton2("Send", nil)
+	button = widgets.NewQPushButton2("STAKE", nil)
 	button.ConnectClicked(func(bool) {
 		var info *string
 		v := "Transaction sent"
@@ -59,24 +71,16 @@ func ShowSendPage() *widgets.QTabWidget {
 		defer func(nfo *string) {
 			widgets.QMessageBox_Information(nil, "Info", *nfo, widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 		}(info)
-
 		if !MainWallet.Check() {
 			v = fmt.Sprint("Load wallet first")
 			info = &v
 			return
 		}
+		var bar []byte
 		ar := common.Address{}
-		if len(Recipient.Text()) < 20 {
-			i, err := strconv.Atoi(Recipient.Text())
-			if err != nil || i > 255 {
-				v = fmt.Sprint(err)
-				info = &v
-				return
-			}
-			ar = common.GetDelegatedAccountAddress(int16(i))
-		} else {
-
-			bar, err := hex.DecodeString(Recipient.Text())
+		di, err := strconv.ParseInt(delegatedEdit.Text(), 10, 16)
+		if err != nil {
+			bar, err = hex.DecodeString(delegatedEdit.Text())
 			if err != nil {
 				v = fmt.Sprint(err)
 				info = &v
@@ -88,15 +92,23 @@ func ShowSendPage() *widgets.QTabWidget {
 				info = &v
 				return
 			}
+		} else {
+			ar = common.GetDelegatedAccountAddress(int16(di))
 		}
-		af, err := strconv.ParseFloat(Amount.Text(), 64)
+		if isDel := account.IsDelegatedAccountFromAddress(ar); !isDel {
+			v = fmt.Sprint("This is not a valid delegated account:", ar.GetHex())
+			info = &v
+			return
+		}
+
+		af, err := strconv.ParseFloat(amount.Text(), 64)
 		if err != nil {
 			v = fmt.Sprint(err)
 			info = &v
 			return
 		}
-		if af < 0 {
-			v = fmt.Sprint("Send Amount cannot be negative")
+		if int64(af*math.Pow10(int(common.Decimals))) < common.MinStakingUser {
+			v = fmt.Sprint("Staked amount cannot less than:", float64(common.MinStakingUser)/math.Pow10(int(common.Decimals)))
 			info = &v
 			return
 		}
@@ -106,24 +118,22 @@ func ShowSendPage() *widgets.QTabWidget {
 			info = &v
 			return
 		}
-		optData := SmartContractData.ToPlainText()
-
-		scData := []byte{}
-		if len(optData) > 0 {
-			scData, err = hex.DecodeString(optData)
-			if err != nil {
-				scData = []byte{}
-			}
+		if unstakeButton.IsChecked() {
+			am *= -1
 		}
-
+		isoperator := uint8(0)
+		if operator.IsChecked() {
+			isoperator = uint8(1)
+		}
 		pk := common.PubKey{}
 		if pubkeyInclude.IsChecked() {
 			pk = MainWallet.PublicKey
 		}
+
 		txd := transactionsDefinition.TxData{
 			Recipient: ar,
 			Amount:    am,
-			OptData:   scData,
+			OptData:   []byte{isoperator},
 			Pubkey:    pk,
 		}
 		par := transactionsDefinition.TxParam{
@@ -175,6 +185,7 @@ func ShowSendPage() *widgets.QTabWidget {
 		<-clientrpc.OutRPC
 		v = string(reply)
 		info = &v
+
 	})
 	widget.Layout().AddWidget(button)
 
