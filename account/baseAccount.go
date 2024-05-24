@@ -2,7 +2,7 @@ package account
 
 import (
 	"fmt"
-	"github.com/quad/quad-node/common"
+	"github.com/quad-foundation/quad-node/common"
 	"math"
 )
 

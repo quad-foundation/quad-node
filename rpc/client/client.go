@@ -1,7 +1,7 @@
 package clientrpc
 
 import (
-	"github.com/quad/quad-node/tcpip"
+	"github.com/quad-foundation/quad-node/tcpip"
 	"log"
 	"net/rpc"
 	"strconv"

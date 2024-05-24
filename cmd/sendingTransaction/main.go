@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/quad/quad-node/common"
-	"github.com/quad/quad-node/crypto/oqs/rand"
-	clientrpc "github.com/quad/quad-node/rpc/client"
-	"github.com/quad/quad-node/services/transactionServices"
-	"github.com/quad/quad-node/statistics"
-	"github.com/quad/quad-node/transactionsDefinition"
-	"github.com/quad/quad-node/wallet"
+	"github.com/quad-foundation/quad-node/common"
+	"github.com/quad-foundation/quad-node/crypto/oqs/rand"
+	clientrpc "github.com/quad-foundation/quad-node/rpc/client"
+	"github.com/quad-foundation/quad-node/services/transactionServices"
+	"github.com/quad-foundation/quad-node/statistics"
+	"github.com/quad-foundation/quad-node/transactionsDefinition"
+	"github.com/quad-foundation/quad-node/wallet"
 	rand2 "math/rand"
 
 	"log"

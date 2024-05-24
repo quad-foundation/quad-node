@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/quad/quad-node/wallet"
+	"github.com/quad-foundation/quad-node/wallet"
 	"golang.org/x/crypto/ssh/terminal"
 	"log"
 	"os"

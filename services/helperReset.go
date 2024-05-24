@@ -1,9 +1,9 @@
 package services
 
 import (
-	"github.com/quad/quad-node/account"
-	"github.com/quad/quad-node/blocks"
-	"github.com/quad/quad-node/common"
+	"github.com/quad-foundation/quad-node/account"
+	"github.com/quad-foundation/quad-node/blocks"
+	"github.com/quad-foundation/quad-node/common"
 	"log"
 )
 

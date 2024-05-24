@@ -1,10 +1,10 @@
 package transactionServices
 
 import (
-	"github.com/quad/quad-node/common"
-	"github.com/quad/quad-node/message"
-	"github.com/quad/quad-node/transactionsDefinition"
-	"github.com/quad/quad-node/transactionsPool"
+	"github.com/quad-foundation/quad-node/common"
+	"github.com/quad-foundation/quad-node/message"
+	"github.com/quad-foundation/quad-node/transactionsDefinition"
+	"github.com/quad-foundation/quad-node/transactionsPool"
 	"log"
 )
 

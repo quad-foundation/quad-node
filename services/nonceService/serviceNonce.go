@@ -1,13 +1,13 @@
 package nonceServices
 
 import (
-	"github.com/quad/quad-node/blocks"
-	"github.com/quad/quad-node/common"
-	"github.com/quad/quad-node/message"
-	"github.com/quad/quad-node/services"
-	"github.com/quad/quad-node/tcpip"
-	"github.com/quad/quad-node/transactionsDefinition"
-	"github.com/quad/quad-node/wallet"
+	"github.com/quad-foundation/quad-node/blocks"
+	"github.com/quad-foundation/quad-node/common"
+	"github.com/quad-foundation/quad-node/message"
+	"github.com/quad-foundation/quad-node/services"
+	"github.com/quad-foundation/quad-node/tcpip"
+	"github.com/quad-foundation/quad-node/transactionsDefinition"
+	"github.com/quad-foundation/quad-node/wallet"
 	"log"
 	"time"
 )
