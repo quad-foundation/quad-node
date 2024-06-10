@@ -171,6 +171,10 @@ func CheckFromDBPoolTx(prefix []byte, hashTransaction []byte) bool {
 
 // Verify - checking if hash is correct and signature
 func (tx *Transaction) Verify() bool {
+	if tx.GetData().Amount < 0 {
+		log.Println("transaction amount has to be larger or equal 0")
+		return false
+	}
 	b := tx.GetHash().GetBytes()
 	err := tx.CalcHashAndSet()
 	if err != nil {
