@@ -148,7 +148,7 @@ func ShowStakingPage() *widgets.QTabWidget {
 			Hash:      common.Hash{},
 			Signature: common.Signature{},
 			Height:    0,
-			GasPrice:  int64(rand.Intn(0xffffffff)),
+			GasPrice:  int64(rand.Intn(0xefffffff)),
 			GasUsage:  0,
 		}
 		clientrpc.InRPC <- []byte("STAT")
