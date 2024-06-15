@@ -7,7 +7,6 @@ import (
 	"github.com/quad-foundation/quad-node/common"
 	memDatabase "github.com/quad-foundation/quad-node/database"
 	"log"
-	"sync"
 )
 
 type StakingAccountsType struct {
@@ -15,7 +14,6 @@ type StakingAccountsType struct {
 }
 
 var StakingAccounts [256]StakingAccountsType
-var StakingRWMutex sync.RWMutex
 
 // Marshal converts AccountsType to a binary format.
 func (at StakingAccountsType) Marshal() []byte {
@@ -68,8 +66,7 @@ func (at *StakingAccountsType) Unmarshal(data []byte) error {
 }
 
 func StoreStakingAccounts() error {
-	StakingRWMutex.RLock()
-	defer StakingRWMutex.RUnlock()
+
 	for i, stakeAccount := range StakingAccounts {
 		k := stakeAccount.Marshal()
 		prefix := [2]byte{byte(i / 16), byte(i % 16)}
@@ -83,8 +80,7 @@ func StoreStakingAccounts() error {
 }
 
 func LoadStakingAccounts() error {
-	StakingRWMutex.Lock()
-	defer StakingRWMutex.Unlock()
+
 	for i := 0; i < 256; i++ {
 		prefix := [2]byte{byte(i / 16), byte(i % 16)}
 		b, err := memDatabase.MainDB.Get(prefix[:])
