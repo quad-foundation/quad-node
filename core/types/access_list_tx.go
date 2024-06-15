@@ -57,7 +57,7 @@ type AccessList []AccessTuple
 // AccessTuple is the element type of an access list.
 type AccessTuple struct {
 	Address     common.Address `json:"address"        gencodec:"required"`
-	StorageKeys []common.HHash `json:"storageKeys"    gencodec:"required"`
+	StorageKeys []common.Hash  `json:"storageKeys"    gencodec:"required"`
 }
 
 // StorageKeys returns the total number of storage keys in the access list.

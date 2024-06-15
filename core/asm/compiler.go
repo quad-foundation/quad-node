@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/quad-foundation/quad-node/common/math"
-	"github.com/quad-foundation/quad-node/core/gvm"
+	"github.com/quad-foundation/quad-node/core/evm"
 )
 
 // Compiler contains information about the parsed source

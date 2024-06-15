@@ -39,7 +39,7 @@ func MakeTopics(query ...[]interface{}) ([][]common.Hash, error) {
 			case common.Hash:
 				copy(topic[:], rule[:])
 			case common.Address:
-				copy(topic[common.HashLength-common.AddressLength:], rule.GetByte())
+				copy(topic[common.HashLength-common.AddressLength:], rule.GetBytes())
 			case *big.Int:
 				blob := rule.Bytes()
 				copy(topic[common.HashLength-len(blob):], blob)
@@ -105,7 +105,7 @@ func genIntType(rule int64, size uint) []byte {
 		// extended to common.HashLength bytes.
 		topic = [common.HashLength]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}
 	}
-	for i := uint(0); i < size; i++ {
+	for i := 0; i < int(size); i++ {
 		topic[common.HashLength-i-1] = byte(rule >> (i * 8))
 	}
 	return topic[:]
