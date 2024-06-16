@@ -95,11 +95,15 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 			stakingAccounts[stakingAcc.Address] = stakingAcc
 			ret := CheckStakingTransaction(poolTx, stakingAccounts[stakingAcc.Address].StakedBalance, stakingAccounts[stakingAcc.Address].StakingRewards)
 			if ret == false {
+				// remove bad transaction from pool
+				transactionsPool.PoolsTx.RemoveTransactionByHash(poolTx.Hash.GetBytes())
 				return 0, fmt.Errorf("staking transactions checking fails")
 			}
 		}
 		acc := account.GetAccountByAddressBytes(address.GetBytes())
 		if bytes.Compare(acc.Address[:], address.GetBytes()) != 0 {
+			// remove bad transaction from pool
+			transactionsPool.PoolsTx.RemoveTransactionByHash(poolTx.Hash.GetBytes())
 			return 0, fmt.Errorf("no account found in check block transafer")
 		}
 		if IsInKeysOfMapAccounts(accounts, acc.Address) {
@@ -111,6 +115,8 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 			accounts[acc.Address] = acc
 		}
 		if acc.Balance < 0 {
+			// remove bad transaction from pool
+			transactionsPool.PoolsTx.RemoveTransactionByHash(poolTx.Hash.GetBytes())
 			return 0, fmt.Errorf("not enough funds on account")
 		}
 	}
@@ -162,13 +168,15 @@ func ProcessBlockTransfers(block Block, reward int64) error {
 		}
 		err = ProcessTransaction(poolTx, block.GetHeader().Height)
 		if err != nil {
+			// remove bad transaction from pool
+			transactionsPool.PoolsTx.RemoveTransactionByHash(poolTx.Hash.GetBytes())
 			return err
 		}
 	}
 	addr := block.BaseBlock.BaseHeader.OperatorAccount.ByteValue
 	n, err := account.IntDelegatedAccountFromAddress(block.BaseBlock.BaseHeader.DelegatedAccount)
 	if err != nil || n < 1 || n > 255 {
-		return fmt.Errorf("wromg delegated account in block")
+		return fmt.Errorf("wrong delegated account in block")
 	}
 	staked, sum := account.GetStakedInDelegatedAccount(n)
 	if sum <= 0 {
@@ -178,7 +186,7 @@ func ProcessBlockTransfers(block Block, reward int64) error {
 	for _, acc := range staked {
 		if acc.Balance > 0 {
 			userReward := int64(float64(reward) * float64(acc.Balance) / sum)
-			rest -= userReward
+			rest -= userReward // in the case when rounding lose some fraction of coins
 			err := account.Reward(acc.Address[:], userReward, block.GetHeader().Height, n)
 			if err != nil {
 				return err
@@ -197,8 +205,17 @@ func ProcessBlockTransfers(block Block, reward int64) error {
 	return nil
 }
 
+func RemoveAllTransactionsRelatedToBlock(newBlock Block) {
+	txs := newBlock.TransactionsHashes
+	for _, tx := range txs {
+		hash := tx.GetBytes()
+		transactionsPool.PoolsTx.RemoveTransactionByHash(hash)
+	}
+}
+
 func CheckBlockAndTransferFunds(newBlock Block, lastBlock Block, merkleTrie *transactionsPool.MerkleTree) error {
 
+	defer RemoveAllTransactionsRelatedToBlock(newBlock)
 	reward, err := CheckBlockTransfers(newBlock, lastBlock)
 	if err != nil {
 		return err

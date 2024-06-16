@@ -35,7 +35,11 @@ func CheckStakingTransaction(tx transactionsDefinition.Transaction, sumAmount in
 	if n > 0 && n < 256 {
 		accStaking := account.GetStakingAccountByAddressBytes(address.GetBytes(), n)
 		if bytes.Compare(accStaking.DelegatedAccount[:], addressRecipient.GetBytes()) != 0 {
-			log.Println("no staking account found in check staking transaction")
+			if amount <= 0 {
+				log.Println("no staking account found in check staking transaction")
+				return false
+			}
+
 		}
 		if amount < common.MinStakingUser && amount > 0 {
 			log.Println("staking amount has to be larger than ", common.MinStakingUser)

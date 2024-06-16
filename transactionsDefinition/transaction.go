@@ -3,6 +3,7 @@ package transactionsDefinition
 import (
 	"bytes"
 	"fmt"
+	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/common"
 	memDatabase "github.com/quad-foundation/quad-node/database"
 	"github.com/quad-foundation/quad-node/wallet"
@@ -171,12 +172,14 @@ func CheckFromDBPoolTx(prefix []byte, hashTransaction []byte) bool {
 
 // Verify - checking if hash is correct and signature
 func (tx *Transaction) Verify() bool {
-	if tx.GetData().Amount < 0 {
+	recipientAddress := tx.TxData.Recipient
+	n, err := account.IntDelegatedAccountFromAddress(recipientAddress)
+	if tx.GetData().Amount < 0 && err != nil && n < 512 {
 		log.Println("transaction amount has to be larger or equal 0")
 		return false
 	}
 	b := tx.GetHash().GetBytes()
-	err := tx.CalcHashAndSet()
+	err = tx.CalcHashAndSet()
 	if err != nil {
 		return false
 	}

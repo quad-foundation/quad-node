@@ -61,16 +61,16 @@ func Unstake(accb []byte, amount int64, height int64, delegatedAccount int) erro
 	}
 	StakingRWMutex.Lock()
 	defer StakingRWMutex.Unlock()
-	if amount < 0 {
+	if amount >= 0 {
 		return fmt.Errorf("unstaked amount has to be larger than 0")
 	}
 
 	if acc.StakedBalance+amount < 0 {
 		return fmt.Errorf("insufficient staked balance")
 	}
-	acc.StakedBalance -= amount
+	acc.StakedBalance += amount
 	sd := StakingDetail{
-		Amount:      -amount,
+		Amount:      amount,
 		LastUpdated: time.Now().Unix(),
 	}
 	if ContainsKeyInt64(ExtractKeysOfList(acc.StakingDetails), height) == false {
@@ -122,17 +122,17 @@ func WithdrawReward(accb []byte, amount int64, height int64, delegatedAccount in
 	}
 	StakingRWMutex.Lock()
 	defer StakingRWMutex.Unlock()
-	if amount < 0 {
+	if amount >= 0 {
 		return fmt.Errorf("withdraw amount has to be larger than 0")
 	}
 
 	if acc.StakingRewards+amount < 0 {
 		return fmt.Errorf("insufficient rewards balance to withdraw")
 	}
-	acc.StakedBalance -= amount
+	acc.StakedBalance += amount
 	sd := StakingDetail{
 		Amount:      0,
-		Reward:      -amount,
+		Reward:      amount,
 		LastUpdated: time.Now().Unix(),
 	}
 	if ContainsKeyInt64(ExtractKeysOfList(acc.StakingDetails), height) == false {
