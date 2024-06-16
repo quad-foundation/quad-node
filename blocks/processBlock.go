@@ -65,6 +65,7 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 	txs := block.TransactionsHashes
 	lastSupply := lastBlock.GetBlockSupply()
 	accounts := map[[common.AddressLength]byte]account.Account{}
+	stakingAccounts := map[[common.AddressLength]byte]account.StakingAccount{}
 	totalFee := int64(0)
 	for _, tx := range txs {
 		hash := tx.GetBytes()
@@ -77,6 +78,26 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 		amount := poolTx.TxData.Amount
 		total_amount := fee + amount
 		address := poolTx.GetSenderAddress()
+		recipientAddress := poolTx.TxData.Recipient
+		n, err := account.IntDelegatedAccountFromAddress(recipientAddress)
+		if err == nil { // delegated account
+			stakingAcc := account.GetStakingAccountByAddressBytes(address.GetBytes(), n)
+			if bytes.Compare(stakingAcc.Address[:], address.GetBytes()) != 0 {
+				log.Println("no account found in check block transfer")
+				copy(stakingAcc.Address[:], address.GetBytes())
+				copy(stakingAcc.DelegatedAccount[:], recipientAddress.GetBytes())
+			}
+			if IsInKeysOfMapStakingAccounts(stakingAccounts, stakingAcc.Address) {
+				stakingAcc = stakingAccounts[stakingAcc.Address]
+			}
+			stakingAcc.StakedBalance += amount
+			stakingAcc.StakingRewards += fee // just using for fee in the local copy
+			stakingAccounts[stakingAcc.Address] = stakingAcc
+			ret := CheckStakingTransaction(poolTx, stakingAccounts[stakingAcc.Address].StakedBalance, stakingAccounts[stakingAcc.Address].StakingRewards)
+			if ret == false {
+				return 0, fmt.Errorf("staking transactions checking fails")
+			}
+		}
 		acc := account.GetAccountByAddressBytes(address.GetBytes())
 		if bytes.Compare(acc.Address[:], address.GetBytes()) != 0 {
 			return 0, fmt.Errorf("no account found in check block transafer")
@@ -98,7 +119,8 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 	if lastSupply != block.GetBlockSupply() {
 		return 0, fmt.Errorf("block supply checking fails")
 	}
-	if GetSupplyInAccounts()+reward-totalFee != block.GetBlockSupply() {
+	staked, rewarded := GetSupplyInStakedAccounts()
+	if GetSupplyInAccounts()+staked+rewarded+reward-totalFee != block.GetBlockSupply() {
 		return 0, fmt.Errorf("block supply checking fails vs account balances")
 	}
 	return reward, nil
@@ -112,40 +134,64 @@ func ExtractKeysFromMapAccounts(m map[[common.AddressLength]byte]account.Account
 	return keys
 }
 
+func ExtractKeysFromMapStakingAccounts(m map[[common.AddressLength]byte]account.StakingAccount) [][common.AddressLength]byte {
+	keys := [][common.AddressLength]byte{}
+	for k, _ := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 func IsInKeysOfMapAccounts(m map[[common.AddressLength]byte]account.Account, searchKey [common.AddressLength]byte) bool {
 	keys := ExtractKeysFromMapAccounts(m)
 	return common.ContainsKeyInMap(keys, searchKey)
 }
 
+func IsInKeysOfMapStakingAccounts(m map[[common.AddressLength]byte]account.StakingAccount, searchKey [common.AddressLength]byte) bool {
+	keys := ExtractKeysFromMapStakingAccounts(m)
+	return common.ContainsKeyInMap(keys, searchKey)
+}
+
 func ProcessBlockTransfers(block Block, reward int64) error {
 	txs := block.TransactionsHashes
-	totalFee := int64(0)
 	for _, tx := range txs {
 		hash := tx.GetBytes()
 		poolTx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], hash)
 		if err != nil {
 			return err
 		}
-		fee := poolTx.GasPrice * poolTx.GasUsage
-		totalFee += fee
-		amount := poolTx.TxData.Amount
-		total_amount := fee + amount
-		address := poolTx.GetSenderAddress()
-		addressRecipient := poolTx.TxData.Recipient
-		err = AddBalance(address.ByteValue, -total_amount)
-		if err != nil {
-			return err
-		}
-
-		err = AddBalance(addressRecipient.ByteValue, amount)
+		err = ProcessTransaction(poolTx, block.GetHeader().Height)
 		if err != nil {
 			return err
 		}
 	}
 	addr := block.BaseBlock.BaseHeader.OperatorAccount.ByteValue
-	err := AddBalance(addr, reward)
-	if err != nil {
-		return fmt.Errorf("reward adding fails %v", err)
+	n, err := account.IntDelegatedAccountFromAddress(block.BaseBlock.BaseHeader.DelegatedAccount)
+	if err != nil || n < 1 || n > 255 {
+		return fmt.Errorf("wromg delegated account in block")
+	}
+	staked, sum := account.GetStakedInDelegatedAccount(n)
+	if sum <= 0 {
+		return fmt.Errorf("no staked amount in delegated account which was rewarded")
+	}
+	rest := reward
+	for _, acc := range staked {
+		if acc.Balance > 0 {
+			userReward := int64(float64(reward) * float64(acc.Balance) / sum)
+			rest -= userReward
+			err := account.Reward(acc.Address[:], userReward, block.GetHeader().Height, n)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if rest > 0 {
+		err := account.Reward(addr[:], rest, block.GetHeader().Height, n)
+		if err != nil {
+			return err
+		}
+	} else if rest < 0 {
+		return fmt.Errorf("this shouldn't happen anytime")
 	}
 
 	return nil

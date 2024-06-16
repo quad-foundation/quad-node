@@ -3,14 +3,13 @@ package account
 import (
 	"bytes"
 	"fmt"
-	"github.com/quad-foundation/quad-node/account/stake"
 	"github.com/quad-foundation/quad-node/common"
 	memDatabase "github.com/quad-foundation/quad-node/database"
 	"log"
 )
 
 type StakingAccountsType struct {
-	AllStakingAccounts map[[20]byte]stake.StakingAccount `json:"all_staking_accounts"`
+	AllStakingAccounts map[[20]byte]StakingAccount `json:"all_staking_accounts"`
 }
 
 var StakingAccounts [256]StakingAccountsType
@@ -18,7 +17,8 @@ var StakingAccounts [256]StakingAccountsType
 // Marshal converts AccountsType to a binary format.
 func (at StakingAccountsType) Marshal() []byte {
 	var buffer bytes.Buffer
-
+	StakingRWMutex.RLock()
+	defer StakingRWMutex.RUnlock()
 	// Number of accounts
 	accountCount := len(at.AllStakingAccounts)
 	buffer.Write(common.GetByteInt64(int64(accountCount)))
@@ -40,12 +40,12 @@ func (at *StakingAccountsType) Unmarshal(data []byte) error {
 	// Number of accounts
 	accountCount := common.GetInt64FromByte(buffer.Next(8))
 
-	at.AllStakingAccounts = make(map[[common.AddressLength]byte]stake.StakingAccount, accountCount)
+	at.AllStakingAccounts = make(map[[common.AddressLength]byte]StakingAccount, accountCount)
 
 	// Read each account
 	for i := int64(0); i < accountCount; i++ {
 		var address [common.AddressLength]byte
-		var acc stake.StakingAccount
+		var acc StakingAccount
 
 		// Read address
 		if n, err := buffer.Read(address[:]); err != nil || n != common.AddressLength {
@@ -81,7 +81,7 @@ func StoreStakingAccounts() error {
 
 func LoadStakingAccounts() error {
 
-	for i := 0; i < 256; i++ {
+	for i := 1; i < 256; i++ {
 		prefix := [2]byte{byte(i / 16), byte(i % 16)}
 		b, err := memDatabase.MainDB.Get(prefix[:])
 		if err != nil {
@@ -95,4 +95,12 @@ func LoadStakingAccounts() error {
 		}
 	}
 	return nil
+}
+
+func GetStakingAccountByAddressBytes(address []byte, delegatedAccount int) StakingAccount {
+	StakingRWMutex.RLock()
+	defer StakingRWMutex.RUnlock()
+	addrb := [common.AddressLength]byte{}
+	copy(addrb[:], address[:common.AddressLength])
+	return StakingAccounts[delegatedAccount].AllStakingAccounts[addrb]
 }

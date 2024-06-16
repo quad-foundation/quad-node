@@ -1,10 +1,9 @@
-package stake
+package account
 
 import (
 	"bytes"
 	"fmt"
 	"github.com/quad-foundation/quad-node/common"
-	"math"
 	"time"
 )
 
@@ -12,6 +11,7 @@ type StakingAccount struct {
 	StakedBalance    int64                      `json:"staked_balance"`
 	StakingRewards   int64                      `json:"staking_rewards"`
 	DelegatedAccount [common.AddressLength]byte `json:"delegated_account"`
+	Address          [common.AddressLength]byte `json:"address"`
 	StakingDetails   map[int64][]StakingDetail  `json:"staking_details,omitempty"` // block number as key of map
 }
 
@@ -21,98 +21,133 @@ type StakingDetail struct {
 	LastUpdated int64 `json:"last_updated"`
 }
 
-func Stake(account *StakingAccount, amount int64, height int64) error {
+func Stake(accb []byte, amount int64, height int64, delegatedAccount int) error {
+	if len(accb) != common.AddressLength {
+		return fmt.Errorf("wrong address length, must be %v", common.AddressLength)
+	}
+	acc := GetStakingAccountByAddressBytes(accb, delegatedAccount)
+	if bytes.Compare(acc.Address[:], accb) != 0 {
+		copy(acc.Address[:], accb)
+	}
 	StakingRWMutex.Lock()
 	defer StakingRWMutex.Unlock()
 	if amount < 0 {
 		return fmt.Errorf("staked amount has to be larger than 0")
 	}
-	account.StakedBalance += amount
+
+	acc.StakedBalance += amount
 	sd := StakingDetail{
 		Amount:      amount,
 		Reward:      0,
 		LastUpdated: time.Now().Unix(),
 	}
-	if ContainsKeyInt64(ExtractKeysOfList(account.StakingDetails), height) == false {
-		account.StakingDetails[height] = []StakingDetail{}
+	if ContainsKeyInt64(ExtractKeysOfList(acc.StakingDetails), height) == false {
+		acc.StakingDetails = map[int64][]StakingDetail{}
+		acc.StakingDetails[height] = []StakingDetail{}
 	}
-	account.StakingDetails[height] = append(account.StakingDetails[height], sd)
+	acc.StakingDetails[height] = append(acc.StakingDetails[height], sd)
+
+	StakingAccounts[delegatedAccount].AllStakingAccounts[acc.Address] = acc
 	return nil
 }
 
-func Unstake(account *StakingAccount, amount int64, height int64) error {
+func Unstake(accb []byte, amount int64, height int64, delegatedAccount int) error {
+	if len(accb) != common.AddressLength {
+		return fmt.Errorf("wrong address length, must be %v", common.AddressLength)
+	}
+	acc := GetStakingAccountByAddressBytes(accb, delegatedAccount)
+	if bytes.Compare(acc.Address[:], accb) != 0 {
+		return fmt.Errorf("no account present in unstaking account")
+	}
 	StakingRWMutex.Lock()
 	defer StakingRWMutex.Unlock()
 	if amount < 0 {
 		return fmt.Errorf("unstaked amount has to be larger than 0")
 	}
-	if account.StakedBalance+amount < 0 {
+
+	if acc.StakedBalance+amount < 0 {
 		return fmt.Errorf("insufficient staked balance")
 	}
-	account.StakedBalance -= amount
+	acc.StakedBalance -= amount
 	sd := StakingDetail{
 		Amount:      -amount,
 		LastUpdated: time.Now().Unix(),
 	}
-	if ContainsKeyInt64(ExtractKeysOfList(account.StakingDetails), height) == false {
-		account.StakingDetails[height] = []StakingDetail{}
+	if ContainsKeyInt64(ExtractKeysOfList(acc.StakingDetails), height) == false {
+		acc.StakingDetails = map[int64][]StakingDetail{}
+		acc.StakingDetails[height] = []StakingDetail{}
 	}
-	account.StakingDetails[height] = append(account.StakingDetails[height], sd)
+	acc.StakingDetails[height] = append(acc.StakingDetails[height], sd)
+
+	StakingAccounts[delegatedAccount].AllStakingAccounts[acc.Address] = acc
 	return nil
 }
 
-func Reward(account *StakingAccount, reward int64, height int64) error {
+func Reward(accb []byte, reward int64, height int64, delegatedAccount int) error {
+	if len(accb) != common.AddressLength {
+		return fmt.Errorf("wrong address length, must be %v", common.AddressLength)
+	}
+	acc := GetStakingAccountByAddressBytes(accb, delegatedAccount)
+	if bytes.Compare(acc.Address[:], accb) != 0 {
+		return fmt.Errorf("no account present in rewarding account")
+	}
 	StakingRWMutex.Lock()
 	defer StakingRWMutex.Unlock()
 	if reward < 0 {
 		return fmt.Errorf("reward has to be larger than 0")
 	}
-	account.StakingRewards += reward
+
+	acc.StakingRewards += reward
 	sd := StakingDetail{
 		Amount:      0,
 		Reward:      reward,
 		LastUpdated: time.Now().Unix(),
 	}
-	if ContainsKeyInt64(ExtractKeysOfList(account.StakingDetails), height) == false {
-		account.StakingDetails[height] = []StakingDetail{}
+	if ContainsKeyInt64(ExtractKeysOfList(acc.StakingDetails), height) == false {
+		acc.StakingDetails = map[int64][]StakingDetail{}
+		acc.StakingDetails[height] = []StakingDetail{}
 	}
-	account.StakingDetails[height] = append(account.StakingDetails[height], sd)
+	acc.StakingDetails[height] = append(acc.StakingDetails[height], sd)
+	StakingAccounts[delegatedAccount].AllStakingAccounts[acc.Address] = acc
 	return nil
 }
 
-func WithdrawReward(account *StakingAccount, amount int64, height int64) error {
+func WithdrawReward(accb []byte, amount int64, height int64, delegatedAccount int) error {
+	if len(accb) != common.AddressLength {
+		return fmt.Errorf("wrong address length, must be %v", common.AddressLength)
+	}
+	acc := GetStakingAccountByAddressBytes(accb, delegatedAccount)
+	if bytes.Compare(acc.Address[:], accb) != 0 {
+		return fmt.Errorf("no account present in withdraw rewarding")
+	}
 	StakingRWMutex.Lock()
 	defer StakingRWMutex.Unlock()
 	if amount < 0 {
 		return fmt.Errorf("withdraw amount has to be larger than 0")
 	}
-	if account.StakingRewards+amount < 0 {
+
+	if acc.StakingRewards+amount < 0 {
 		return fmt.Errorf("insufficient rewards balance to withdraw")
 	}
-	account.StakedBalance -= amount
+	acc.StakedBalance -= amount
 	sd := StakingDetail{
 		Amount:      0,
 		Reward:      -amount,
 		LastUpdated: time.Now().Unix(),
 	}
-	if ContainsKeyInt64(ExtractKeysOfList(account.StakingDetails), height) == false {
-		account.StakingDetails[height] = []StakingDetail{}
+	if ContainsKeyInt64(ExtractKeysOfList(acc.StakingDetails), height) == false {
+		acc.StakingDetails = map[int64][]StakingDetail{}
+		acc.StakingDetails[height] = []StakingDetail{}
 	}
-	account.StakingDetails[height] = append(account.StakingDetails[height], sd)
-	return nil
-}
+	acc.StakingDetails[height] = append(acc.StakingDetails[height], sd)
 
-// GetStakeConfirmedFloat get amount of confirmed staked QAD in human-readable format
-func (a *StakingAccount) GetBalanceConfirmedFloat() float64 {
-	StakingRWMutex.RLock()
-	defer StakingRWMutex.RUnlock()
-	return float64(a.StakedBalance) * math.Pow10(-int(common.Decimals))
+	StakingAccounts[delegatedAccount].AllStakingAccounts[acc.Address] = acc
+	return nil
 }
 
 // Marshal converts StakingAccount to a binary format.
 func (sa StakingAccount) Marshal() []byte {
-	StakingRWMutex.RLock()
-	defer StakingRWMutex.RUnlock()
+
 	var buffer bytes.Buffer
 
 	// StakedBalance, StakingRewards
@@ -142,8 +177,7 @@ func (sa StakingAccount) Marshal() []byte {
 
 // Unmarshal decodes StakingAccount from a binary format.
 func (sa *StakingAccount) Unmarshal(data []byte) error {
-	StakingRWMutex.Lock()
-	defer StakingRWMutex.Unlock()
+
 	buffer := bytes.NewBuffer(data)
 
 	// StakedBalance, StakingRewards
@@ -177,4 +211,20 @@ func (sa *StakingAccount) Unmarshal(data []byte) error {
 		sa.StakingDetails[key] = details
 	}
 	return nil
+}
+
+func GetStakedInDelegatedAccount(n int) ([]Account, float64) {
+	StakingRWMutex.RLock()
+	defer StakingRWMutex.RUnlock()
+	sum := int64(0)
+	accs := []Account{}
+	for _, sa := range StakingAccounts[n].AllStakingAccounts {
+		acc := Account{
+			Balance: sa.StakedBalance,
+			Address: sa.Address,
+		}
+		sum += sa.StakedBalance
+		accs = append(accs, acc)
+	}
+	return accs, float64(sum)
 }

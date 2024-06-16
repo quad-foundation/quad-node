@@ -60,8 +60,8 @@ func (l *Listener) Send(line []byte, reply *[]byte) error {
 	//	handleACCS(byt, reply)
 	case "DETS":
 		handleDETS(byt, reply)
-	//case "STAK":
-	//	handleSTAK(byt, reply)
+	case "STAK":
+		handleSTAK(byt, reply)
 	//case "ACCS":
 	//	handleACCS(reply)
 	//case "LTKN":
@@ -130,6 +130,18 @@ func handleACCT(line []byte, reply *[]byte) {
 	account.AccountsRWMutex.RLock()
 	acc := account.Accounts.AllAccounts[byt]
 	account.AccountsRWMutex.RUnlock()
+	am := acc.Marshal()
+	*reply = am
+}
+
+func handleSTAK(line []byte, reply *[]byte) {
+
+	byt := [common.AddressLength]byte{}
+	copy(byt[:], line[:common.AddressLength])
+	n := int(line[common.AddressLength])
+	account.StakingRWMutex.RLock()
+	acc := account.StakingAccounts[n].AllStakingAccounts[byt]
+	account.StakingRWMutex.RUnlock()
 	am := acc.Marshal()
 	*reply = am
 }

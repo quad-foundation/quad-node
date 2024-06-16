@@ -95,7 +95,8 @@ func ShowStakingPage() *widgets.QTabWidget {
 		} else {
 			ar = common.GetDelegatedAccountAddress(int16(di))
 		}
-		if isDel := account.IsDelegatedAccountFromAddress(ar); !isDel {
+
+		if _, err := account.IntDelegatedAccountFromAddress(ar); err != nil {
 			v = fmt.Sprint("This is not a valid delegated account:", ar.GetHex())
 			info = &v
 			return

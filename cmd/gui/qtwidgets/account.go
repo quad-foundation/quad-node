@@ -57,47 +57,52 @@ func UpdateAccountStats() {
 		return
 	}
 	conf := acc.GetBalanceConfirmedFloat()
-	uncTx := 0.0 //acc.GetUnconfirmedTransactionFloat(st.Heights)
+	uncTx := 0.0
 
-	//inb = append([]byte("ACCS"), MainWallet.Address.GetBytes()...)
-	//clientrpc.InRPC <- inb
-	//var accs stake2.StakingAccount
-	//
-	//re = <-clientrpc.OutRPC
-	//if string(reply) == "Timeout" {
-	//	return
-	//}
-	//err = accs.Unmarshal(re)
-	//if err != nil {
-	//	log.Println("cannot unmarshal stake account")
-	//	return
-	//}
+	stake := 0.0
+	uncStake := 0.0
 
-	stake := 0.0    //accs.GetBalanceConfirmedFloat()
-	uncStake := 0.0 // acc.GetUnconfirmedStakeFloat(st.Heights)
+	rewards := 0.0
+	uncRewards := 0.0
+
+	var stakeAccs [256]account.StakingAccount
+	for i := 1; i < 256; i++ {
+		inb = append([]byte("STAK"), MainWallet.Address.GetBytes()...)
+		inb = append(inb, byte(i))
+		clientrpc.InRPC <- inb
+		re = <-clientrpc.OutRPC
+		if string(reply) == "Timeout" {
+			return
+		}
+		err = stakeAccs[i].Unmarshal(re)
+		if err != nil {
+			log.Println("cannot unmarshal stake account")
+			return
+		}
+		stake += account.Int64toFloat64(stakeAccs[i].StakedBalance)
+		rewards += account.Int64toFloat64(stakeAccs[i].StakingRewards)
+	}
 
 	txt += fmt.Sprintln("\n\nYour Address:", MainWallet.Address.GetHex())
-	txt += fmt.Sprintf("Your holdings: %18.8f QAD\n", conf+uncTx+stake+uncStake)
+	txt += fmt.Sprintf("Your holdings: %18.8f QAD\n", conf+stake+rewards+uncTx+uncStake+uncRewards)
 	txt += fmt.Sprintf("Confirmed balance: %18.8f QAD\n", conf)
 	txt += fmt.Sprintf("Transactions unconfirmed balance: %18.8f QAD\n", uncTx)
 	txt += fmt.Sprintf("Staked amount: %18.8f QAD\n", stake)
 	txt += fmt.Sprintf("Unconfirmed staked amount: %18.8f QAD\n", uncStake)
+	txt += fmt.Sprintf("Rewards amount: %18.8f QAD\n", rewards)
+	txt += fmt.Sprintf("Unconfirmed rewards amount: %18.8f QAD\n", uncRewards)
 	txt += fmt.Sprintf("\nStaking details:\n")
-	//for k, v := range accs.StakingDetails {
-	//	if v.Amount == 0 {
-	//		continue
-	//	}
-	//	ab, _ := hex.DecodeString(k)
-	//	a := common.Address{}
-	//	a.Init(ab[:])
-	//	if n := common.NumericalDelegatedAccountAddress(a); n > 0 {
-	//
-	//		txt += fmt.Sprintf("Delegated Address: %v\n", a.GetHex())
-	//		txt += fmt.Sprintf("Delegated Account Number: %v = %v\n", n, account.Int64toFloat64(v.Amount))
-	//
-	//	}
-	//}
-	//fmt.Println(txt)
+	for i, acc := range stakeAccs {
+		if acc.StakedBalance == 0 && acc.StakingRewards == 0 {
+			continue
+		}
+		a := common.Address{}
+		a.Init(acc.DelegatedAccount[:])
+
+		txt += fmt.Sprintf("Delegated Address: %v\n", a.GetHex())
+		txt += fmt.Sprintf("Staked: %v = %v\n", i, account.Int64toFloat64(acc.StakedBalance))
+		txt += fmt.Sprintf("Rewards: %v = %v\n", i, account.Int64toFloat64(acc.StakingRewards))
+	}
 	StatsLabel.SetText(txt)
 	//txt2 := ""
 	//if lastSt.Heights == 0 {
