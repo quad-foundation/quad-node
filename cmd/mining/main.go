@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/quad-foundation/quad-node/account"
-	"github.com/quad-foundation/quad-node/account/stake"
 	"github.com/quad-foundation/quad-node/common"
 	memDatabase "github.com/quad-foundation/quad-node/database"
 	"github.com/quad-foundation/quad-node/genesis"
@@ -45,17 +44,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for i := 0; i < 256; i++ {
+	for i := 1; i < 256; i++ {
 		del := common.GetDelegatedAccountAddress(int16(i))
 		delbytes := [common.AddressLength]byte{}
 		copy(delbytes[:], del.GetBytes())
-		sa := stake.StakingAccount{
+		sa := account.StakingAccount{
 			StakedBalance:    0,
 			StakingRewards:   0,
 			DelegatedAccount: delbytes,
 			StakingDetails:   nil,
 		}
-		allStakingAccounts := map[[20]byte]stake.StakingAccount{}
+		allStakingAccounts := map[[20]byte]account.StakingAccount{}
 		allStakingAccounts[addrbytes] = sa
 		account.StakingAccounts[i] = account.StakingAccountsType{AllStakingAccounts: allStakingAccounts}
 	}

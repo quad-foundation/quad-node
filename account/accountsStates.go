@@ -36,8 +36,8 @@ func GetBalance(address [common.AddressLength]byte) int64 {
 // Marshal converts AccountsType to a binary format.
 func (at AccountsType) Marshal() []byte {
 	var buffer bytes.Buffer
-	AccountsRWMutex.Lock()
-	defer AccountsRWMutex.Unlock()
+	AccountsRWMutex.RLock()
+	defer AccountsRWMutex.RUnlock()
 	// Number of accounts
 	accountCount := len(at.AllAccounts)
 	buffer.Write(common.GetByteInt64(int64(accountCount)))

@@ -24,6 +24,7 @@ type Genesis struct {
 	Decimals               uint8             `json:"decimals"`
 	BlockTimeInterval      float32           `json:"block_time_interval"`
 	Balances               map[string]int64  `json:"balances"`
+	StakedBalances         map[string]int64  `json:"staked_balances"`
 	TransactionsSignatures map[string]string `json:"transactions_signatures"`
 	PubKeys                map[string]string `json:"pub_keys"`
 	Signature              string            `json:"signature"`
@@ -32,6 +33,10 @@ type Genesis struct {
 
 func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 
+	initSupplyWithoutStaked := common.InitSupply
+	for _, balance := range genesis.StakedBalances {
+		initSupplyWithoutStaked -= balance
+	}
 	pubKeyOpBytes, err := hex.DecodeString(genesis.OperatorPubKey)
 	if err != nil {
 		log.Fatal("cannot decode address from string in genesis block")
@@ -50,7 +55,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 		log.Fatalf("cannot retrieve operator address from pub key in genesis block %v", err)
 	}
 	accDel1 := account.Accounts.AllAccounts[addressOp1.ByteValue]
-	accDel1.Balance = common.InitSupply
+	accDel1.Balance = initSupplyWithoutStaked
 	accDel1.Address = addressOp1.ByteValue
 	account.Accounts.AllAccounts[addressOp1.ByteValue] = accDel1
 
@@ -81,7 +86,32 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 		blockTransactionsHashes = append(blockTransactionsHashes, tx.GetHash())
 		walletNonce++
 	}
-
+	for addr, balance := range genesis.StakedBalances {
+		ab, err := hex.DecodeString(addr)
+		if err != nil {
+			log.Fatal("cannot decode address from string in genesis block")
+		}
+		addrb := [common.AddressLength]byte{}
+		copy(addrb[:], ab)
+		delAddrb := [common.AddressLength]byte{}
+		firstDel := common.GetDelegatedAccountAddress(1)
+		copy(delAddrb[:], firstDel.GetBytes())
+		sd := account.StakingDetail{
+			Amount:      balance,
+			Reward:      0,
+			LastUpdated: genesis.Timestamp,
+		}
+		sds := map[int64][]account.StakingDetail{}
+		sds[0] = []account.StakingDetail{sd}
+		as := account.StakingAccount{
+			StakedBalance:    balance,
+			StakingRewards:   0,
+			DelegatedAccount: delAddrb,
+			Address:          addrb,
+			StakingDetails:   sds,
+		}
+		account.StakingAccounts[1].AllStakingAccounts[addrb] = as
+	}
 	genesisMerkleTrie, err := transactionsPool.BuildMerkleTree(0, blockTransactionsHashesBytes)
 	if err != nil {
 		log.Fatalf("cannot generate genesis merkleTrie %v", err)
@@ -207,6 +237,8 @@ func GenesisTransaction(sender common.Address, recipient common.Address, amount 
 	//if err != nil {
 	//	log.Fatal("Signing error", err)
 	//}
+	//println(t.Signature.GetHex())
+
 	if t.Verify() == false {
 		log.Fatal("genesis transaction cannot be verified")
 	}

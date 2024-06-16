@@ -3,8 +3,10 @@ package account
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"github.com/quad-foundation/quad-node/common"
 	"math"
+	"sync"
 )
 
 func Int64toFloat64(value int64) float64 {
@@ -23,14 +25,6 @@ func Int64toFloat64ByDecimals(value int64, decimals uint8) float64 {
 //		da := common.GetDelegatedAccountAddress(n)
 //		return bytes.Compare(da.GetBytes(), ab[:]) == 0
 //	}
-func IsDelegatedAccountFromAddress(a common.Address) bool {
-	n := binary.BigEndian.Uint16(a.GetBytes())
-	if !(n > 0 && n < 256) {
-		return false
-	}
-	da := common.GetDelegatedAccountAddress(int16(n))
-	return bytes.Compare(da.GetBytes(), a.GetBytes()) == 0
-}
 
 //
 //func IsDEXAccountFromAddress(a common.Address) bool {
@@ -41,3 +35,39 @@ func IsDelegatedAccountFromAddress(a common.Address) bool {
 //	da := common.GetDelegatedAccountByteForDEX(n, a.GetByte()[2:])
 //	return bytes.Compare(da.GetByte(), a.GetByte()) == 0
 //}
+
+var StakingRWMutex sync.RWMutex
+
+func ExtractKeysOfList(m map[int64][]StakingDetail) []int64 {
+	keys := []int64{}
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func ContainsKeyInt64(keys []int64, searchKey int64) bool {
+	for _, key := range keys {
+		if key == searchKey {
+			return true
+		}
+	}
+	return false
+}
+
+func IntDelegatedAccountFromAddress(a common.Address) (int, error) {
+	n := binary.BigEndian.Uint16(a.GetBytes())
+	if n < 1 {
+		return -1, fmt.Errorf("this is not correct delegated account")
+	}
+	for _, b := range a.GetBytes()[2:] {
+		if b != 0 {
+			return -1, fmt.Errorf("this is not correct delegated account")
+		}
+	}
+	da := common.GetDelegatedAccountAddress(int16(n))
+	if bytes.Compare(da.GetBytes(), a.GetBytes()) == 0 {
+		return int(n), nil
+	}
+	return -1, fmt.Errorf("wrongly formated delegated account")
+}

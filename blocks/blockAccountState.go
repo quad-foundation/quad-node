@@ -37,3 +37,18 @@ func GetSupplyInAccounts() int64 {
 	}
 	return sum
 }
+
+func GetSupplyInStakedAccounts() (int64, int64) {
+	sumStaked := int64(0)
+	sumRewards := int64(0)
+	account.StakingRWMutex.RLock()
+	defer account.StakingRWMutex.RUnlock()
+
+	for _, delAcc := range account.StakingAccounts {
+		for _, acc := range delAcc.AllStakingAccounts {
+			sumStaked += acc.StakedBalance
+			sumRewards += acc.StakingRewards
+		}
+	}
+	return sumStaked, sumRewards
+}
