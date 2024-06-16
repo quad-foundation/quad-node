@@ -108,7 +108,8 @@ func OnMessage(addr string, m []byte) {
 			transactionsHashes)
 
 		if err != nil {
-			panic("Error in block creation")
+			log.Println(err)
+			panic("Error in block creation ")
 		}
 
 		if newBlock.CheckProofOfSynergy() {
