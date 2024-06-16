@@ -197,9 +197,12 @@ func (tx *Transaction) Verify() bool {
 		return false
 	}
 	a := tx.GetSenderAddress()
-	pk, err := (*memDatabase.MainDB).Get(append(common.PubKeyDBPrefix[:], a.GetBytes()...))
-	if err != nil {
-		return false
+	pk := tx.TxData.GetPubKey().GetBytes()
+	if len(pk) == 0 {
+		pk, err = (*memDatabase.MainDB).Get(append(common.PubKeyDBPrefix[:], a.GetBytes()...))
+		if err != nil {
+			return false
+		}
 	}
 	signature := tx.GetSignature()
 	return wallet.Verify(b, signature.GetBytes(), pk)
