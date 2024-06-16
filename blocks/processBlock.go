@@ -216,6 +216,14 @@ func RemoveAllTransactionsRelatedToBlock(newBlock Block) {
 func CheckBlockAndTransferFunds(newBlock Block, lastBlock Block, merkleTrie *transactionsPool.MerkleTree) error {
 
 	defer RemoveAllTransactionsRelatedToBlock(newBlock)
+	n, err := account.IntDelegatedAccountFromAddress(newBlock.GetHeader().DelegatedAccount)
+	if err != nil || n < 1 || n > 255 {
+		return fmt.Errorf("wrong delegated account")
+	}
+	if _, sumStaked := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode {
+		return fmt.Errorf("not enough staked coins to be a node")
+	}
+
 	reward, err := CheckBlockTransfers(newBlock, lastBlock)
 	if err != nil {
 		return err
