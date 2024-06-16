@@ -128,7 +128,7 @@ func (tp *TransactionPool) PopTransactionByHash(hash []byte) transactionsDefinit
 	h := [common.HashLength]byte{}
 	copy(h[:], hash)
 	tp.rwmutex.Lock()
-	defer tp.rwmutex.Unlock()
+	txs := transactionsDefinition.EmptyTransaction()
 	if _, exists := tp.transactions[h]; exists {
 		for i := 0; i < tp.priorityQueue.Len(); i++ {
 			h2 := (*tp.priorityQueue[i]).GetHash().GetBytes()
@@ -136,12 +136,14 @@ func (tp *TransactionPool) PopTransactionByHash(hash []byte) transactionsDefinit
 				tx := tp.transactions[h]
 				heap.Remove(&tp.priorityQueue, i)
 				delete(tp.transactions, h)
-				return tx
+				txs = tx
+				break
 			}
 		}
 	}
+	tp.rwmutex.Unlock()
 	tp.updateIndices()
-	return transactionsDefinition.EmptyTransaction()
+	return txs
 }
 
 func (tp *TransactionPool) NumberOfTransactions() int {
