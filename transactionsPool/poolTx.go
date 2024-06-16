@@ -124,6 +124,16 @@ func (tp *TransactionPool) RemoveTransactionByHash(hash []byte) {
 	tp.rwmutex.Unlock()
 	tp.updateIndices()
 }
+
+func (tp *TransactionPool) TransactionExists(hash []byte) bool {
+	h := [common.HashLength]byte{}
+	copy(h[:], hash)
+	tp.rwmutex.RLock()
+	defer tp.rwmutex.RUnlock()
+	_, exists := tp.transactions[h]
+	return exists
+}
+
 func (tp *TransactionPool) PopTransactionByHash(hash []byte) transactionsDefinition.Transaction {
 	h := [common.HashLength]byte{}
 	copy(h[:], hash)

@@ -77,7 +77,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 		if err != nil {
 			log.Fatalf("cannot calculate hash of transaction in genesis block %v", err)
 		}
-		err = tx.StoreToDBPoolTx(common.TransactionDBPrefix[:])
+		err = tx.StoreToDBPoolTx(common.TransactionPoolHashesDBPrefix[:])
 		if err != nil {
 			log.Fatalf("cannot store transaction of genesis block %v", err)
 		}

@@ -53,7 +53,7 @@ func IsAllTransactions(block Block) [][]byte {
 	hashes := [][]byte{}
 	for _, tx := range txs {
 		hash := tx.GetBytes()
-		isKey := transactionsDefinition.CheckFromDBPoolTx(common.TransactionDBPrefix[:], hash)
+		isKey := transactionsDefinition.CheckFromDBPoolTx(common.TransactionPoolHashesDBPrefix[:], hash)
 		if isKey == false {
 			hashes = append(hashes, hash)
 		}
@@ -69,9 +69,13 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 	totalFee := int64(0)
 	for _, tx := range txs {
 		hash := tx.GetBytes()
-		poolTx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], hash)
+		poolTx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionPoolHashesDBPrefix[:], hash)
 		if err != nil {
 			return 0, err
+		}
+		if transactionsDefinition.CheckFromDBPoolTx(common.TransactionDBPrefix[:], poolTx.Hash.GetBytes()) {
+			log.Println("transaction just exists in DB")
+			continue
 		}
 		fee := poolTx.GasPrice * poolTx.GasUsage
 		totalFee += fee
@@ -162,7 +166,7 @@ func ProcessBlockTransfers(block Block, reward int64) error {
 	txs := block.TransactionsHashes
 	for _, tx := range txs {
 		hash := tx.GetBytes()
-		poolTx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], hash)
+		poolTx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionPoolHashesDBPrefix[:], hash)
 		if err != nil {
 			return err
 		}
@@ -253,6 +257,16 @@ func CheckBlockAndTransferFunds(newBlock Block, lastBlock Block, merkleTrie *tra
 	if err != nil {
 		return err
 	}
-
+	for _, h := range hashes {
+		tx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], h.GetBytes())
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		err = tx.RemoveFromDBPoolTx(common.TransactionPoolHashesDBPrefix[:])
+		if err != nil {
+			log.Println(err)
+		}
+	}
 	return nil
 }

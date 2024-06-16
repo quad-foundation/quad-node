@@ -99,7 +99,7 @@ func sendTransactions(w *wallet.Wallet) {
 	count := int64(0)
 	start := common.GetCurrentTimeStampInSecond()
 
-	for range time.Tick(time.Millisecond * 2) {
+	for range time.Tick(time.Millisecond * 10) {
 		var txs []transactionsDefinition.Transaction
 		for i := 0; i < batchSize; i++ {
 			tx := SampleTransaction(w)
