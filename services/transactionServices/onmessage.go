@@ -44,11 +44,11 @@ func OnMessage(addr string, m []byte) {
 			for _, t := range v {
 				if t.Verify() {
 					if transactionsPool.PoolsTx.TransactionExists(t.Hash.GetBytes()) {
-						log.Println("transaction just exists in Pool")
+						//log.Println("transaction just exists in Pool")
 						continue
 					}
 					if transactionsDefinition.CheckFromDBPoolTx(common.TransactionDBPrefix[:], t.Hash.GetBytes()) {
-						log.Println("transaction just exists in DB")
+						//log.Println("transaction just exists in DB")
 						continue
 					}
 					transactionsPool.PoolsTx.AddTransaction(t)
