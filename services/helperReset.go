@@ -29,7 +29,15 @@ func ResetAccountsAndBlocksSync(height int64) {
 	if err != nil {
 		return
 	}
+	err = account.LoadStakingAccounts(height)
+	if err != nil {
+		return
+	}
 	ha, err := account.LastHeightStoredInAccounts()
+	if err != nil {
+		log.Println(err)
+	}
+	hsa, err := account.LastHeightStoredInStakingAccounts()
 	if err != nil {
 		log.Println(err)
 	}
@@ -45,6 +53,12 @@ func ResetAccountsAndBlocksSync(height int64) {
 	}
 	for i := ha; i > height; i-- {
 		err := account.RemoveAccountsFromDB(i)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+	for i := hsa; i > height; i-- {
+		err := account.RemoveStakingAccountsFromDB(i)
 		if err != nil {
 			log.Println(err)
 		}

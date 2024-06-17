@@ -65,12 +65,15 @@ func (at *StakingAccountsType) Unmarshal(data []byte) error {
 	return nil
 }
 
-func StoreStakingAccounts() error {
+func StoreStakingAccounts(height int64) error {
 
 	for i, stakeAccount := range StakingAccounts {
 		k := stakeAccount.Marshal()
-		prefix := [2]byte{byte(i / 16), byte(i % 16)}
-		err := memDatabase.MainDB.Put(prefix[:], k[:])
+		prefix2 := [2]byte{byte(i / 16), byte(i % 16)}
+		hb := common.GetByteInt64(height)
+		prefix := append(common.StakingAccountsDBPrefix[:], hb...)
+		prefix = append(prefix, prefix2[:]...)
+		err := memDatabase.MainDB.Put(prefix, k[:])
 		if err != nil {
 			log.Println("cannot store accounts", err)
 			return err
@@ -79,16 +82,28 @@ func StoreStakingAccounts() error {
 	return nil
 }
 
-func LoadStakingAccounts() error {
+func LoadStakingAccounts(height int64) error {
+	var err error
+	if height < 0 {
+		height, err = LastHeightStoredInStakingAccounts()
+		if err != nil {
+			log.Println(err)
+		}
+	}
 
 	for i := 1; i < 256; i++ {
-		prefix := [2]byte{byte(i / 16), byte(i % 16)}
-		b, err := memDatabase.MainDB.Get(prefix[:])
+		prefix2 := [2]byte{byte(i / 16), byte(i % 16)}
+		hb := common.GetByteInt64(height)
+		prefix := append(common.StakingAccountsDBPrefix[:], hb...)
+		prefix = append(prefix, prefix2[:]...)
+		b, err := memDatabase.MainDB.Get(prefix)
 		if err != nil {
 			log.Println("cannot load accounts", err)
 			return err
 		}
+		StakingRWMutex.Lock()
 		err = (&StakingAccounts[i]).Unmarshal(b)
+		StakingRWMutex.Unlock()
 		if err != nil {
 			log.Println("cannot unmarshal accounts")
 			return err
@@ -103,4 +118,37 @@ func GetStakingAccountByAddressBytes(address []byte, delegatedAccount int) Staki
 	addrb := [common.AddressLength]byte{}
 	copy(addrb[:], address[:common.AddressLength])
 	return StakingAccounts[delegatedAccount].AllStakingAccounts[addrb]
+}
+
+func RemoveStakingAccountsFromDB(height int64) error {
+	hb := common.GetByteInt64(height)
+	prefix := append(common.StakingAccountsDBPrefix[:], hb...)
+	for i := 1; i < 256; i++ {
+		prefix2 := [2]byte{byte(i / 16), byte(i % 16)}
+		prefix = append(prefix, prefix2[:]...)
+		err := memDatabase.MainDB.Delete(prefix)
+		if err != nil {
+			log.Println("cannot remove account", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func LastHeightStoredInStakingAccounts() (int64, error) {
+	i := int64(0)
+	for {
+		ib := common.GetByteInt64(i)
+		prefix := append(common.StakingAccountsDBPrefix[:], ib...)
+		prefix = append(prefix, []byte{0, 1}...)
+		isKey, err := memDatabase.MainDB.IsKey(prefix)
+		if err != nil {
+			return i - 1, err
+		}
+		if isKey == false {
+			break
+		}
+		i++
+	}
+	return i - 1, nil
 }

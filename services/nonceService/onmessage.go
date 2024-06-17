@@ -173,6 +173,10 @@ func OnMessage(addr string, m []byte) {
 				if err != nil {
 					log.Println(err)
 				}
+				err = account.StoreStakingAccounts(newBlock.GetHeader().Height)
+				if err != nil {
+					log.Println(err)
+				}
 				statistics.UpdateStatistics(newBlock, merkleTrie, lastBlock)
 			}
 		}

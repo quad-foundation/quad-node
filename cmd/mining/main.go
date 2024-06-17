@@ -58,7 +58,7 @@ func main() {
 		allStakingAccounts[addrbytes] = sa
 		account.StakingAccounts[i] = account.StakingAccountsType{AllStakingAccounts: allStakingAccounts}
 	}
-	err = account.StoreStakingAccounts()
+	err = account.StoreStakingAccounts(0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,11 +71,11 @@ func main() {
 		log.Fatal(err)
 	}
 	defer account.StoreAccounts(-1)
-	err = account.LoadStakingAccounts()
+	err = account.LoadStakingAccounts(-1)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer account.StoreStakingAccounts()
+	defer account.StoreStakingAccounts(-1)
 
 	w := wallet.GetActiveWallet()
 
