@@ -61,6 +61,17 @@ func OnMessage(addr string, m []byte) {
 		}
 		nonceHeight := transaction.GetHeight()
 
+		delAcc := common.GetDelegatedAccount()
+		n, err := account.IntDelegatedAccountFromAddress(delAcc)
+		if err != nil {
+			return
+		}
+		// checking if enough coins staked
+		if _, sumStaked := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode {
+			log.Println("not enough staked coins to be a node")
+			return
+		}
+
 		h := common.GetHeight()
 
 		if nonceHeight < 1 || nonceHeight != h+1 {
@@ -97,7 +108,8 @@ func OnMessage(addr string, m []byte) {
 			transactionsHashes)
 
 		if err != nil {
-			panic("Error in block creation")
+			log.Println(err)
+			panic("Error in block creation ")
 		}
 
 		if newBlock.CheckProofOfSynergy() {

@@ -147,6 +147,15 @@ func (mt *Transaction) StoreToDBPoolTx(prefix []byte) error {
 	return nil
 }
 
+func (mt *Transaction) RemoveFromDBPoolTx(prefix []byte) error {
+	prefix = append(prefix, mt.GetHash().GetBytes()...)
+	err := (*memDatabase.MainDB).Delete(prefix)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func LoadFromDBPoolTx(prefix []byte, hashTransaction []byte) (Transaction, error) {
 	prefix = append(prefix, hashTransaction...)
 	bt, err := (*memDatabase.MainDB).Get(prefix)
@@ -188,9 +197,12 @@ func (tx *Transaction) Verify() bool {
 		return false
 	}
 	a := tx.GetSenderAddress()
-	pk, err := (*memDatabase.MainDB).Get(append(common.PubKeyDBPrefix[:], a.GetBytes()...))
-	if err != nil {
-		return false
+	pk := tx.TxData.GetPubKey().GetBytes()
+	if len(pk) == 0 {
+		pk, err = (*memDatabase.MainDB).Get(append(common.PubKeyDBPrefix[:], a.GetBytes()...))
+		if err != nil {
+			return false
+		}
 	}
 	signature := tx.GetSignature()
 	return wallet.Verify(b, signature.GetBytes(), pk)
