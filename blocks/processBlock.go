@@ -55,6 +55,13 @@ func IsAllTransactions(block Block) [][]byte {
 		hash := tx.GetBytes()
 		isKey := transactionsDefinition.CheckFromDBPoolTx(common.TransactionPoolHashesDBPrefix[:], hash)
 		if isKey == false {
+			isKeyPerm := transactionsDefinition.CheckFromDBPoolTx(common.TransactionDBPrefix[:], hash)
+			if isKeyPerm {
+				err := transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionDBPrefix[:], hash)
+				if err != nil {
+					log.Println(err)
+				}
+			}
 			hashes = append(hashes, hash)
 		}
 	}

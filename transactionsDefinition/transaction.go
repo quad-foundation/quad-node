@@ -156,6 +156,15 @@ func (mt *Transaction) RemoveFromDBPoolTx(prefix []byte) error {
 	return nil
 }
 
+func RemoveTransactionFromDBbyHash(prefix []byte, hash []byte) error {
+	prefix = append(prefix, hash...)
+	err := (*memDatabase.MainDB).Delete(prefix)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func LoadFromDBPoolTx(prefix []byte, hashTransaction []byte) (Transaction, error) {
 	prefix = append(prefix, hashTransaction...)
 	bt, err := (*memDatabase.MainDB).Get(prefix)
