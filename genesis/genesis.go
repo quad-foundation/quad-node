@@ -23,7 +23,8 @@ type Genesis struct {
 	RewardRatio            float64           `json:"reward_ratio"`
 	Decimals               uint8             `json:"decimals"`
 	BlockTimeInterval      float32           `json:"block_time_interval"`
-	Balances               map[string]int64  `json:"balances"`
+	TransactionsQueue      []string          `json:"transactions_queue"`
+	Transactions           map[string]int64  `json:"transactions"`
 	StakedBalances         map[string]int64  `json:"staked_balances"`
 	TransactionsSignatures map[string]string `json:"transactions_signatures"`
 	PubKeys                map[string]string `json:"pub_keys"`
@@ -63,7 +64,8 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 	blockTransactionsHashesBytes := [][]byte{}
 	blockTransactionsHashes := []common.Hash{}
 	genesisTxs := []transactionsDefinition.Transaction{}
-	for addr, balance := range genesis.Balances {
+	for _, addr := range genesis.TransactionsQueue {
+		balance := genesis.Transactions[addr]
 		ab, err := hex.DecodeString(addr)
 		if err != nil {
 			log.Fatal("cannot decode address from string in genesis block")
@@ -87,6 +89,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 		walletNonce++
 	}
 	for addr, balance := range genesis.StakedBalances {
+
 		ab, err := hex.DecodeString(addr)
 		if err != nil {
 			log.Fatal("cannot decode address from string in genesis block")
