@@ -98,8 +98,8 @@ func (tb Block) CheckProofOfSynergy() bool {
 	return CheckProofOfSynergy(tb.BaseBlock)
 }
 
-func (b Block) GetTransactionsHashes(tempMerkleTrie *transactionsPool.MerkleTree, height int64) ([]common.Hash, error) {
-	txsHashes, err := tempMerkleTrie.LoadTransactionsHashes(height)
+func (b Block) GetTransactionsHashes(height int64) ([]common.Hash, error) {
+	txsHashes, err := transactionsPool.LoadTransactionsHashes(height)
 	if err != nil {
 		return nil, err
 	}

@@ -55,13 +55,6 @@ func IsAllTransactions(block Block) [][]byte {
 		hash := tx.GetBytes()
 		isKey := transactionsDefinition.CheckFromDBPoolTx(common.TransactionPoolHashesDBPrefix[:], hash)
 		if isKey == false {
-			isKeyPerm := transactionsDefinition.CheckFromDBPoolTx(common.TransactionDBPrefix[:], hash)
-			if isKeyPerm {
-				err := transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionDBPrefix[:], hash)
-				if err != nil {
-					log.Println(err)
-				}
-			}
 			hashes = append(hashes, hash)
 		}
 	}
@@ -80,9 +73,9 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 		if err != nil {
 			return 0, err
 		}
-		if transactionsDefinition.CheckFromDBPoolTx(common.TransactionDBPrefix[:], poolTx.Hash.GetBytes()) {
-			log.Println("transaction just exists in DB")
-			continue
+		err = checkTransactionInDBAndInMarkleTrie(hash)
+		if err != nil {
+			return 0, err
 		}
 		fee := poolTx.GasPrice * poolTx.GasUsage
 		totalFee += fee
@@ -169,14 +162,48 @@ func IsInKeysOfMapStakingAccounts(m map[[common.AddressLength]byte]account.Staki
 	return common.ContainsKeyInMap(keys, searchKey)
 }
 
+func checkTransactionInDBAndInMarkleTrie(hash []byte) error {
+	if transactionsDefinition.CheckFromDBPoolTx(common.TransactionDBPrefix[:], hash) {
+		dbTx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], hash)
+		if err != nil {
+			return err
+		}
+		h := dbTx.Height
+		txHeight, err := transactionsPool.FindTransactionInBlocks(hash, h)
+		if err != nil {
+			return err
+		}
+		if txHeight < 0 {
+			log.Println("transaction not in merkle tree. removing transaction")
+			err = transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionDBPrefix[:], hash)
+			if err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("transaction was previously added in chain")
+		}
+	}
+	return nil
+}
+
 func ProcessBlockTransfers(block Block, reward int64) error {
 	txs := block.TransactionsHashes
 	for _, tx := range txs {
 		hash := tx.GetBytes()
+		err := checkTransactionInDBAndInMarkleTrie(hash)
+		if err != nil {
+			return err
+		}
 		poolTx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionPoolHashesDBPrefix[:], hash)
 		if err != nil {
 			return err
 		}
+
+		if poolTx.Height > block.GetHeader().Height {
+			transactionsPool.PoolsTx.RemoveTransactionByHash(poolTx.Hash.GetBytes())
+			return fmt.Errorf("transaction height is wrong")
+		}
+
 		err = ProcessTransaction(poolTx, block.GetHeader().Height)
 		if err != nil {
 			// remove bad transaction from pool
@@ -221,6 +248,7 @@ func RemoveAllTransactionsRelatedToBlock(newBlock Block) {
 	for _, tx := range txs {
 		hash := tx.GetBytes()
 		transactionsPool.PoolsTx.RemoveTransactionByHash(hash)
+		transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionPoolHashesDBPrefix[:], hash)
 	}
 }
 
@@ -242,21 +270,12 @@ func CheckBlockAndTransferFunds(newBlock Block, lastBlock Block, merkleTrie *tra
 
 	hashes := newBlock.GetBlockTransactionsHashes()
 	log.Println("Number of transactions in block: ", len(hashes))
-	txshb := [][]byte{}
-	for _, h := range hashes {
-		tx := transactionsPool.PoolsTx.PopTransactionByHash(h.GetBytes())
-		txshb = append(txshb, tx.GetHash().GetBytes())
-		err = tx.StoreToDBPoolTx(common.TransactionDBPrefix[:])
-		if err != nil {
-			return err
-		}
-	}
 
 	err = ProcessBlockPubKey(newBlock)
 	if err != nil {
 		return err
 	}
-	err = merkleTrie.StoreTree(newBlock.GetHeader().Height, txshb)
+	err = merkleTrie.StoreTree(newBlock.GetHeader().Height)
 	if err != nil {
 		return err
 	}
@@ -265,15 +284,21 @@ func CheckBlockAndTransferFunds(newBlock Block, lastBlock Block, merkleTrie *tra
 		return err
 	}
 	for _, h := range hashes {
-		tx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], h.GetBytes())
+		tx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionPoolHashesDBPrefix[:], h.GetBytes())
 		if err != nil {
 			log.Println(err)
 			continue
 		}
+		err = tx.StoreToDBPoolTx(common.TransactionDBPrefix[:])
+		if err != nil {
+			return err
+		}
+		transactionsPool.PoolsTx.RemoveTransactionByHash(h.GetBytes())
 		err = tx.RemoveFromDBPoolTx(common.TransactionPoolHashesDBPrefix[:])
 		if err != nil {
 			log.Println(err)
 		}
 	}
+
 	return nil
 }

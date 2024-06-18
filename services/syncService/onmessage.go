@@ -188,7 +188,7 @@ func OnMessage(addr string, m []byte) {
 			if err != nil {
 				log.Println(err)
 			}
-			statistics.UpdateStatistics(block, merkleTries[index], oldBlock)
+			statistics.UpdateStatistics(block, oldBlock)
 		}
 
 	case "gh":

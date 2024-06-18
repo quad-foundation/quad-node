@@ -121,7 +121,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 	}
 	defer genesisMerkleTrie.Destroy()
 
-	err = genesisMerkleTrie.StoreTree(0, blockTransactionsHashesBytes)
+	err = genesisMerkleTrie.StoreTree(0)
 	if err != nil {
 		log.Fatalf("cannot store genesis merkleTrie %v", err)
 	}

@@ -4,6 +4,7 @@ import (
 	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/blocks"
 	"github.com/quad-foundation/quad-node/common"
+	"github.com/quad-foundation/quad-node/transactionsPool"
 	"log"
 )
 
@@ -59,6 +60,16 @@ func ResetAccountsAndBlocksSync(height int64) {
 	}
 	for i := hsa; i > height; i-- {
 		err := account.RemoveStakingAccountsFromDB(i)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+	hm, err := transactionsPool.LastHeightStoredInMerleTrie()
+	if err != nil {
+		log.Println(err)
+	}
+	for i := hm; i > height; i-- {
+		err := transactionsPool.RemoveMerkleTrieFromDB(i)
 		if err != nil {
 			log.Println(err)
 		}

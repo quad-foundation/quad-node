@@ -177,7 +177,7 @@ func OnMessage(addr string, m []byte) {
 				if err != nil {
 					log.Println(err)
 				}
-				statistics.UpdateStatistics(newBlock, merkleTrie, lastBlock)
+				statistics.UpdateStatistics(newBlock, lastBlock)
 			}
 		}
 	default:
