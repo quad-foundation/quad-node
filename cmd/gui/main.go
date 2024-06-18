@@ -60,7 +60,7 @@ func main() {
 	window.AddTab(walletWidget, "Wallet")
 	window.AddTab(accountWidget, "Account")
 	window.AddTab(sendWidget, "Send/Register")
-	window.AddTab(stakingWidget, "Staking/Unstaking")
+	window.AddTab(stakingWidget, "Staking/Rewards")
 	window.AddTab(historyWidget, "Transactions history")
 	window.AddTab(detailsWidget, "Details")
 	//window.AddTab(smartContractWidget, "Smart Contract")

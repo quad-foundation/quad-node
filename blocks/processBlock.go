@@ -85,7 +85,7 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 		recipientAddress := poolTx.TxData.Recipient
 		n, err := account.IntDelegatedAccountFromAddress(recipientAddress)
 		if err == nil { // delegated account
-			stakingAcc := account.GetStakingAccountByAddressBytes(address.GetBytes(), n)
+			stakingAcc := account.GetStakingAccountByAddressBytes(address.GetBytes(), n%256)
 			if bytes.Compare(stakingAcc.Address[:], address.GetBytes()) != 0 {
 				log.Println("no account found in check block transfer")
 				copy(stakingAcc.Address[:], address.GetBytes())

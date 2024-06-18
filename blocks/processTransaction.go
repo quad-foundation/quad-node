@@ -63,8 +63,8 @@ func CheckStakingTransaction(tx transactionsDefinition.Transaction, sumAmount in
 	}
 	if n >= 256 && n < 256*2 {
 
-		accStaking := account.GetStakingAccountByAddressBytes(address.GetBytes(), n-255)
-		if bytes.Compare(accStaking.DelegatedAccount[:], addressRecipient.GetBytes()) != 0 {
+		accStaking := account.GetStakingAccountByAddressBytes(address.GetBytes(), n%256)
+		if bytes.Compare(accStaking.Address[:], address.GetBytes()) != 0 {
 			log.Println("no staking account found in check staking transaction (rewards)")
 			return false
 		}
@@ -105,18 +105,18 @@ func ProcessTransaction(tx transactionsDefinition.Transaction, height int64) err
 		}
 		if n >= 256 && n < 256+256 {
 
-			accStaking := account.GetStakingAccountByAddressBytes(address.GetBytes(), n-255)
+			accStaking := account.GetStakingAccountByAddressBytes(address.GetBytes(), n%256)
 			if bytes.Compare(accStaking.Address[:], address.GetBytes()) != 0 {
 				return fmt.Errorf("no staking account found in check staking transaction (rewards)")
 			}
 			if amount > 0 {
 				log.Println("not implemented")
-				//err := account.Reward(accStaking.Address[:], amount, height, n)
+				//err := account.Reward(accStaking.Address[:], amount, height, n%256)
 				//if err != nil {
 				//	return err
 				//}
 			} else if amount < 0 {
-				err := account.WithdrawReward(accStaking.Address[:], amount, height, n)
+				err := account.WithdrawReward(accStaking.Address[:], amount, height, n%256)
 				if err != nil {
 					return err
 				}

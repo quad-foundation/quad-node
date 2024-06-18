@@ -41,6 +41,14 @@ func ShowStakingPage() *widgets.QTabWidget {
 		button.SetText("UNSTAKE")
 		//operator.SetEnabled(false)
 	})
+
+	withdrawButton := widgets.NewQRadioButton2("WITHDRAW REWARDS", nil)
+	widget.Layout().AddWidget(withdrawButton)
+	withdrawButton.ConnectClicked(func(bool) {
+		amount.SetPlaceholderText("Withdraw rewards amount")
+		button.SetText("WITHDRAW REWARDS")
+		//operator.SetEnabled(false)
+	})
 	stakeButton.SetChecked(true)
 	// create a line edit
 	// with a custom placeholder text
@@ -93,7 +101,11 @@ func ShowStakingPage() *widgets.QTabWidget {
 				return
 			}
 		} else {
-			ar = common.GetDelegatedAccountAddress(int16(di))
+			if withdrawButton.IsChecked() {
+				ar = common.GetDelegatedAccountAddress(int16(di + 256))
+			} else {
+				ar = common.GetDelegatedAccountAddress(int16(di))
+			}
 		}
 
 		if _, err := account.IntDelegatedAccountFromAddress(ar); err != nil {
@@ -109,9 +121,17 @@ func ShowStakingPage() *widgets.QTabWidget {
 			return
 		}
 		if int64(af*math.Pow10(int(common.Decimals))) < common.MinStakingUser {
-			v = fmt.Sprint("Staked amount cannot less than:", float64(common.MinStakingUser)/math.Pow10(int(common.Decimals)))
-			info = &v
-			return
+			if withdrawButton.IsChecked() {
+				if af >= 0 {
+					v = fmt.Sprint("Withdraw amount cannot less or equal than:", 0)
+					info = &v
+					return
+				}
+			} else {
+				v = fmt.Sprint("Staked amount cannot less than:", float64(common.MinStakingUser)/math.Pow10(int(common.Decimals)))
+				info = &v
+				return
+			}
 		}
 		am := int64(af * math.Pow10(int(common.Decimals)))
 		if float64(am) != af*math.Pow10(int(common.Decimals)) {
@@ -120,6 +140,8 @@ func ShowStakingPage() *widgets.QTabWidget {
 			return
 		}
 		if unstakeButton.IsChecked() {
+			am *= -1
+		} else if withdrawButton.IsChecked() {
 			am *= -1
 		}
 		isoperator := uint8(0)

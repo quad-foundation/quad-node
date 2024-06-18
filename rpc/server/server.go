@@ -129,7 +129,7 @@ func handleACCT(line []byte, reply *[]byte) {
 	copy(byt[:], line[:common.AddressLength])
 	account.AccountsRWMutex.RLock()
 	acc := account.Accounts.AllAccounts[byt]
-	account.AccountsRWMutex.RUnlock()
+	defer account.AccountsRWMutex.RUnlock()
 	am := acc.Marshal()
 	*reply = am
 }
@@ -141,7 +141,7 @@ func handleSTAK(line []byte, reply *[]byte) {
 	n := int(line[common.AddressLength])
 	account.StakingRWMutex.RLock()
 	acc := account.StakingAccounts[n].AllStakingAccounts[byt]
-	account.StakingRWMutex.RUnlock()
+	defer account.StakingRWMutex.RUnlock()
 	am := acc.Marshal()
 	*reply = am
 }

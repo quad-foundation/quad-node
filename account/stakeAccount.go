@@ -129,7 +129,7 @@ func WithdrawReward(accb []byte, amount int64, height int64, delegatedAccount in
 	if acc.StakingRewards+amount < 0 {
 		return fmt.Errorf("insufficient rewards balance to withdraw")
 	}
-	acc.StakedBalance += amount
+	acc.StakingRewards += amount
 	sd := StakingDetail{
 		Amount:      0,
 		Reward:      amount,
