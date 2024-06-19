@@ -40,7 +40,7 @@ func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 			if err != nil {
 				return blocks.Block{}, err
 			}
-			return blocks.Block{}, fmt.Errorf("last block hash and nonce hash do not match", ha, " ", lastBlock.GetBlockHash().GetBytes())
+			return blocks.Block{}, fmt.Errorf("last block hash and nonce hash do not match %v %v", ha, lastBlock.GetBlockHash().GetBytes())
 		}
 		if heightTransaction != heightLastBlocktransaction+1 {
 			return blocks.Block{}, fmt.Errorf("last block height and nonce height do not match")
