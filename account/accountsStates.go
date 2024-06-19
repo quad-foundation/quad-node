@@ -87,8 +87,8 @@ func StoreAccounts(height int64) error {
 	if height < 0 {
 		height = common.GetHeight()
 	}
-	AccountsRWMutex.RLock()
-	defer AccountsRWMutex.RUnlock()
+	AccountsRWMutex.Lock()
+	defer AccountsRWMutex.Unlock()
 	k := Accounts.Marshal()
 	hb := common.GetByteInt64(height)
 	prefix := append(common.AccountsDBPrefix[:], hb...)
@@ -129,7 +129,7 @@ func LoadAccounts(height int64) error {
 		log.Println("cannot load accounts", err)
 		return err
 	}
-	err = Accounts.Unmarshal(b)
+	err = (&Accounts).Unmarshal(b)
 	if err != nil {
 		log.Println("cannot unmarshal accounts")
 		return err

@@ -31,10 +31,11 @@ func (a Account) Marshal() []byte {
 }
 
 func (a *Account) Unmarshal(data []byte) error {
-	a.Balance = common.GetInt64FromByte(data[:8])
 	if len(data) != 28 {
 		return fmt.Errorf("wrong number of bytes in unmarshal account")
 	}
+	a.Balance = common.GetInt64FromByte(data[:8])
+
 	copy(a.Address[:], data[8:])
 	return nil
 }
