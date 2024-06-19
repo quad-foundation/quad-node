@@ -109,7 +109,8 @@ func OnMessage(addr string, m []byte) {
 
 		if err != nil {
 			log.Println(err)
-			panic("Error in block creation ")
+			return
+			//panic("Error in block creation ")
 		}
 
 		if newBlock.CheckProofOfSynergy() {

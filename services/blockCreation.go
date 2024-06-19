@@ -36,11 +36,11 @@ func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 		heightLastBlocktransaction := common.GetInt64FromByte(at.GetData().GetOptData()[:8])
 		hashLastBlocktransaction := at.GetData().GetOptData()[8:40]
 		if !bytes.Equal(hashLastBlocktransaction, lastBlock.GetBlockHash().GetBytes()) {
-			ha, err := blocks.LoadHashOfBlock(heightTransaction - 1)
+			ha, err := blocks.LoadHashOfBlock(heightTransaction - 2)
 			if err != nil {
 				return blocks.Block{}, err
 			}
-			return blocks.Block{}, fmt.Errorf("last block hash and nonce hash do not match %v %v", ha, lastBlock.GetBlockHash().GetBytes())
+			return blocks.Block{}, fmt.Errorf("last block hash and nonce hash do not match %v %v", ha, hashLastBlocktransaction)
 		}
 		if heightTransaction != heightLastBlocktransaction+1 {
 			return blocks.Block{}, fmt.Errorf("last block height and nonce height do not match")
