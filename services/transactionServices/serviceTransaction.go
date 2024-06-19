@@ -106,8 +106,7 @@ func Send(addr string, nb []byte) {
 }
 
 func Spread(ignoreAddr string, nb []byte) {
-	tcpip.PeersMutex.RLock()
-	defer tcpip.PeersMutex.RUnlock()
+
 	var peers = tcpip.GetPeersConnected()
 	for topicip, _ := range peers {
 		ip := topicip[2:]
