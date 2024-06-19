@@ -76,7 +76,6 @@ func StoreStakingAccounts(height int64) error {
 		err := memDatabase.MainDB.Put(prefix, k[:])
 		if err != nil {
 			log.Println("cannot store accounts", err)
-			return err
 		}
 	}
 	return nil

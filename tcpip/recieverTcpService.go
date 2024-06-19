@@ -21,7 +21,7 @@ var (
 	receiveMutex     = &sync.Mutex{}
 	waitChan         = make(chan []byte)
 	tcpConnections   = make(map[[2]byte]map[string]*net.TCPConn)
-	peersMutex       = &sync.RWMutex{}
+	PeersMutex       = &sync.RWMutex{}
 	Quit             chan os.Signal
 	TransactionTopic = [2]byte{'T', 'T'}
 	NonceTopic       = [2]byte{'N', 'N'}
@@ -153,8 +153,8 @@ func RegisterPeer(topic [2]byte, tcpConn *net.TCPConn) {
 	addrRemote := ra[0]
 	topicip := string(topic[:]) + addrRemote
 
-	peersMutex.Lock()
-	defer peersMutex.Unlock()
+	PeersMutex.Lock()
+	defer PeersMutex.Unlock()
 
 	if _, ok := peersConnected[topicip]; !ok {
 		log.Println("New connection from address", addrRemote, "on topic", topic)
@@ -168,14 +168,14 @@ func RegisterPeer(topic [2]byte, tcpConn *net.TCPConn) {
 }
 
 func GetPeersConnected() map[string]string {
-	peersMutex.RLock()
-	defer peersMutex.RUnlock()
+	PeersMutex.RLock()
+	defer PeersMutex.RUnlock()
 	return peersConnected
 }
 
 func LookUpForNewPeersToConnect(chanPeer chan string) {
 	for {
-		peersMutex.RLock()
+		PeersMutex.RLock()
 		for topicip, topic := range peersConnected {
 			_, ok := oldPeers[topicip]
 			if ok == false {
@@ -191,7 +191,7 @@ func LookUpForNewPeersToConnect(chanPeer chan string) {
 				delete(oldPeers, topicip)
 			}
 		}
-		peersMutex.RUnlock()
+		PeersMutex.RUnlock()
 		time.Sleep(time.Second)
 	}
 }
