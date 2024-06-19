@@ -120,7 +120,11 @@ func ShowStakingPage() *widgets.QTabWidget {
 			info = &v
 			return
 		}
-		if int64(af*math.Pow10(int(common.Decimals))) < common.MinStakingUser {
+		withdrawMin := common.MinStakingUser
+		if withdrawButton.IsChecked() {
+			withdrawMin = 0
+		}
+		if int64(af*math.Pow10(int(common.Decimals))) < withdrawMin {
 			if withdrawButton.IsChecked() {
 				if af >= 0 {
 					v = fmt.Sprint("Withdraw amount cannot less or equal than:", 0)

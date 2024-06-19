@@ -65,11 +65,10 @@ func (at *StakingAccountsType) Unmarshal(data []byte) error {
 }
 
 func StoreStakingAccounts(height int64) error {
-
+	StakingRWMutex.Lock()
+	defer StakingRWMutex.Unlock()
 	for i := 1; i < 256; i++ {
-		StakingRWMutex.Lock()
 		k := StakingAccounts[i].Marshal()
-		StakingRWMutex.Unlock()
 		hb := common.GetByteInt64(height)
 		prefix := append(common.StakingAccountsDBPrefix[:], hb...)
 		prefix = append(prefix, byte(i))
@@ -89,7 +88,8 @@ func LoadStakingAccounts(height int64) error {
 			log.Println(err)
 		}
 	}
-
+	StakingRWMutex.Lock()
+	defer StakingRWMutex.Unlock()
 	for i := 1; i < 256; i++ {
 		hb := common.GetByteInt64(height)
 		prefix := append(common.StakingAccountsDBPrefix[:], hb...)
@@ -99,9 +99,7 @@ func LoadStakingAccounts(height int64) error {
 			log.Println("cannot load accounts", err)
 			continue
 		}
-		StakingRWMutex.Lock()
 		err = (&StakingAccounts[i]).Unmarshal(b)
-		StakingRWMutex.Unlock()
 		if err != nil {
 			log.Println("cannot unmarshal accounts", err)
 			return err
