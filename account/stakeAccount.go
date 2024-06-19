@@ -156,7 +156,8 @@ func (sa StakingAccount) Marshal() []byte {
 
 	// Address length and Address
 	buffer.Write(sa.DelegatedAccount[:])
-
+	// Address length and Address
+	buffer.Write(sa.Address[:])
 	// StakingDetails count
 	buffer.Write(common.GetByteInt64(int64(len(sa.StakingDetails))))
 
@@ -179,24 +180,36 @@ func (sa StakingAccount) Marshal() []byte {
 func (sa *StakingAccount) Unmarshal(data []byte) error {
 
 	buffer := bytes.NewBuffer(data)
-
+	// Ensure there's enough data for StakedBalance and StakingRewards
+	if buffer.Len() < 16+2*common.AddressLength {
+		return fmt.Errorf("insufficient data for StakedBalance and StakingRewards")
+	}
 	// StakedBalance, StakingRewards
 	sa.StakedBalance = common.GetInt64FromByte(buffer.Next(8))
 	sa.StakingRewards = common.GetInt64FromByte(buffer.Next(8))
 
 	// Address
 	copy(sa.DelegatedAccount[:], buffer.Next(common.AddressLength))
+	copy(sa.Address[:], buffer.Next(common.AddressLength))
 
 	// StakingDetails
 	detailsCount := common.GetInt64FromByte(buffer.Next(8))
 	sa.StakingDetails = make(map[int64][]StakingDetail, detailsCount)
 
 	for i := int64(0); i < detailsCount; i++ {
+		// Ensure there's enough data for the key and the detail count
+		if buffer.Len() < 16 {
+			return fmt.Errorf("insufficient data for key and detail count at detail %d", i)
+		}
 		key := common.GetInt64FromByte(buffer.Next(8))
 		detailCount := common.GetInt64FromByte(buffer.Next(8))
 
 		details := make([]StakingDetail, detailCount)
 		for j := int64(0); j < detailCount; j++ {
+			// Ensure there's enough data for each StakingDetail
+			if buffer.Len() < 24 {
+				return fmt.Errorf("insufficient data for StakingDetail at detail %d, entry %d", i, j)
+			}
 			amount := common.GetInt64FromByte(buffer.Next(8))
 			reward := common.GetInt64FromByte(buffer.Next(8))
 			lastUpdated := common.GetInt64FromByte(buffer.Next(8))
