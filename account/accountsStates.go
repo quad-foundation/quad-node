@@ -54,8 +54,6 @@ func (at AccountsType) Marshal() []byte {
 // Unmarshal decodes AccountsType from a binary format.
 func (at *AccountsType) Unmarshal(data []byte) error {
 	buffer := bytes.NewBuffer(data)
-	AccountsRWMutex.Lock()
-	defer AccountsRWMutex.Unlock()
 	// Number of accounts
 	accountCount := common.GetInt64FromByte(buffer.Next(8))
 
