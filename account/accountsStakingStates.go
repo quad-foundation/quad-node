@@ -82,14 +82,15 @@ func StoreStakingAccounts(height int64) error {
 
 func LoadStakingAccounts(height int64) error {
 	var err error
+	StakingRWMutex.Lock()
+	defer StakingRWMutex.Unlock()
 	if height < 0 {
 		height, err = LastHeightStoredInStakingAccounts()
 		if err != nil {
 			log.Println(err)
 		}
 	}
-	StakingRWMutex.Lock()
-	defer StakingRWMutex.Unlock()
+
 	for i := 1; i < 256; i++ {
 		hb := common.GetByteInt64(height)
 		prefix := append(common.StakingAccountsDBPrefix[:], hb...)
@@ -120,8 +121,7 @@ func RemoveStakingAccountsFromDB(height int64) error {
 	hb := common.GetByteInt64(height)
 	prefix := append(common.StakingAccountsDBPrefix[:], hb...)
 	for i := 1; i < 256; i++ {
-		prefix2 := [2]byte{byte(i / 16), byte(i % 16)}
-		prefix = append(prefix, prefix2[:]...)
+		prefix = append(prefix, byte(i))
 		err := memDatabase.MainDB.Delete(prefix)
 		if err != nil {
 			log.Println("cannot remove account", err)
@@ -136,7 +136,7 @@ func LastHeightStoredInStakingAccounts() (int64, error) {
 	for {
 		ib := common.GetByteInt64(i)
 		prefix := append(common.StakingAccountsDBPrefix[:], ib...)
-		prefix = append(prefix, []byte{0, 1}...)
+		prefix = append(prefix, byte(1))
 		isKey, err := memDatabase.MainDB.IsKey(prefix)
 		if err != nil {
 			return i - 1, err

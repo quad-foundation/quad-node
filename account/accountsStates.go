@@ -36,8 +36,6 @@ func GetBalance(address [common.AddressLength]byte) int64 {
 // Marshal converts AccountsType to a binary format.
 func (at AccountsType) Marshal() []byte {
 	var buffer bytes.Buffer
-	AccountsRWMutex.RLock()
-	defer AccountsRWMutex.RUnlock()
 	// Number of accounts
 	accountCount := len(at.AllAccounts)
 	buffer.Write(common.GetByteInt64(int64(accountCount)))
@@ -89,9 +87,9 @@ func StoreAccounts(height int64) error {
 	if height < 0 {
 		height = common.GetHeight()
 	}
-	k := Accounts.Marshal()
 	AccountsRWMutex.RLock()
 	defer AccountsRWMutex.RUnlock()
+	k := Accounts.Marshal()
 	hb := common.GetByteInt64(height)
 	prefix := append(common.AccountsDBPrefix[:], hb...)
 	err := memDatabase.MainDB.Put(prefix, k[:])
@@ -115,6 +113,8 @@ func RemoveAccountsFromDB(height int64) error {
 
 func LoadAccounts(height int64) error {
 	var err error
+	AccountsRWMutex.Lock()
+	defer AccountsRWMutex.Unlock()
 	if height < 0 {
 		height, err = LastHeightStoredInAccounts()
 		if err != nil {
@@ -122,8 +122,6 @@ func LoadAccounts(height int64) error {
 		}
 	}
 
-	AccountsRWMutex.Lock()
-	defer AccountsRWMutex.Unlock()
 	hb := common.GetByteInt64(height)
 	prefix := append(common.AccountsDBPrefix[:], hb...)
 	b, err := memDatabase.MainDB.Get(prefix)
