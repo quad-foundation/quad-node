@@ -61,7 +61,7 @@ func CheckStakingTransaction(tx transactionsDefinition.Transaction, sumAmount in
 			return false
 		}
 	}
-	if n >= 256 && n < 256*2 {
+	if n >= 256 && n < 512 {
 
 		accStaking := account.GetStakingAccountByAddressBytes(address.GetBytes(), n%256)
 		if bytes.Compare(accStaking.Address[:], address.GetBytes()) != 0 {
@@ -103,7 +103,7 @@ func ProcessTransaction(tx transactionsDefinition.Transaction, height int64) err
 				return err
 			}
 		}
-		if n >= 256 && n < 256+256 {
+		if n >= 256 && n < 512 {
 
 			accStaking := account.GetStakingAccountByAddressBytes(address.GetBytes(), n%256)
 			if bytes.Compare(accStaking.Address[:], address.GetBytes()) != 0 {

@@ -84,7 +84,7 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 		address := poolTx.GetSenderAddress()
 		recipientAddress := poolTx.TxData.Recipient
 		n, err := account.IntDelegatedAccountFromAddress(recipientAddress)
-		if err == nil { // delegated account
+		if err == nil && n < 512 { // delegated account
 			stakingAcc := account.GetStakingAccountByAddressBytes(address.GetBytes(), n%256)
 			if bytes.Compare(stakingAcc.Address[:], address.GetBytes()) != 0 {
 				log.Println("no account found in check block transfer")
@@ -123,6 +123,7 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 			transactionsPool.PoolsTx.RemoveTransactionByHash(poolTx.Hash.GetBytes())
 			return 0, fmt.Errorf("not enough funds on account")
 		}
+
 	}
 	reward := account.GetReward(lastSupply)
 	lastSupply += reward - totalFee
