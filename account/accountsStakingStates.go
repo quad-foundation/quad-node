@@ -67,9 +67,9 @@ func (at *StakingAccountsType) Unmarshal(data []byte) error {
 func StoreStakingAccounts(height int64) error {
 
 	for i := 1; i < 256; i++ {
-		StakingRWMutex.RLock()
+		StakingRWMutex.Lock()
 		k := StakingAccounts[i].Marshal()
-		StakingRWMutex.RUnlock()
+		StakingRWMutex.Unlock()
 		hb := common.GetByteInt64(height)
 		prefix := append(common.StakingAccountsDBPrefix[:], hb...)
 		prefix = append(prefix, byte(i))
