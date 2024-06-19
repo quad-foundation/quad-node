@@ -125,6 +125,7 @@ func LoadAccounts(height int64) error {
 	}
 
 	AccountsRWMutex.Lock()
+	defer AccountsRWMutex.Unlock()
 	hb := common.GetByteInt64(height)
 	prefix := append(common.AccountsDBPrefix[:], hb...)
 	b, err := memDatabase.MainDB.Get(prefix)
@@ -132,7 +133,6 @@ func LoadAccounts(height int64) error {
 		log.Println("cannot load accounts", err)
 		return err
 	}
-	AccountsRWMutex.Unlock()
 	err = Accounts.Unmarshal(b)
 	if err != nil {
 		log.Println("cannot unmarshal accounts")
