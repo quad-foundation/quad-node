@@ -101,6 +101,7 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 			if ret == false {
 				// remove bad transaction from pool
 				transactionsPool.PoolsTx.RemoveTransactionByHash(poolTx.Hash.GetBytes())
+				transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionPoolHashesDBPrefix[:], poolTx.Hash.GetBytes())
 				return 0, fmt.Errorf("staking transactions checking fails")
 			}
 		}
@@ -108,6 +109,7 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 		if bytes.Compare(acc.Address[:], address.GetBytes()) != 0 {
 			// remove bad transaction from pool
 			transactionsPool.PoolsTx.RemoveTransactionByHash(poolTx.Hash.GetBytes())
+			transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionPoolHashesDBPrefix[:], poolTx.Hash.GetBytes())
 			return 0, fmt.Errorf("no account found in check block transafer")
 		}
 		if IsInKeysOfMapAccounts(accounts, acc.Address) {
@@ -121,6 +123,7 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 		if acc.Balance < 0 {
 			// remove bad transaction from pool
 			transactionsPool.PoolsTx.RemoveTransactionByHash(poolTx.Hash.GetBytes())
+			transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionPoolHashesDBPrefix[:], poolTx.Hash.GetBytes())
 			return 0, fmt.Errorf("not enough funds on account")
 		}
 
