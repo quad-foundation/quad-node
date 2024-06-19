@@ -17,8 +17,7 @@ var StakingAccounts [256]StakingAccountsType
 // Marshal converts AccountsType to a binary format.
 func (at StakingAccountsType) Marshal() []byte {
 	var buffer bytes.Buffer
-	StakingRWMutex.RLock()
-	defer StakingRWMutex.RUnlock()
+
 	// Number of accounts
 	accountCount := len(at.AllStakingAccounts)
 	buffer.Write(common.GetByteInt64(int64(accountCount)))
@@ -66,7 +65,8 @@ func (at *StakingAccountsType) Unmarshal(data []byte) error {
 }
 
 func StoreStakingAccounts(height int64) error {
-
+	StakingRWMutex.RLock()
+	defer StakingRWMutex.RUnlock()
 	for i, stakeAccount := range StakingAccounts {
 		k := stakeAccount.Marshal()
 		prefix2 := [2]byte{byte(i / 16), byte(i % 16)}
@@ -105,7 +105,7 @@ func LoadStakingAccounts(height int64) error {
 		err = (&StakingAccounts[i]).Unmarshal(b)
 		StakingRWMutex.Unlock()
 		if err != nil {
-			log.Println("cannot unmarshal accounts")
+			log.Println("cannot unmarshal accounts", err)
 			return err
 		}
 	}
