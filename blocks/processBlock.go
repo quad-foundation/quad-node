@@ -220,7 +220,7 @@ func ProcessBlockTransfers(block Block, reward int64) error {
 	if err != nil || n < 1 || n > 255 {
 		return fmt.Errorf("wrong delegated account in block")
 	}
-	staked, sum := account.GetStakedInDelegatedAccount(n)
+	staked, sum, _ := account.GetStakedInDelegatedAccount(n)
 	if sum <= 0 {
 		return fmt.Errorf("no staked amount in delegated account which was rewarded")
 	}
@@ -263,8 +263,9 @@ func CheckBlockAndTransferFunds(newBlock Block, lastBlock Block, merkleTrie *tra
 	if err != nil || n < 1 || n > 255 {
 		return fmt.Errorf("wrong delegated account")
 	}
-	if _, sumStaked := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode {
-		return fmt.Errorf("not enough staked coins to be a node")
+	opAccBlockAddr := newBlock.GetHeader().OperatorAccount
+	if _, sumStaked, opAcc := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode || bytes.Compare(opAcc.Address[:], opAccBlockAddr.GetBytes()) != 0 {
+		return fmt.Errorf("not enough staked coins to be a node or not valid operetional account")
 	}
 
 	reward, err := CheckBlockTransfers(newBlock, lastBlock)

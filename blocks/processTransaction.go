@@ -79,13 +79,14 @@ func CheckStakingTransaction(tx transactionsDefinition.Transaction, sumAmount in
 func ProcessTransaction(tx transactionsDefinition.Transaction, height int64) error {
 	fee := tx.GasPrice * tx.GasUsage
 	amount := tx.TxData.Amount
+	operational := len(tx.TxData.OptData) > 0
 	address := tx.GetSenderAddress()
 	addressRecipient := tx.TxData.Recipient
 	n, err := account.IntDelegatedAccountFromAddress(addressRecipient)
 	if err == nil { // this is delegated account
 		if n > 0 && n < 256 {
 			if amount >= common.MinStakingUser {
-				err := account.Stake(address.GetBytes(), amount, height, n)
+				err := account.Stake(address.GetBytes(), amount, height, n, operational)
 				if err != nil {
 					return err
 				}

@@ -107,11 +107,12 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 		sds := map[int64][]account.StakingDetail{}
 		sds[0] = []account.StakingDetail{sd}
 		as := account.StakingAccount{
-			StakedBalance:    balance,
-			StakingRewards:   0,
-			DelegatedAccount: delAddrb,
-			Address:          addrb,
-			StakingDetails:   sds,
+			StakedBalance:      balance,
+			StakingRewards:     0,
+			DelegatedAccount:   delAddrb,
+			Address:            addrb,
+			OperationalAccount: true,
+			StakingDetails:     sds,
 		}
 		account.StakingAccounts[1].AllStakingAccounts[addrb] = as
 	}

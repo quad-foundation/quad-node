@@ -8,11 +8,12 @@ import (
 )
 
 type StakingAccount struct {
-	StakedBalance    int64                      `json:"staked_balance"`
-	StakingRewards   int64                      `json:"staking_rewards"`
-	DelegatedAccount [common.AddressLength]byte `json:"delegated_account"`
-	Address          [common.AddressLength]byte `json:"address"`
-	StakingDetails   map[int64][]StakingDetail  `json:"staking_details,omitempty"` // block number as key of map
+	StakedBalance      int64                      `json:"staked_balance"`
+	StakingRewards     int64                      `json:"staking_rewards"`
+	DelegatedAccount   [common.AddressLength]byte `json:"delegated_account"`
+	Address            [common.AddressLength]byte `json:"address"`
+	OperationalAccount bool                       `json:"operational_account"`
+	StakingDetails     map[int64][]StakingDetail  `json:"staking_details,omitempty"` // block number as key of map
 }
 
 type StakingDetail struct {
@@ -21,7 +22,7 @@ type StakingDetail struct {
 	LastUpdated int64 `json:"last_updated"`
 }
 
-func Stake(accb []byte, amount int64, height int64, delegatedAccount int) error {
+func Stake(accb []byte, amount int64, height int64, delegatedAccount int, operational bool) error {
 	if len(accb) != common.AddressLength {
 		return fmt.Errorf("wrong address length, must be %v", common.AddressLength)
 	}
@@ -35,6 +36,7 @@ func Stake(accb []byte, amount int64, height int64, delegatedAccount int) error 
 		return fmt.Errorf("staked amount has to be larger than 0")
 	}
 
+	acc.OperationalAccount = operational
 	acc.StakedBalance += amount
 	sd := StakingDetail{
 		Amount:      amount,
@@ -69,6 +71,9 @@ func Unstake(accb []byte, amount int64, height int64, delegatedAccount int) erro
 		return fmt.Errorf("insufficient staked balance")
 	}
 	acc.StakedBalance += amount
+	if acc.StakedBalance == 0 {
+		acc.OperationalAccount = false
+	}
 	sd := StakingDetail{
 		Amount:      amount,
 		LastUpdated: time.Now().Unix(),
@@ -226,18 +231,26 @@ func (sa *StakingAccount) Unmarshal(data []byte) error {
 	return nil
 }
 
-func GetStakedInDelegatedAccount(n int) ([]Account, float64) {
+func GetStakedInDelegatedAccount(n int) ([]Account, float64, Account) {
 	StakingRWMutex.RLock()
 	defer StakingRWMutex.RUnlock()
 	sum := int64(0)
+	intAcc := Account{
+		Balance: 0,
+		Address: [20]byte{},
+	}
 	accs := []Account{}
 	for _, sa := range StakingAccounts[n].AllStakingAccounts {
 		acc := Account{
 			Balance: sa.StakedBalance,
 			Address: sa.Address,
 		}
+		if intAcc.Balance < sa.StakedBalance && sa.OperationalAccount {
+			intAcc.Balance = sa.StakedBalance
+			intAcc.Address = sa.Address
+		}
 		sum += sa.StakedBalance
 		accs = append(accs, acc)
 	}
-	return accs, float64(sum)
+	return accs, float64(sum), intAcc
 }

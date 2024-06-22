@@ -1,6 +1,7 @@
 package nonceServices
 
 import (
+	"bytes"
 	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/blocks"
 	"github.com/quad-foundation/quad-node/common"
@@ -67,8 +68,8 @@ func OnMessage(addr string, m []byte) {
 			return
 		}
 		// checking if enough coins staked
-		if _, sumStaked := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode {
-			log.Println("not enough staked coins to be a node")
+		if _, sumStaked, operationalAcc := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode || bytes.Compare(operationalAcc.Address[:], transaction.TxParam.Sender.GetBytes()) != 0 {
+			log.Println("not enough staked coins to be a node or not valid operational account")
 			return
 		}
 

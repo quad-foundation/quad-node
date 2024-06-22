@@ -148,9 +148,9 @@ func ShowStakingPage() *widgets.QTabWidget {
 		} else if withdrawButton.IsChecked() {
 			am *= -1
 		}
-		isoperator := uint8(0)
+		isoperator := []byte{}
 		if operator.IsChecked() {
-			isoperator = uint8(1)
+			isoperator = []byte{1}
 		}
 		pk := common.PubKey{}
 		if pubkeyInclude.IsChecked() {
@@ -160,7 +160,7 @@ func ShowStakingPage() *widgets.QTabWidget {
 		txd := transactionsDefinition.TxData{
 			Recipient: ar,
 			Amount:    am,
-			OptData:   []byte{isoperator},
+			OptData:   isoperator,
 			Pubkey:    pk,
 		}
 		par := transactionsDefinition.TxParam{
