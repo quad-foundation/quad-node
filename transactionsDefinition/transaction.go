@@ -12,13 +12,15 @@ import (
 )
 
 type Transaction struct {
-	TxData    TxData           `json:"tx_data"`
-	TxParam   TxParam          `json:"tx_param"`
-	Hash      common.Hash      `json:"hash"`
-	Signature common.Signature `json:"signature"`
-	Height    int64            `json:"height"`
-	GasPrice  int64            `json:"gas_price"`
-	GasUsage  int64            `json:"gas_usage"`
+	TxData          TxData           `json:"tx_data"`
+	TxParam         TxParam          `json:"tx_param"`
+	Hash            common.Hash      `json:"hash"`
+	Signature       common.Signature `json:"signature"`
+	Height          int64            `json:"height"`
+	GasPrice        int64            `json:"gas_price"`
+	GasUsage        int64            `json:"gas_usage"`
+	OutputLogs      []byte           `json:"outputLogs,omitempty"`
+	ContractAddress common.Address   `json:"contractAddress,omitempty"`
 }
 
 func (mt *Transaction) GetData() TxData {

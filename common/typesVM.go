@@ -19,6 +19,7 @@ package common
 import (
 	"bytes"
 	"database/sql/driver"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"github.com/quad-foundation/quad-node/common/hexutil"
@@ -38,6 +39,14 @@ func BytesToHash(b []byte) Hash {
 	var h Hash
 	h.SetBytes(b)
 	return h
+}
+
+func GetUintFromSCByte(bs []byte) uint {
+	return uint(binary.BigEndian.Uint64(bs[3*8:]))
+}
+
+func GetInt64FromSCByte(bs []byte) int64 {
+	return int64(binary.BigEndian.Uint64(bs[3*8:]))
 }
 
 // HexToHash sets byte representation of s to hash.
