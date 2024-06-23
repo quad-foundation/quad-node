@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/common"
+	memDatabase "github.com/quad-foundation/quad-node/database"
 	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"github.com/quad-foundation/quad-node/transactionsPool"
 	"log"
@@ -256,6 +257,36 @@ func RemoveAllTransactionsRelatedToBlock(newBlock Block) {
 	}
 }
 
+func EvaluateSmartContracts(bl *Block) bool {
+	height := (*bl).GetHeader().Height
+	if ok, logs, addresses, codes, _ := EvaluateSCForBlock(*bl); ok {
+		State.SetSnapShotNum(height, State.Snapshot())
+		for th, a := range addresses {
+
+			prefix := common.OutputLogsHashesDBPrefix[:]
+			err := memDatabase.MainDB.Put(append(prefix, th[:]...), []byte(logs[th]))
+			if err != nil {
+				log.Println("Cannot store output logs")
+				return false
+			}
+
+			aa := [common.AddressLength]byte{}
+			copy(aa[:], a.GetBytes())
+			prefix = common.OutputAddressesHashesDBPrefix[:]
+			err = memDatabase.MainDB.Put(append(prefix, th[:]...), codes[aa])
+			if err != nil {
+				log.Println("Cannot store address codes")
+				return false
+			}
+		}
+
+	} else {
+		log.Println("Evaluating Smart Contract fails")
+		return false
+	}
+	return true
+}
+
 func CheckBlockAndTransferFunds(newBlock Block, lastBlock Block, merkleTrie *transactionsPool.MerkleTree) error {
 
 	defer RemoveAllTransactionsRelatedToBlock(newBlock)
@@ -272,7 +303,9 @@ func CheckBlockAndTransferFunds(newBlock Block, lastBlock Block, merkleTrie *tra
 	if err != nil {
 		return err
 	}
-
+	if EvaluateSmartContracts(&newBlock) == false {
+		return fmt.Errorf("evaluation of smart contracts in block fails")
+	}
 	hashes := newBlock.GetBlockTransactionsHashes()
 	log.Println("Number of transactions in block: ", len(hashes))
 

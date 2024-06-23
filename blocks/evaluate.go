@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"bytes"
+	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/common"
 	vm "github.com/quad-foundation/quad-node/core/evm"
 	"github.com/quad-foundation/quad-node/core/stateDB"
@@ -41,6 +42,11 @@ func EvaluateSCForBlock(bl Block) (bool, map[[common.HashLength]byte]string, map
 				log.Println(err)
 				return false, logs, map[[common.HashLength]byte]common.Address{}, map[[common.AddressLength]byte][]byte{}, map[[common.HashLength]byte][]byte{}
 			}
+		}
+		addressRecipient := t.TxData.Recipient
+		_, err = account.IntDelegatedAccountFromAddress(addressRecipient)
+		if err == nil {
+			continue
 		}
 		if len(t.TxData.OptData) == 0 {
 			continue

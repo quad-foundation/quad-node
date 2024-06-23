@@ -52,6 +52,9 @@ var (
 	TransactionSyncingHashesDBPrefix = [2]byte{'S', '0'}
 	AccountsDBPrefix                 = [2]byte{'A', 'C'}
 	StakingAccountsDBPrefix          = [2]byte{'S', 'A'}
+	OutputLogsHashesDBPrefix         = [2]byte{'O', '0'}
+	OutputLogDBPrefix                = [2]byte{'Z', '0'}
+	OutputAddressesHashesDBPrefix    = [2]byte{'C', '0'}
 )
 
 var chainID = int16(23)
