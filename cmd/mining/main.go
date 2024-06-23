@@ -44,6 +44,15 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// DEX acount init
+
+	allDexAccounts := map[[20]byte]account.DexAccount{}
+	account.DexAccounts = account.DexAccountsType{AllDexAccounts: allDexAccounts}
+	err = account.StoreDexAccounts(0)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	for i := 1; i < 256; i++ {
 		del := common.GetDelegatedAccountAddress(int16(i))
 		delbytes := [common.AddressLength]byte{}
@@ -71,6 +80,13 @@ func main() {
 		log.Fatal(err)
 	}
 	defer account.StoreAccounts(-1)
+
+	err = account.LoadDexAccounts(-1)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer account.StoreDexAccounts(-1)
+
 	err = account.LoadStakingAccounts(-1)
 	if err != nil {
 		log.Fatal(err)

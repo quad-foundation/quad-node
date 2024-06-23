@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/quad-foundation/quad-node/common/hexutil"
+	"math"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -58,6 +59,19 @@ func GetStringFromSCBytes(code []byte, startIndex uint) string {
 	o2 := code[startIndex+64 : startIndex+64+l]
 	st := string(o2)
 	return st
+}
+
+func RoundCoin(v float64) float64 {
+	return math.Round(v*math.Pow10(int(Decimals))) * math.Pow10(-int(Decimals))
+}
+
+func RoundToken(v float64, decimal int) float64 {
+	return math.Round(v*math.Pow10(decimal)) * math.Pow10(-decimal)
+}
+
+func CalcNewDEXPrice(myTokens, myCoins, poolAmountTokens, poolAmountCoins float64) float64 {
+	price := (poolAmountTokens + myTokens) / (poolAmountCoins + myCoins)
+	return price
 }
 
 // IsHexAddress verifies whether a string can represent a valid hex-encoded

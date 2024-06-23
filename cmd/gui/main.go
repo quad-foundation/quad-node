@@ -56,7 +56,7 @@ func main() {
 	detailsWidget := qtwidgets.ShowDetailsPage()
 	stakingWidget := qtwidgets.ShowStakingPage()
 	smartContractWidget := qtwidgets.ShowSmartContractPage()
-	//dexWidget := qtwidgets.ShowDexPage(&MainWallet)
+	//dexWidget := qtwidgets.ShowDexPage()
 	window.AddTab(walletWidget, "Wallet")
 	window.AddTab(accountWidget, "Account")
 	window.AddTab(sendWidget, "Send/Register")

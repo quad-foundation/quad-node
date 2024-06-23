@@ -55,6 +55,8 @@ var (
 	OutputLogsHashesDBPrefix         = [2]byte{'O', '0'}
 	OutputLogDBPrefix                = [2]byte{'Z', '0'}
 	OutputAddressesHashesDBPrefix    = [2]byte{'C', '0'}
+	TokenDetailsDBPrefix             = [2]byte{'T', 'D'}
+	DexAccountsDBPrefix              = [2]byte{'D', 'A'}
 )
 
 var chainID = int16(23)

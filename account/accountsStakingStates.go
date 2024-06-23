@@ -67,7 +67,7 @@ func (at *StakingAccountsType) Unmarshal(data []byte) error {
 func StoreStakingAccounts(height int64) error {
 	StakingRWMutex.Lock()
 	defer StakingRWMutex.Unlock()
-	for i := 1; i < 256; i++ {
+	for i := 0; i < 256; i++ {
 		k := StakingAccounts[i].Marshal()
 		hb := common.GetByteInt64(height)
 		prefix := append(common.StakingAccountsDBPrefix[:], hb...)
@@ -91,7 +91,7 @@ func LoadStakingAccounts(height int64) error {
 		}
 	}
 
-	for i := 1; i < 256; i++ {
+	for i := 0; i < 256; i++ {
 		hb := common.GetByteInt64(height)
 		prefix := append(common.StakingAccountsDBPrefix[:], hb...)
 		prefix = append(prefix, byte(i))
@@ -120,7 +120,7 @@ func GetStakingAccountByAddressBytes(address []byte, delegatedAccount int) Staki
 func RemoveStakingAccountsFromDB(height int64) error {
 	hb := common.GetByteInt64(height)
 	prefix := append(common.StakingAccountsDBPrefix[:], hb...)
-	for i := 1; i < 256; i++ {
+	for i := 0; i < 256; i++ {
 		prefix = append(prefix, byte(i))
 		err := memDatabase.MainDB.Delete(prefix)
 		if err != nil {

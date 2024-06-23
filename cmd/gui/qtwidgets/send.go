@@ -15,15 +15,12 @@ import (
 )
 
 var ChainID = int16(23)
-var TPS float32
-var quitChan chan []byte
 var SmartContractData *widgets.QTextEdit
 var Recipient *widgets.QLineEdit
 var Amount *widgets.QLineEdit
 
 func ShowSendPage() *widgets.QTabWidget {
 
-	quitChan = make(chan []byte)
 	// create a regular widget
 	// give it a QVBoxLayout
 	// and make it the central widget of the window
