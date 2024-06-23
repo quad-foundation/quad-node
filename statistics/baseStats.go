@@ -105,7 +105,7 @@ func LoadStats() (*GlobalMainStats, error) {
 	return nil, fmt.Errorf("try Lock fails")
 }
 
-func UpdateStatistics(newBlock blocks.Block, merkleTrie *transactionsPool.MerkleTree, lastBlock blocks.Block) {
+func UpdateStatistics(newBlock blocks.Block, lastBlock blocks.Block) {
 	if GmsMutex.Mutex.TryLock() {
 		defer GmsMutex.Mutex.Unlock()
 		stats, _ := LoadStats()
@@ -116,7 +116,7 @@ func UpdateStatistics(newBlock blocks.Block, merkleTrie *transactionsPool.Merkle
 		stats.MainStats.TimeInterval = newBlock.BaseBlock.BlockTimeStamp - lastBlock.BaseBlock.BlockTimeStamp
 		empt := transactionsDefinition.EmptyTransaction()
 
-		hs, _ := newBlock.GetTransactionsHashes(merkleTrie, newBlock.GetHeader().Height)
+		hs, _ := newBlock.GetTransactionsHashes(newBlock.GetHeader().Height)
 		stats.MainStats.Transactions = len(hs)
 		stats.MainStats.TransactionsSize = len(hs) * len(empt.GetBytes())
 		ntxs := len(hs)

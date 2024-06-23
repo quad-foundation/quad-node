@@ -31,25 +31,25 @@ func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 
 	myWallet := wallet.GetActiveWallet()
 	heightTransaction := nonceTx[0].GetHeight()
-	totalFee := int64(0)
+	//totalFee := int64(0)
 	for _, at := range nonceTx {
 		heightLastBlocktransaction := common.GetInt64FromByte(at.GetData().GetOptData()[:8])
 		hashLastBlocktransaction := at.GetData().GetOptData()[8:40]
 		if !bytes.Equal(hashLastBlocktransaction, lastBlock.GetBlockHash().GetBytes()) {
-			ha, err := blocks.LoadHashOfBlock(heightTransaction - 1)
+			ha, err := blocks.LoadHashOfBlock(heightTransaction - 2)
 			if err != nil {
 				return blocks.Block{}, err
 			}
-			return blocks.Block{}, fmt.Errorf("last block hash and nonce hash do not match", ha, " ", lastBlock.GetBlockHash().GetBytes())
+			return blocks.Block{}, fmt.Errorf("last block hash and nonce hash do not match %v %v", ha, hashLastBlocktransaction)
 		}
 		if heightTransaction != heightLastBlocktransaction+1 {
 			return blocks.Block{}, fmt.Errorf("last block height and nonce height do not match")
 		}
-		totalFee += at.GasUsage * at.GasPrice
+		//totalFee += at.GasUsage * at.GasPrice
 	}
 
 	reward := account.GetReward(lastBlock.GetBlockSupply())
-	supply := lastBlock.GetBlockSupply() - totalFee + reward
+	supply := lastBlock.GetBlockSupply() + reward
 
 	sendingTimeTransaction := nonceTx[0].GetParam().SendingTime
 	ti := sendingTimeTransaction - lastBlock.GetBlockTimeStamp()

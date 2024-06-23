@@ -106,6 +106,7 @@ func Send(addr string, nb []byte) {
 }
 
 func Spread(ignoreAddr string, nb []byte) {
+
 	var peers = tcpip.GetPeersConnected()
 	for topicip, _ := range peers {
 		ip := topicip[2:]

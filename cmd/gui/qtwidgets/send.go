@@ -138,7 +138,7 @@ func ShowSendPage() *widgets.QTabWidget {
 			Hash:      common.Hash{},
 			Signature: common.Signature{},
 			Height:    0,
-			GasPrice:  int64(rand.Intn(0xffffffff)),
+			GasPrice:  int64(rand.Intn(0x000000ff)),
 			GasUsage:  0,
 		}
 		clientrpc.InRPC <- []byte("STAT")
@@ -151,6 +151,7 @@ func ShowSendPage() *widgets.QTabWidget {
 			info = &v
 			return
 		}
+		tx.GasUsage = tx.GasUsageEstimate()
 		tx.Height = st.Heights
 		err = tx.CalcHashAndSet()
 		if err != nil {

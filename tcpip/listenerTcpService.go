@@ -21,8 +21,8 @@ func StartNewListener(sendChan <-chan []byte, topic [2]byte) {
 	}
 	defer conn.Close()
 	defer func() {
-		peersMutex.Lock()
-		defer peersMutex.Unlock()
+		PeersMutex.Lock()
+		defer PeersMutex.Unlock()
 		for _, tcpConn := range tcpConnections[topic] {
 			tcpConn.Close()
 		}
@@ -52,9 +52,9 @@ func LoopSend(sendChan <-chan []byte, topic [2]byte) {
 			}
 			ipr := string(s[2 : 2+l])
 			if ipr == "0.0.0.0" {
-				peersMutex.RLock()
+				PeersMutex.RLock()
 				tmpConn := tcpConnections[topic]
-				peersMutex.RUnlock()
+				PeersMutex.RUnlock()
 				for k, tcpConn0 := range tmpConn {
 					if k != MyIP {
 						//log.Println("send to ipr", k)
@@ -62,10 +62,10 @@ func LoopSend(sendChan <-chan []byte, topic [2]byte) {
 					}
 				}
 			} else {
-				peersMutex.RLock()
+				PeersMutex.RLock()
 				tcpConns := tcpConnections[topic]
 				tcpConn, ok := tcpConns[ipr]
-				peersMutex.RUnlock()
+				PeersMutex.RUnlock()
 				if ok {
 					//log.Println("send to ip", ipr)
 					Send(tcpConn, s[2+l:])
@@ -107,8 +107,8 @@ func StartNewConnection(ip string, receiveChan chan []byte, topic [2]byte) {
 	}
 	defer func() {
 		if r := recover(); r != nil {
-			peersMutex.Lock()
-			defer peersMutex.Unlock()
+			PeersMutex.Lock()
+			defer PeersMutex.Unlock()
 			tcpConn.Close()
 			log.Println("recover (receive Msg)", r)
 		}
@@ -184,8 +184,8 @@ func CloseAndRemoveConnection(tcpConn *net.TCPConn) {
 	if tcpConn == nil {
 		return
 	}
-	peersMutex.Lock()
-	defer peersMutex.Unlock()
+	PeersMutex.Lock()
+	defer PeersMutex.Unlock()
 	for topic, c := range tcpConnections {
 		for k, v := range c {
 			if tcpConn.RemoteAddr().String() == v.RemoteAddr().String() {

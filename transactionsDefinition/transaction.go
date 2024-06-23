@@ -12,13 +12,15 @@ import (
 )
 
 type Transaction struct {
-	TxData    TxData           `json:"tx_data"`
-	TxParam   TxParam          `json:"tx_param"`
-	Hash      common.Hash      `json:"hash"`
-	Signature common.Signature `json:"signature"`
-	Height    int64            `json:"height"`
-	GasPrice  int64            `json:"gas_price"`
-	GasUsage  int64            `json:"gas_usage"`
+	TxData          TxData           `json:"tx_data"`
+	TxParam         TxParam          `json:"tx_param"`
+	Hash            common.Hash      `json:"hash"`
+	Signature       common.Signature `json:"signature"`
+	Height          int64            `json:"height"`
+	GasPrice        int64            `json:"gas_price"`
+	GasUsage        int64            `json:"gas_usage"`
+	OutputLogs      []byte           `json:"outputLogs,omitempty"`
+	ContractAddress common.Address   `json:"contractAddress,omitempty"`
 }
 
 func (mt *Transaction) GetData() TxData {
@@ -30,7 +32,9 @@ func (mt *Transaction) GetParam() TxParam {
 }
 
 func (mt *Transaction) GasUsageEstimate() int64 {
-	return 2100
+	gas := len(mt.TxData.OptData) * 100
+	gas += len(mt.TxData.Pubkey.GetBytes()) * 10
+	return int64(gas) + 21000
 }
 
 func (mt *Transaction) GetGasUsage() int64 {
@@ -57,6 +61,8 @@ func (tx *Transaction) GetString() string {
 	t += "Gas Usage: " + strconv.FormatInt(tx.GasUsage, 10) + "\n"
 	t += "Hash: " + tx.Hash.GetHex() + "\n"
 	t += "Signature: " + tx.Signature.GetHex() + "\n"
+	t += "Contract Address: " + tx.ContractAddress.GetHex() + "\n"
+	t += "Contract Logs:\n" + string(tx.OutputLogs) + "\n"
 	return t
 }
 
@@ -89,12 +95,25 @@ func (tx *Transaction) GetFromBytes(b []byte) (Transaction, []byte, error) {
 		GasUsage:  common.GetInt64FromByte(b[16:24]),
 	}
 	at.Hash = common.GetHashFromBytes(b[24:56])
-	signature, err := common.GetSignatureFromBytes(b[56:], tp.Sender)
+	vb, leftb, err := common.BytesWithLenToBytes(b[56:])
+	if err != nil {
+		return Transaction{}, nil, err
+	}
+	signature, err := common.GetSignatureFromBytes(vb, tp.Sender)
 	if err != nil {
 		return Transaction{}, nil, err
 	}
 	at.Signature = signature
-	return at, b[56+signature.GetLength():], nil
+	err = at.ContractAddress.Init(leftb[:20])
+	if err != nil {
+		return Transaction{}, nil, err
+	}
+	toBytes, leftb2, err := common.BytesWithLenToBytes(leftb[20:])
+	if err != nil {
+		return Transaction{}, nil, err
+	}
+	at.OutputLogs = toBytes[:]
+	return at, leftb2, nil
 }
 
 func (mt *Transaction) GetGasPrice() int64 {
@@ -131,7 +150,12 @@ func (mt *Transaction) CalcHashAndSet() error {
 func (mt *Transaction) GetBytes() []byte {
 	if mt != nil {
 		b := mt.GetBytesWithoutSignature(true)
-		b = append(b, mt.GetSignature().GetBytes()...)
+		sb := common.BytesToLenAndBytes(mt.GetSignature().GetBytes())
+		b = append(b, sb...)
+		b = append(b, mt.ContractAddress.GetBytes()...)
+		olb := common.BytesToLenAndBytes(mt.OutputLogs)
+		b = append(b, olb...)
+
 		return b
 	}
 	return nil
@@ -149,6 +173,15 @@ func (mt *Transaction) StoreToDBPoolTx(prefix []byte) error {
 
 func (mt *Transaction) RemoveFromDBPoolTx(prefix []byte) error {
 	prefix = append(prefix, mt.GetHash().GetBytes()...)
+	err := (*memDatabase.MainDB).Delete(prefix)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func RemoveTransactionFromDBbyHash(prefix []byte, hash []byte) error {
+	prefix = append(prefix, hash...)
 	err := (*memDatabase.MainDB).Delete(prefix)
 	if err != nil {
 		return err

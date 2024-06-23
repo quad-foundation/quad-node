@@ -12,6 +12,7 @@ type Block struct {
 	BaseBlock          BaseBlock     `json:"base_block"`
 	TransactionsHashes []common.Hash `json:"transactions_hashes"`
 	BlockHash          common.Hash   `json:"block_hash"`
+	BlockFee           int64         `json:"block_fee"`
 }
 
 // GetString returns a string representation of Block.
@@ -56,6 +57,7 @@ func (tb Block) GetBlockHash() common.Hash {
 func (tb Block) GetBytes() []byte {
 	b := tb.BaseBlock.GetBytes()
 	b = append(b, tb.BlockHash.GetBytes()...)
+	b = append(b, common.GetByteInt64(tb.BlockFee)...)
 	for _, tx := range tb.TransactionsHashes {
 		b = append(b, tx.GetBytes()...)
 	}
@@ -74,6 +76,8 @@ func (tb Block) GetFromBytes(b []byte) (Block, error) {
 	}
 	tb.BlockHash = common.GetHashFromBytes(b[0:32])
 	b = b[32:]
+	tb.BlockFee = common.GetInt64FromByte(b[0:8])
+	b = b[8:]
 	if len(b)%32 != 0 {
 		return Block{}, fmt.Errorf("wrongly decompile block")
 	}
@@ -82,6 +86,7 @@ func (tb Block) GetFromBytes(b []byte) (Block, error) {
 		bb := b[i*32 : (i+1)*32]
 		tb.TransactionsHashes = append(tb.TransactionsHashes, common.GetHashFromBytes(bb))
 	}
+
 	return tb, nil
 }
 
@@ -98,8 +103,8 @@ func (tb Block) CheckProofOfSynergy() bool {
 	return CheckProofOfSynergy(tb.BaseBlock)
 }
 
-func (b Block) GetTransactionsHashes(tempMerkleTrie *transactionsPool.MerkleTree, height int64) ([]common.Hash, error) {
-	txsHashes, err := tempMerkleTrie.LoadTransactionsHashes(height)
+func (b Block) GetTransactionsHashes(height int64) ([]common.Hash, error) {
+	txsHashes, err := transactionsPool.LoadTransactionsHashes(height)
 	if err != nil {
 		return nil, err
 	}

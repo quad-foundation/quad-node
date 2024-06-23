@@ -19,12 +19,14 @@ package common
 import (
 	"bytes"
 	"database/sql/driver"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"github.com/quad-foundation/quad-node/common/hexutil"
 	"math/big"
 	"math/rand"
 	"reflect"
+	"strings"
 )
 
 var (
@@ -38,6 +40,41 @@ func BytesToHash(b []byte) Hash {
 	var h Hash
 	h.SetBytes(b)
 	return h
+}
+
+func CheckQuotationAndRetainString(base string) (string, bool) {
+	if ind := strings.Index(base, "\""); ind >= 0 {
+		substr := strings.Split(base, "\"")
+		if len(substr) == 3 {
+			return substr[1], true
+		}
+	}
+	return base, false
+}
+
+func GetStringFromSCBytes(code []byte, startIndex uint) string {
+	o1 := code[startIndex : startIndex+32]
+	l := GetUintFromSCByte(o1)
+	o2 := code[startIndex+64 : startIndex+64+l]
+	st := string(o2)
+	return st
+}
+
+// IsHexAddress verifies whether a string can represent a valid hex-encoded
+// Ethereum address or not.
+func IsHexVMAddress(s string) bool {
+	if Has0xPrefix(s) {
+		s = s[2:]
+	}
+	return len(s) == 2*AddressLength && isHex(s)
+}
+
+func GetUintFromSCByte(bs []byte) uint {
+	return uint(binary.BigEndian.Uint64(bs[3*8:]))
+}
+
+func GetInt64FromSCByte(bs []byte) int64 {
+	return int64(binary.BigEndian.Uint64(bs[3*8:]))
 }
 
 // HexToHash sets byte representation of s to hash.

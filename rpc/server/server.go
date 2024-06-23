@@ -1,7 +1,9 @@
 package serverrpc
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/blocks"
 	"github.com/quad-foundation/quad-node/common"
@@ -52,8 +54,8 @@ func (l *Listener) Send(line []byte, reply *[]byte) error {
 		handleWALL(byt, reply)
 	case "TRAN":
 		handleTRAN(byt, reply)
-	//case "VIEW":
-	//	handleVIEW(byt, reply)
+	case "VIEW":
+		handleVIEW(byt, reply)
 	case "ACCT":
 		handleACCT(byt, reply)
 	//case "ACCS":
@@ -83,6 +85,28 @@ func handleWALL(line []byte, reply *[]byte) {
 		return
 	}
 	*reply = r
+}
+
+func handleVIEW(line []byte, reply *[]byte) {
+	m := blocks.PasiveFunction{}
+
+	err := json.Unmarshal(line, &m)
+	if err != nil {
+		*reply = []byte(fmt.Sprint(err))
+		return
+	}
+
+	bl, err := blocks.LoadBlock(m.Height)
+	if err != nil {
+		*reply = []byte(fmt.Sprint(err))
+		return
+	}
+
+	l, _, _, _, _, err := blocks.GetViewFunctionReturns(m.Address, m.OptData, bl)
+	if err != nil {
+		*reply = []byte(fmt.Sprint(err))
+	}
+	*reply, _ = hex.DecodeString(l)
 }
 
 func handleDETS(line []byte, reply *[]byte) {
@@ -129,7 +153,7 @@ func handleACCT(line []byte, reply *[]byte) {
 	copy(byt[:], line[:common.AddressLength])
 	account.AccountsRWMutex.RLock()
 	acc := account.Accounts.AllAccounts[byt]
-	account.AccountsRWMutex.RUnlock()
+	defer account.AccountsRWMutex.RUnlock()
 	am := acc.Marshal()
 	*reply = am
 }
@@ -141,7 +165,7 @@ func handleSTAK(line []byte, reply *[]byte) {
 	n := int(line[common.AddressLength])
 	account.StakingRWMutex.RLock()
 	acc := account.StakingAccounts[n].AllStakingAccounts[byt]
-	account.StakingRWMutex.RUnlock()
+	defer account.StakingRWMutex.RUnlock()
 	am := acc.Marshal()
 	*reply = am
 }

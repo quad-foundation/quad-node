@@ -8,11 +8,12 @@ import (
 )
 
 type StakingAccount struct {
-	StakedBalance    int64                      `json:"staked_balance"`
-	StakingRewards   int64                      `json:"staking_rewards"`
-	DelegatedAccount [common.AddressLength]byte `json:"delegated_account"`
-	Address          [common.AddressLength]byte `json:"address"`
-	StakingDetails   map[int64][]StakingDetail  `json:"staking_details,omitempty"` // block number as key of map
+	StakedBalance      int64                      `json:"staked_balance"`
+	StakingRewards     int64                      `json:"staking_rewards"`
+	DelegatedAccount   [common.AddressLength]byte `json:"delegated_account"`
+	Address            [common.AddressLength]byte `json:"address"`
+	OperationalAccount bool                       `json:"operational_account"`
+	StakingDetails     map[int64][]StakingDetail  `json:"staking_details,omitempty"` // block number as key of map
 }
 
 type StakingDetail struct {
@@ -21,7 +22,7 @@ type StakingDetail struct {
 	LastUpdated int64 `json:"last_updated"`
 }
 
-func Stake(accb []byte, amount int64, height int64, delegatedAccount int) error {
+func Stake(accb []byte, amount int64, height int64, delegatedAccount int, operational bool) error {
 	if len(accb) != common.AddressLength {
 		return fmt.Errorf("wrong address length, must be %v", common.AddressLength)
 	}
@@ -35,6 +36,7 @@ func Stake(accb []byte, amount int64, height int64, delegatedAccount int) error 
 		return fmt.Errorf("staked amount has to be larger than 0")
 	}
 
+	acc.OperationalAccount = operational
 	acc.StakedBalance += amount
 	sd := StakingDetail{
 		Amount:      amount,
@@ -69,6 +71,9 @@ func Unstake(accb []byte, amount int64, height int64, delegatedAccount int) erro
 		return fmt.Errorf("insufficient staked balance")
 	}
 	acc.StakedBalance += amount
+	if acc.StakedBalance == 0 {
+		acc.OperationalAccount = false
+	}
 	sd := StakingDetail{
 		Amount:      amount,
 		LastUpdated: time.Now().Unix(),
@@ -129,7 +134,7 @@ func WithdrawReward(accb []byte, amount int64, height int64, delegatedAccount in
 	if acc.StakingRewards+amount < 0 {
 		return fmt.Errorf("insufficient rewards balance to withdraw")
 	}
-	acc.StakedBalance += amount
+	acc.StakingRewards += amount
 	sd := StakingDetail{
 		Amount:      0,
 		Reward:      amount,
@@ -156,7 +161,8 @@ func (sa StakingAccount) Marshal() []byte {
 
 	// Address length and Address
 	buffer.Write(sa.DelegatedAccount[:])
-
+	// Address length and Address
+	buffer.Write(sa.Address[:])
 	// StakingDetails count
 	buffer.Write(common.GetByteInt64(int64(len(sa.StakingDetails))))
 
@@ -179,24 +185,36 @@ func (sa StakingAccount) Marshal() []byte {
 func (sa *StakingAccount) Unmarshal(data []byte) error {
 
 	buffer := bytes.NewBuffer(data)
-
+	// Ensure there's enough data for StakedBalance and StakingRewards
+	if buffer.Len() < 16+2*common.AddressLength {
+		return fmt.Errorf("insufficient data for StakedBalance and StakingRewards")
+	}
 	// StakedBalance, StakingRewards
 	sa.StakedBalance = common.GetInt64FromByte(buffer.Next(8))
 	sa.StakingRewards = common.GetInt64FromByte(buffer.Next(8))
 
 	// Address
 	copy(sa.DelegatedAccount[:], buffer.Next(common.AddressLength))
+	copy(sa.Address[:], buffer.Next(common.AddressLength))
 
 	// StakingDetails
 	detailsCount := common.GetInt64FromByte(buffer.Next(8))
 	sa.StakingDetails = make(map[int64][]StakingDetail, detailsCount)
 
 	for i := int64(0); i < detailsCount; i++ {
+		// Ensure there's enough data for the key and the detail count
+		if buffer.Len() < 16 {
+			return fmt.Errorf("insufficient data for key and detail count at detail %d", i)
+		}
 		key := common.GetInt64FromByte(buffer.Next(8))
 		detailCount := common.GetInt64FromByte(buffer.Next(8))
 
 		details := make([]StakingDetail, detailCount)
 		for j := int64(0); j < detailCount; j++ {
+			// Ensure there's enough data for each StakingDetail
+			if buffer.Len() < 24 {
+				return fmt.Errorf("insufficient data for StakingDetail at detail %d, entry %d", i, j)
+			}
 			amount := common.GetInt64FromByte(buffer.Next(8))
 			reward := common.GetInt64FromByte(buffer.Next(8))
 			lastUpdated := common.GetInt64FromByte(buffer.Next(8))
@@ -213,18 +231,26 @@ func (sa *StakingAccount) Unmarshal(data []byte) error {
 	return nil
 }
 
-func GetStakedInDelegatedAccount(n int) ([]Account, float64) {
+func GetStakedInDelegatedAccount(n int) ([]Account, float64, Account) {
 	StakingRWMutex.RLock()
 	defer StakingRWMutex.RUnlock()
 	sum := int64(0)
+	intAcc := Account{
+		Balance: 0,
+		Address: [20]byte{},
+	}
 	accs := []Account{}
 	for _, sa := range StakingAccounts[n].AllStakingAccounts {
 		acc := Account{
 			Balance: sa.StakedBalance,
 			Address: sa.Address,
 		}
+		if intAcc.Balance < sa.StakedBalance && sa.OperationalAccount {
+			intAcc.Balance = sa.StakedBalance
+			intAcc.Address = sa.Address
+		}
 		sum += sa.StakedBalance
 		accs = append(accs, acc)
 	}
-	return accs, float64(sum)
+	return accs, float64(sum), intAcc
 }

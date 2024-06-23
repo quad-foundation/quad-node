@@ -167,8 +167,9 @@ func OnMessage(addr string, m []byte) {
 				}
 				was = true
 			}
-			err := blocks.CheckBlockAndTransferFunds(block, oldBlock, merkleTries[index])
+			err := blocks.CheckBlockAndTransferFunds(&block, oldBlock, merkleTries[index])
 			if err != nil {
+				log.Println(err)
 				return
 			}
 			// storing blocks
@@ -183,7 +184,11 @@ func OnMessage(addr string, m []byte) {
 			if err != nil {
 				log.Println(err)
 			}
-			statistics.UpdateStatistics(block, merkleTries[index], oldBlock)
+			err = account.StoreStakingAccounts(block.GetHeader().Height)
+			if err != nil {
+				log.Println(err)
+			}
+			statistics.UpdateStatistics(block, oldBlock)
 		}
 
 	case "gh":

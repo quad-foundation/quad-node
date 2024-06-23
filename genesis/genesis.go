@@ -23,7 +23,8 @@ type Genesis struct {
 	RewardRatio            float64           `json:"reward_ratio"`
 	Decimals               uint8             `json:"decimals"`
 	BlockTimeInterval      float32           `json:"block_time_interval"`
-	Balances               map[string]int64  `json:"balances"`
+	TransactionsQueue      []string          `json:"transactions_queue"`
+	Transactions           map[string]int64  `json:"transactions"`
 	StakedBalances         map[string]int64  `json:"staked_balances"`
 	TransactionsSignatures map[string]string `json:"transactions_signatures"`
 	PubKeys                map[string]string `json:"pub_keys"`
@@ -63,7 +64,8 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 	blockTransactionsHashesBytes := [][]byte{}
 	blockTransactionsHashes := []common.Hash{}
 	genesisTxs := []transactionsDefinition.Transaction{}
-	for addr, balance := range genesis.Balances {
+	for _, addr := range genesis.TransactionsQueue {
+		balance := genesis.Transactions[addr]
 		ab, err := hex.DecodeString(addr)
 		if err != nil {
 			log.Fatal("cannot decode address from string in genesis block")
@@ -87,6 +89,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 		walletNonce++
 	}
 	for addr, balance := range genesis.StakedBalances {
+
 		ab, err := hex.DecodeString(addr)
 		if err != nil {
 			log.Fatal("cannot decode address from string in genesis block")
@@ -104,11 +107,12 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 		sds := map[int64][]account.StakingDetail{}
 		sds[0] = []account.StakingDetail{sd}
 		as := account.StakingAccount{
-			StakedBalance:    balance,
-			StakingRewards:   0,
-			DelegatedAccount: delAddrb,
-			Address:          addrb,
-			StakingDetails:   sds,
+			StakedBalance:      balance,
+			StakingRewards:     0,
+			DelegatedAccount:   delAddrb,
+			Address:            addrb,
+			OperationalAccount: true,
+			StakingDetails:     sds,
 		}
 		account.StakingAccounts[1].AllStakingAccounts[addrb] = as
 	}
@@ -118,7 +122,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 	}
 	defer genesisMerkleTrie.Destroy()
 
-	err = genesisMerkleTrie.StoreTree(0, blockTransactionsHashesBytes)
+	err = genesisMerkleTrie.StoreTree(0)
 	if err != nil {
 		log.Fatalf("cannot store genesis merkleTrie %v", err)
 	}
@@ -268,6 +272,10 @@ func InitGenesis() {
 		log.Fatal(err)
 	}
 	err = account.StoreAccounts(0)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = account.StoreStakingAccounts(0)
 	if err != nil {
 		log.Fatal(err)
 	}

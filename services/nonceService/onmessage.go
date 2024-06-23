@@ -1,6 +1,7 @@
 package nonceServices
 
 import (
+	"bytes"
 	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/blocks"
 	"github.com/quad-foundation/quad-node/common"
@@ -67,8 +68,8 @@ func OnMessage(addr string, m []byte) {
 			return
 		}
 		// checking if enough coins staked
-		if _, sumStaked := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode {
-			log.Println("not enough staked coins to be a node")
+		if _, sumStaked, operationalAcc := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode || bytes.Compare(operationalAcc.Address[:], transaction.TxParam.Sender.GetBytes()) != 0 {
+			log.Println("not enough staked coins to be a node or not valid operational account")
 			return
 		}
 
@@ -109,7 +110,8 @@ func OnMessage(addr string, m []byte) {
 
 		if err != nil {
 			log.Println(err)
-			panic("Error in block creation ")
+			return
+			//panic("Error in block creation ")
 		}
 
 		if newBlock.CheckProofOfSynergy() {
@@ -157,7 +159,7 @@ func OnMessage(addr string, m []byte) {
 					transactionServices.SendGT(addr, hashesMissing)
 					continue
 				}
-				err = blocks.CheckBlockAndTransferFunds(newBlock, lastBlock, merkleTrie)
+				err = blocks.CheckBlockAndTransferFunds(&newBlock, lastBlock, merkleTrie)
 				if err != nil {
 					log.Println("check transfer transactions in block fails", err)
 					return
@@ -173,7 +175,11 @@ func OnMessage(addr string, m []byte) {
 				if err != nil {
 					log.Println(err)
 				}
-				statistics.UpdateStatistics(newBlock, merkleTrie, lastBlock)
+				err = account.StoreStakingAccounts(newBlock.GetHeader().Height)
+				if err != nil {
+					log.Println(err)
+				}
+				statistics.UpdateStatistics(newBlock, lastBlock)
 			}
 		}
 	default:

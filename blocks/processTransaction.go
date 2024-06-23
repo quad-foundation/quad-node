@@ -61,10 +61,10 @@ func CheckStakingTransaction(tx transactionsDefinition.Transaction, sumAmount in
 			return false
 		}
 	}
-	if n >= 256 && n < 256*2 {
+	if n >= 256 && n < 512 {
 
-		accStaking := account.GetStakingAccountByAddressBytes(address.GetBytes(), n-255)
-		if bytes.Compare(accStaking.DelegatedAccount[:], addressRecipient.GetBytes()) != 0 {
+		accStaking := account.GetStakingAccountByAddressBytes(address.GetBytes(), n%256)
+		if bytes.Compare(accStaking.Address[:], address.GetBytes()) != 0 {
 			log.Println("no staking account found in check staking transaction (rewards)")
 			return false
 		}
@@ -79,13 +79,14 @@ func CheckStakingTransaction(tx transactionsDefinition.Transaction, sumAmount in
 func ProcessTransaction(tx transactionsDefinition.Transaction, height int64) error {
 	fee := tx.GasPrice * tx.GasUsage
 	amount := tx.TxData.Amount
+	operational := len(tx.TxData.OptData) > 0
 	address := tx.GetSenderAddress()
 	addressRecipient := tx.TxData.Recipient
 	n, err := account.IntDelegatedAccountFromAddress(addressRecipient)
 	if err == nil { // this is delegated account
 		if n > 0 && n < 256 {
 			if amount >= common.MinStakingUser {
-				err := account.Stake(address.GetBytes(), amount, height, n)
+				err := account.Stake(address.GetBytes(), amount, height, n, operational)
 				if err != nil {
 					return err
 				}
@@ -103,20 +104,20 @@ func ProcessTransaction(tx transactionsDefinition.Transaction, height int64) err
 				return err
 			}
 		}
-		if n >= 256 && n < 256+256 {
+		if n >= 256 && n < 512 {
 
-			accStaking := account.GetStakingAccountByAddressBytes(address.GetBytes(), n-255)
+			accStaking := account.GetStakingAccountByAddressBytes(address.GetBytes(), n%256)
 			if bytes.Compare(accStaking.Address[:], address.GetBytes()) != 0 {
 				return fmt.Errorf("no staking account found in check staking transaction (rewards)")
 			}
 			if amount > 0 {
 				log.Println("not implemented")
-				//err := account.Reward(accStaking.Address[:], amount, height, n)
+				//err := account.Reward(accStaking.Address[:], amount, height, n%256)
 				//if err != nil {
 				//	return err
 				//}
 			} else if amount < 0 {
-				err := account.WithdrawReward(accStaking.Address[:], amount, height, n)
+				err := account.WithdrawReward(accStaking.Address[:], amount, height, n%256)
 				if err != nil {
 					return err
 				}

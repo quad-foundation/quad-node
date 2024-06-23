@@ -70,10 +70,14 @@ func OnMessage(addr string, m []byte) {
 		for topic, v := range txn {
 			txs := []transactionsDefinition.Transaction{}
 			for _, hs := range v {
-				t, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], hs)
+				t, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionPoolHashesDBPrefix[:], hs)
 				if err != nil {
-					log.Println("cannot load transaction", err)
-					continue
+					//log.Println("cannot load transaction", err)
+					t, err = transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], hs)
+					if err != nil {
+						//log.Println("cannot load transaction", err)
+						continue
+					}
 				}
 				txs = append(txs, t)
 			}

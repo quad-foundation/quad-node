@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/common"
+	memDatabase "github.com/quad-foundation/quad-node/database"
 	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"github.com/quad-foundation/quad-node/transactionsPool"
 	"log"
@@ -61,7 +62,7 @@ func IsAllTransactions(block Block) [][]byte {
 	return hashes
 }
 
-func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
+func CheckBlockTransfers(block Block, lastBlock Block) (int64, int64, error) {
 	txs := block.TransactionsHashes
 	lastSupply := lastBlock.GetBlockSupply()
 	accounts := map[[common.AddressLength]byte]account.Account{}
@@ -71,11 +72,11 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 		hash := tx.GetBytes()
 		poolTx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionPoolHashesDBPrefix[:], hash)
 		if err != nil {
-			return 0, err
+			return 0, 0, err
 		}
-		if transactionsDefinition.CheckFromDBPoolTx(common.TransactionDBPrefix[:], poolTx.Hash.GetBytes()) {
-			log.Println("transaction just exists in DB")
-			continue
+		err = checkTransactionInDBAndInMarkleTrie(hash)
+		if err != nil {
+			return 0, 0, err
 		}
 		fee := poolTx.GasPrice * poolTx.GasUsage
 		totalFee += fee
@@ -84,8 +85,8 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 		address := poolTx.GetSenderAddress()
 		recipientAddress := poolTx.TxData.Recipient
 		n, err := account.IntDelegatedAccountFromAddress(recipientAddress)
-		if err == nil { // delegated account
-			stakingAcc := account.GetStakingAccountByAddressBytes(address.GetBytes(), n)
+		if err == nil && n < 512 { // delegated account
+			stakingAcc := account.GetStakingAccountByAddressBytes(address.GetBytes(), n%256)
 			if bytes.Compare(stakingAcc.Address[:], address.GetBytes()) != 0 {
 				log.Println("no account found in check block transfer")
 				copy(stakingAcc.Address[:], address.GetBytes())
@@ -101,14 +102,16 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 			if ret == false {
 				// remove bad transaction from pool
 				transactionsPool.PoolsTx.RemoveTransactionByHash(poolTx.Hash.GetBytes())
-				return 0, fmt.Errorf("staking transactions checking fails")
+				transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionPoolHashesDBPrefix[:], poolTx.Hash.GetBytes())
+				return 0, 0, fmt.Errorf("staking transactions checking fails")
 			}
 		}
 		acc := account.GetAccountByAddressBytes(address.GetBytes())
 		if bytes.Compare(acc.Address[:], address.GetBytes()) != 0 {
 			// remove bad transaction from pool
 			transactionsPool.PoolsTx.RemoveTransactionByHash(poolTx.Hash.GetBytes())
-			return 0, fmt.Errorf("no account found in check block transafer")
+			transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionPoolHashesDBPrefix[:], poolTx.Hash.GetBytes())
+			return 0, 0, fmt.Errorf("no account found in check block transafer")
 		}
 		if IsInKeysOfMapAccounts(accounts, acc.Address) {
 			acc = accounts[acc.Address]
@@ -121,19 +124,21 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, error) {
 		if acc.Balance < 0 {
 			// remove bad transaction from pool
 			transactionsPool.PoolsTx.RemoveTransactionByHash(poolTx.Hash.GetBytes())
-			return 0, fmt.Errorf("not enough funds on account")
+			transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionPoolHashesDBPrefix[:], poolTx.Hash.GetBytes())
+			return 0, 0, fmt.Errorf("not enough funds on account")
 		}
+
 	}
 	reward := account.GetReward(lastSupply)
-	lastSupply += reward - totalFee
+	lastSupply += reward
 	if lastSupply != block.GetBlockSupply() {
-		return 0, fmt.Errorf("block supply checking fails")
+		return 0, 0, fmt.Errorf("block supply checking fails")
 	}
 	staked, rewarded := GetSupplyInStakedAccounts()
-	if GetSupplyInAccounts()+staked+rewarded+reward-totalFee != block.GetBlockSupply() {
-		return 0, fmt.Errorf("block supply checking fails vs account balances")
+	if GetSupplyInAccounts()+staked+rewarded+reward+lastBlock.BlockFee != block.GetBlockSupply() {
+		return 0, 0, fmt.Errorf("block supply checking fails vs account balances")
 	}
-	return reward, nil
+	return reward, totalFee, nil
 }
 
 func ExtractKeysFromMapAccounts(m map[[common.AddressLength]byte]account.Account) [][common.AddressLength]byte {
@@ -162,14 +167,48 @@ func IsInKeysOfMapStakingAccounts(m map[[common.AddressLength]byte]account.Staki
 	return common.ContainsKeyInMap(keys, searchKey)
 }
 
+func checkTransactionInDBAndInMarkleTrie(hash []byte) error {
+	if transactionsDefinition.CheckFromDBPoolTx(common.TransactionDBPrefix[:], hash) {
+		dbTx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], hash)
+		if err != nil {
+			return err
+		}
+		h := dbTx.Height
+		txHeight, err := transactionsPool.FindTransactionInBlocks(hash, h)
+		if err != nil {
+			return err
+		}
+		if txHeight < 0 {
+			log.Println("transaction not in merkle tree. removing transaction")
+			err = transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionDBPrefix[:], hash)
+			if err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("transaction was previously added in chain")
+		}
+	}
+	return nil
+}
+
 func ProcessBlockTransfers(block Block, reward int64) error {
 	txs := block.TransactionsHashes
 	for _, tx := range txs {
 		hash := tx.GetBytes()
+		err := checkTransactionInDBAndInMarkleTrie(hash)
+		if err != nil {
+			return err
+		}
 		poolTx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionPoolHashesDBPrefix[:], hash)
 		if err != nil {
 			return err
 		}
+
+		if poolTx.Height > block.GetHeader().Height {
+			transactionsPool.PoolsTx.RemoveTransactionByHash(poolTx.Hash.GetBytes())
+			return fmt.Errorf("transaction height is wrong")
+		}
+
 		err = ProcessTransaction(poolTx, block.GetHeader().Height)
 		if err != nil {
 			// remove bad transaction from pool
@@ -182,7 +221,7 @@ func ProcessBlockTransfers(block Block, reward int64) error {
 	if err != nil || n < 1 || n > 255 {
 		return fmt.Errorf("wrong delegated account in block")
 	}
-	staked, sum := account.GetStakedInDelegatedAccount(n)
+	staked, sum, _ := account.GetStakedInDelegatedAccount(n)
 	if sum <= 0 {
 		return fmt.Errorf("no staked amount in delegated account which was rewarded")
 	}
@@ -214,59 +253,91 @@ func RemoveAllTransactionsRelatedToBlock(newBlock Block) {
 	for _, tx := range txs {
 		hash := tx.GetBytes()
 		transactionsPool.PoolsTx.RemoveTransactionByHash(hash)
+		transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionPoolHashesDBPrefix[:], hash)
 	}
 }
 
-func CheckBlockAndTransferFunds(newBlock Block, lastBlock Block, merkleTrie *transactionsPool.MerkleTree) error {
+func EvaluateSmartContracts(bl *Block) bool {
+	height := (*bl).GetHeader().Height
+	if ok, logs, addresses, codes, _ := EvaluateSCForBlock(*bl); ok {
+		State.SetSnapShotNum(height, State.Snapshot())
+		for th, a := range addresses {
 
-	defer RemoveAllTransactionsRelatedToBlock(newBlock)
+			prefix := common.OutputLogsHashesDBPrefix[:]
+			err := memDatabase.MainDB.Put(append(prefix, th[:]...), []byte(logs[th]))
+			if err != nil {
+				log.Println("Cannot store output logs")
+				return false
+			}
+
+			aa := [common.AddressLength]byte{}
+			copy(aa[:], a.GetBytes())
+			prefix = common.OutputAddressesHashesDBPrefix[:]
+			err = memDatabase.MainDB.Put(append(prefix, th[:]...), codes[aa])
+			if err != nil {
+				log.Println("Cannot store address codes")
+				return false
+			}
+		}
+
+	} else {
+		log.Println("Evaluating Smart Contract fails")
+		return false
+	}
+	return true
+}
+
+func CheckBlockAndTransferFunds(newBlock *Block, lastBlock Block, merkleTrie *transactionsPool.MerkleTree) error {
+
+	defer RemoveAllTransactionsRelatedToBlock(*newBlock)
 	n, err := account.IntDelegatedAccountFromAddress(newBlock.GetHeader().DelegatedAccount)
 	if err != nil || n < 1 || n > 255 {
 		return fmt.Errorf("wrong delegated account")
 	}
-	if _, sumStaked := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode {
-		return fmt.Errorf("not enough staked coins to be a node")
+	opAccBlockAddr := newBlock.GetHeader().OperatorAccount
+	if _, sumStaked, opAcc := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode || bytes.Compare(opAcc.Address[:], opAccBlockAddr.GetBytes()) != 0 {
+		return fmt.Errorf("not enough staked coins to be a node or not valid operetional account")
 	}
 
-	reward, err := CheckBlockTransfers(newBlock, lastBlock)
+	reward, totalFee, err := CheckBlockTransfers(*newBlock, lastBlock)
 	if err != nil {
 		return err
 	}
-
+	newBlock.BlockFee = totalFee + lastBlock.BlockFee
+	if EvaluateSmartContracts(newBlock) == false {
+		return fmt.Errorf("evaluation of smart contracts in block fails")
+	}
 	hashes := newBlock.GetBlockTransactionsHashes()
 	log.Println("Number of transactions in block: ", len(hashes))
-	txshb := [][]byte{}
-	for _, h := range hashes {
-		tx := transactionsPool.PoolsTx.PopTransactionByHash(h.GetBytes())
-		txshb = append(txshb, tx.GetHash().GetBytes())
-		err = tx.StoreToDBPoolTx(common.TransactionDBPrefix[:])
-		if err != nil {
-			return err
-		}
-	}
 
-	err = ProcessBlockPubKey(newBlock)
+	err = ProcessBlockPubKey(*newBlock)
 	if err != nil {
 		return err
 	}
-	err = merkleTrie.StoreTree(newBlock.GetHeader().Height, txshb)
+	err = merkleTrie.StoreTree(newBlock.GetHeader().Height)
 	if err != nil {
 		return err
 	}
-	err = ProcessBlockTransfers(newBlock, reward)
+	err = ProcessBlockTransfers(*newBlock, reward)
 	if err != nil {
 		return err
 	}
 	for _, h := range hashes {
-		tx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], h.GetBytes())
+		tx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionPoolHashesDBPrefix[:], h.GetBytes())
 		if err != nil {
 			log.Println(err)
 			continue
 		}
+		err = tx.StoreToDBPoolTx(common.TransactionDBPrefix[:])
+		if err != nil {
+			return err
+		}
+		transactionsPool.PoolsTx.RemoveTransactionByHash(h.GetBytes())
 		err = tx.RemoveFromDBPoolTx(common.TransactionPoolHashesDBPrefix[:])
 		if err != nil {
 			log.Println(err)
 		}
 	}
+
 	return nil
 }
