@@ -159,7 +159,7 @@ func OnMessage(addr string, m []byte) {
 					transactionServices.SendGT(addr, hashesMissing)
 					continue
 				}
-				err = blocks.CheckBlockAndTransferFunds(newBlock, lastBlock, merkleTrie)
+				err = blocks.CheckBlockAndTransferFunds(&newBlock, lastBlock, merkleTrie)
 				if err != nil {
 					log.Println("check transfer transactions in block fails", err)
 					return

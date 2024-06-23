@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"math/rand"
 	"reflect"
+	"strings"
 )
 
 var (
@@ -39,6 +40,25 @@ func BytesToHash(b []byte) Hash {
 	var h Hash
 	h.SetBytes(b)
 	return h
+}
+
+func CheckQuotationAndRetainString(base string) (string, bool) {
+	if ind := strings.Index(base, "\""); ind >= 0 {
+		substr := strings.Split(base, "\"")
+		if len(substr) == 3 {
+			return substr[1], true
+		}
+	}
+	return base, false
+}
+
+// IsHexAddress verifies whether a string can represent a valid hex-encoded
+// Ethereum address or not.
+func IsHexVMAddress(s string) bool {
+	if Has0xPrefix(s) {
+		s = s[2:]
+	}
+	return len(s) == 2*AddressLength && isHex(s)
 }
 
 func GetUintFromSCByte(bs []byte) uint {

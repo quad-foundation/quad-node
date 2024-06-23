@@ -82,7 +82,7 @@ func EvaluateSCForBlock(bl Block) (bool, map[[common.HashLength]byte]string, map
 			return false, logs, map[[common.HashLength]byte]common.Address{}, map[[common.AddressLength]byte][]byte{}, map[[common.HashLength]byte][]byte{}
 		}
 		//TODO we should refund left gas
-		//tm.GasUsage -= int64(leftOverGas)
+		//t.GasUsage -= int64(leftOverGas)
 		t.ContractAddress = address
 		t.OutputLogs = []byte(l)
 		err = t.StoreToDBPoolTx(poolprefix)
@@ -116,7 +116,7 @@ func EvaluateSC(tx transactionsDefinition.Transaction, bl Block) (logs string, r
 		Transfer:    nil,
 		GetHash:     func(height uint64) common.Hash { return bl.GetBlockHash() },
 		Coinbase:    common.EmptyAddress(),
-		GasLimit:    uint64(common.MaxGasUsage),
+		GasLimit:    uint64(common.MaxGasUsage) * uint64(gasMult),
 		BlockNumber: new(big.Int).SetInt64(bl.GetHeader().Height),
 		Time:        new(big.Int).SetInt64(common.GetCurrentTimeStampInSecond()),
 		Difficulty:  new(big.Int).SetInt64(int64(bl.GetHeader().Difficulty)),

@@ -55,7 +55,7 @@ func main() {
 	historyWidget := qtwidgets.ShowHistoryPage()
 	detailsWidget := qtwidgets.ShowDetailsPage()
 	stakingWidget := qtwidgets.ShowStakingPage()
-	//smartContractWidget := qtwidgets.ShowSmartContractPage()
+	smartContractWidget := qtwidgets.ShowSmartContractPage()
 	//dexWidget := qtwidgets.ShowDexPage(&MainWallet)
 	window.AddTab(walletWidget, "Wallet")
 	window.AddTab(accountWidget, "Account")
@@ -63,7 +63,7 @@ func main() {
 	window.AddTab(stakingWidget, "Staking/Rewards")
 	window.AddTab(historyWidget, "Transactions history")
 	window.AddTab(detailsWidget, "Details")
-	//window.AddTab(smartContractWidget, "Smart Contract")
+	window.AddTab(smartContractWidget, "Smart Contract")
 	//window.AddTab(dexWidget, "DEX")
 	// make the window visible
 	window.Show()

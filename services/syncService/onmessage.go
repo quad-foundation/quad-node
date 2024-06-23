@@ -167,7 +167,7 @@ func OnMessage(addr string, m []byte) {
 				}
 				was = true
 			}
-			err := blocks.CheckBlockAndTransferFunds(block, oldBlock, merkleTries[index])
+			err := blocks.CheckBlockAndTransferFunds(&block, oldBlock, merkleTries[index])
 			if err != nil {
 				log.Println(err)
 				return
