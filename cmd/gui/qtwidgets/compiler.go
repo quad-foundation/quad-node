@@ -24,12 +24,12 @@ func SendPasiveFunctionQuery(pf blocks.PasiveFunction) string {
 	var reply []byte
 	reply = <-clientrpc.OutRPC
 	st := statistics.MainStats{}
-	err := json.Unmarshal(reply, &st)
+	err = common.Unmarshal(reply, common.StatDBPrefix, &st)
 	if err != nil {
 		return fmt.Sprint("Can not unmarshal statistics", err)
 	}
 	pf.Height = st.Heights
-	b, err := json.Marshal(pf)
+	b, _ := json.Marshal(pf)
 	clientrpc.InRPC <- append([]byte("VIEW"), b...)
 	reply = <-clientrpc.OutRPC
 	return hex.EncodeToString(reply)

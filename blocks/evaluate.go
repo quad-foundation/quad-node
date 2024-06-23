@@ -59,13 +59,13 @@ func EvaluateSCForBlock(bl Block) (bool, map[[common.HashLength]byte]string, map
 				output, _, _, _, _, err := GetViewFunctionReturns(address, input, bl)
 				var name string
 				if err == nil {
-					name = GetStringFromSCBytes(common.Hex2Bytes(output), 0)
+					name = common.GetStringFromSCBytes(common.Hex2Bytes(output), 0)
 				}
 				input = stateDB.SymbolFunc
 				output, _, _, _, _, err = GetViewFunctionReturns(address, input, bl)
 				var symbol string
 				if err == nil {
-					symbol = GetStringFromSCBytes(common.Hex2Bytes(output), 0)
+					symbol = common.GetStringFromSCBytes(common.Hex2Bytes(output), 0)
 				}
 				input = stateDB.DecimalsFunc
 				output, _, _, _, _, err = GetViewFunctionReturns(address, input, bl)
@@ -84,7 +84,12 @@ func EvaluateSCForBlock(bl Block) (bool, map[[common.HashLength]byte]string, map
 		//TODO we should refund left gas
 		//t.GasUsage -= int64(leftOverGas)
 		t.ContractAddress = address
-		t.OutputLogs = []byte(l)
+		outputLogs := []byte(l)
+		//if err != nil {
+		//	log.Println(err)
+		//	return false, logs, map[[common.HashLength]byte]common.Address{}, map[[common.AddressLength]byte][]byte{}, map[[common.HashLength]byte][]byte{}
+		//}
+		t.OutputLogs = outputLogs[:]
 		err = t.StoreToDBPoolTx(poolprefix)
 		if err != nil {
 			log.Println(err)
@@ -277,14 +282,6 @@ func IsTokenToRegister(code []byte) bool {
 		toRegister = false
 	}
 	return toRegister
-}
-
-func GetStringFromSCBytes(code []byte, startIndex uint) string {
-	o1 := code[startIndex : startIndex+32]
-	l := common.GetUintFromSCByte(o1)
-	o2 := code[startIndex+64 : startIndex+64+l]
-	st := string(o2)
-	return st
 }
 
 func GetBalance(coin common.Address, owner common.Address) (int64, error) {

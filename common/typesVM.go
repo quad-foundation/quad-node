@@ -52,6 +52,14 @@ func CheckQuotationAndRetainString(base string) (string, bool) {
 	return base, false
 }
 
+func GetStringFromSCBytes(code []byte, startIndex uint) string {
+	o1 := code[startIndex : startIndex+32]
+	l := GetUintFromSCByte(o1)
+	o2 := code[startIndex+64 : startIndex+64+l]
+	st := string(o2)
+	return st
+}
+
 // IsHexAddress verifies whether a string can represent a valid hex-encoded
 // Ethereum address or not.
 func IsHexVMAddress(s string) bool {
