@@ -57,7 +57,7 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 	tokenPoolAmount := account.Int64toFloat64ByDecimals(accDex.TokenPool, ti.Decimals)
 	coinPoolAmount := account.Int64toFloat64(accDex.CoinPool)
 	amountTokenFloat := account.Int64toFloat64ByDecimals(amountToken, ti.Decimals)
-	amountCoinFloat := account.Int64toFloat64ByDecimals(tx.TxData.Amount, ti.Decimals)
+	amountCoinFloat := account.Int64toFloat64ByDecimals(tx.TxData.Amount, common.Decimals)
 
 	if coinPoolAmount > 0 && tokenPoolAmount > 0 {
 		price = common.RoundCoin((tokenPoolAmount + amountTokenFloat) / (coinPoolAmount + amountCoinFloat))
@@ -65,11 +65,8 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 
 	switch operation {
 	case 2: // add liquidity
-		amount := common.RoundCoin(1.0 / price * amountTokenFloat)
-		amountCoinInt64 = int64(-amount * math.Pow10(int(common.Decimals)))
-
-		amount = common.RoundToken(price*amountCoinFloat, int(ti.Decimals))
-		amountTokenInt64 = int64(-amount * math.Pow10(int(ti.Decimals)))
+		amountCoinInt64 = int64(-amountCoinFloat * math.Pow10(int(common.Decimals)))
+		amountTokenInt64 = int64(-amountTokenFloat * math.Pow10(int(ti.Decimals)))
 	case 5: // withdraw token
 		if price > 0 {
 			amount := common.RoundCoin(1.0 / price * amountTokenFloat)
@@ -130,18 +127,18 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 
 	if amountTokenInt64 > 0 {
 		dexByte := common.LeftPadBytes(senderAccount.Address[:], 32)
-		amountByte := common.LeftPadBytes(common.GetByteInt64(amountTokenInt64), 32)
+		amountByte := common.LeftPadBytes(common.Int64ToBytes(amountTokenInt64), 32)
 		optData = append(stateDB.TransferFunc, dexByte...)
 		optData = append(optData, amountByte...)
 		fromAccountAddress = tx.ContractAddress
 	} else if amountTokenInt64 < 0 {
 		dexByte := common.LeftPadBytes(tx.ContractAddress.GetBytes(), 32)
-		amountByte := common.LeftPadBytes(common.GetByteInt64(-amountTokenInt64), 32)
+		amountByte := common.LeftPadBytes(common.Int64ToBytes(-amountTokenInt64), 32)
 		optData = append(stateDB.TransferFunc, dexByte...)
 		optData = append(optData, amountByte...)
 		fromAccountAddress = sender
 	}
-
+	log.Println(common.Bytes2Hex(optData))
 	return optData, fromAccountAddress, amountCoinInt64, amountTokenInt64, price, nil
 }
 
@@ -206,14 +203,23 @@ func EvaluateSCForBlock(bl Block) (bool, map[[common.HashLength]byte]string, map
 			}
 
 			accDex := account.GetDexAccountByAddressBytes(t.ContractAddress.GetBytes())
+
 			accDex.TokenPrice = int64(price * math.Pow10(int(common.Decimals+ti.Decimals)))
 			accDex.TokenPool += tokenAmount
 			accDex.CoinPool += coinAmount
-			accDex.Balances[aa] = account.CoinTokenDetails{
-				CoinBalance:  accDex.Balances[aa].CoinBalance + coinAmount,
-				TokenBalance: accDex.Balances[aa].TokenBalance + tokenAmount,
+			coinAmountTmp := accDex.Balances[aa].CoinBalance + coinAmount
+			tokenAmountTmp := accDex.Balances[aa].TokenBalance + tokenAmount
+			balances := accDex.Balances
+			if balances == nil {
+				balances = make(map[[common.AddressLength]byte]account.CoinTokenDetails)
 			}
+			balances[aa] = account.CoinTokenDetails{
+				CoinBalance:  coinAmountTmp,
+				TokenBalance: tokenAmountTmp,
+			}
+			accDex.Balances = balances
 			account.SetDexAccountByAddressBytes(t.ContractAddress.GetBytes(), accDex)
+
 			continue
 		}
 		if err == nil {
@@ -332,7 +338,7 @@ func EvaluateSC(tx transactionsDefinition.Transaction, bl Block) (logs string, r
 		}
 	} else {
 		address = tx.TxData.Recipient
-		ret, leftOverGas, err = VM.Call(vm.AccountRef(origin), address, code, uint64(tx.GasUsage), new(big.Int).SetInt64(0))
+		ret, leftOverGas, err = VM.Call(vm.AccountRef(origin), address, code, uint64(tx.GasUsage)*uint64(gasMult), new(big.Int).SetInt64(0))
 		if err != nil {
 			return logger.ToString(), ret, address, leftOverGas, err
 		}
@@ -381,7 +387,7 @@ func EvaluateSCDex(tokenAddress common.Address, sender common.Address, optData [
 	VM.Origin = sender
 	VM.GasPrice = new(big.Int).SetInt64(0)
 
-	ret, leftOverGas, err = VM.Call(vm.AccountRef(sender), tokenAddress, optData, uint64(210000), new(big.Int).SetInt64(0))
+	ret, leftOverGas, err = VM.Call(vm.AccountRef(sender), tokenAddress, optData, uint64(tx.GasUsage)*uint64(gasMult), new(big.Int).SetInt64(0))
 	if err != nil {
 		return logger.ToString(), ret, tokenAddress, leftOverGas, err
 	}

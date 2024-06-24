@@ -8,8 +8,9 @@ import (
 	"github.com/quad-foundation/quad-node/common"
 	"github.com/quad-foundation/quad-node/core/stateDB"
 	clientrpc "github.com/quad-foundation/quad-node/rpc/client"
+	"github.com/quad-foundation/quad-node/services/transactionServices"
 	"github.com/quad-foundation/quad-node/statistics"
-	"github.com/quad-foundation/quad-node/wallet"
+	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"github.com/therecipe/qt/core"
 	"github.com/therecipe/qt/widgets"
 	"golang.org/x/exp/rand"
@@ -27,11 +28,11 @@ var amountQAD *widgets.QLineEdit
 var amountTokens *widgets.QLineEdit
 var priceToken *widgets.QLineEdit
 var poolPriceToken *widgets.QLineEdit
-var humanReadable, humanReadableGXY, price, priceBid, priceAsk float64
+var humanReadable, humanReadableQAD, price, priceBid, priceAsk float64
 var symbol string
 var poolCoin, poolToken float64
 var removePoolButton *widgets.QRadioButton
-var removePoolButtonGXY *widgets.QRadioButton
+var removePoolButtonQAD *widgets.QRadioButton
 var buyButton *widgets.QPushButton
 var sellButton *widgets.QPushButton
 var coinAddr = common.Address{}
@@ -137,44 +138,43 @@ func ShowDexPage() *widgets.QTabWidget {
 		amount := amountTokens.Text()
 		if amount != "" {
 			t, _ := strconv.ParseFloat(amount, 64)
-			g := common.RoundCoin(priceAsk * t)
+			g := common.RoundCoin(poolCoin / poolToken * t)
 			amountQAD.SetText(fmt.Sprintf("%f", g))
 			if g > 0 {
 				//price = common.RoundToken(g / t, int(common.Decimals + TokenList[coinAddr.GetHex()].Decimals))
-				priceToken.SetText(fmt.Sprintf("My Price GXY/%s = %f", symbol, priceAsk))
+				priceToken.SetText(fmt.Sprintf("My Price QAD/%s = %f", symbol, priceAsk))
 				if poolCoin > 0 {
-					priceBid = common.CalcNewDEXPrice(t, 0, poolToken, poolCoin)
-					priceAsk = common.CalcNewDEXPrice(t, 0, poolToken, poolCoin)
-					poolPriceToken.SetText(fmt.Sprintf("New pool Price GXY/%s = %f/%f", symbol, priceAsk, priceBid))
+					priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
+					priceAsk = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
+					poolPriceToken.SetText(fmt.Sprintf("New pool Price QAD/%s = %f/%f", symbol, priceAsk, priceBid))
 					if tradeButton.IsChecked() {
-						amountQAD.SetText(fmt.Sprintf("Amount of GXY = %f/%f", t*priceAsk, t*priceBid))
+						amountQAD.SetText(fmt.Sprintf("Amount of QAD = %f/%f", t*priceAsk, t*priceBid))
 					}
 				}
 			}
 		}
 	})
 
-	removePoolButtonGXY = widgets.NewQRadioButton2("Withdraw GXY", nil)
-	widget.Layout().AddWidget(removePoolButtonGXY)
-	removePoolButtonGXY.ConnectClicked(func(bool) {
-		poolTokensButton.SetText("Withdraw GXY from Pool")
+	removePoolButtonQAD = widgets.NewQRadioButton2("Withdraw QAD", nil)
+	widget.Layout().AddWidget(removePoolButtonQAD)
+	removePoolButtonQAD.ConnectClicked(func(bool) {
+		poolTokensButton.SetText("Withdraw QAD from Pool")
 		amountTokens.SetEnabled(false)
 		amountQAD.SetEnabled(true)
-		gxy := amountQAD.Text()
-		if gxy != "" {
+		qad := amountQAD.Text()
+		if qad != "" {
 
-			g, _ := strconv.ParseFloat(gxy, 64)
-			t := common.RoundGXY(poolToken / poolCoin * g)
+			g, _ := strconv.ParseFloat(qad, 64)
+			t := common.RoundCoin(poolCoin / poolToken * g)
 			amountTokens.SetText(fmt.Sprintf("%f", t))
 			if g > 0 {
-				price = common.RoundGXY(g / t)
-				priceToken.SetText(fmt.Sprintf("My Price GXY/%s = %f", symbol, price))
+				priceToken.SetText(fmt.Sprintf("My Price QAD/%s = %f", symbol, priceAsk))
 				if poolCoin > 0 {
-					priceBid = common.CalcNewDEXPrice(t, 0, poolToken, poolCoin, true)
-					priceAsk = common.CalcNewDEXPrice(t, 0, poolToken, poolCoin, false)
-					poolPriceToken.SetText(fmt.Sprintf("New pool Price GXY/%s = %f/%f", symbol, priceAsk, priceBid))
+					priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
+					priceAsk = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
+					poolPriceToken.SetText(fmt.Sprintf("New pool Price QAD/%s = %f/%f", symbol, priceAsk, priceBid))
 					if tradeButton.IsChecked() {
-						amountQAD.SetText(fmt.Sprintf("Amount of GXY = %f/%f", t*priceAsk, t*priceBid))
+						amountQAD.SetText(fmt.Sprintf("Amount of QAD = %f/%f", t*priceAsk, t*priceBid))
 					}
 				}
 			}
@@ -185,21 +185,22 @@ func ShowDexPage() *widgets.QTabWidget {
 	widget.Layout().AddWidget(tradeButton)
 	tradeButton.ConnectClicked(func(bool) {
 		amountTokens.SetEnabled(true)
-		amountQAD.SetEnabled(false)
+		amountQAD.SetEnabled(true)
 		amount := amountTokens.Text()
+		qad := amountQAD.Text()
 		if amount != "" {
 			t, _ := strconv.ParseFloat(amount, 64)
-			g := common.RoundGXY(poolCoin / poolToken * t)
+			g, _ := strconv.ParseFloat(qad, 64)
 			amountQAD.SetText(fmt.Sprintf("%f", g))
 			if g > 0 {
-				price = common.RoundGXY(g / t)
-				priceToken.SetText(fmt.Sprintf("My Price GXY/%s = %f", symbol, price))
+				price = common.RoundCoin(g / t)
+				priceToken.SetText(fmt.Sprintf("My Price QAD/%s = %f", symbol, price))
 				if poolCoin > 0 {
-					priceBid = common.CalcNewDEXPrice(t, 0, poolToken, poolCoin, true)
-					priceAsk = common.CalcNewDEXPrice(t, 0, poolToken, poolCoin, false)
-					poolPriceToken.SetText(fmt.Sprintf("New pool Price GXY/%s = %f/%f", symbol, priceAsk, priceBid))
+					priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
+					priceAsk = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
+					poolPriceToken.SetText(fmt.Sprintf("New pool Price QAD/%s = %f/%f", symbol, priceAsk, priceBid))
 					if tradeButton.IsChecked() {
-						amountQAD.SetText(fmt.Sprintf("Amount of GXY = %f/%f", t*priceAsk, t*priceBid))
+						amountQAD.SetText(fmt.Sprintf("Amount of QAD = %f/%f", t*priceAsk, t*priceBid))
 					}
 				}
 			}
@@ -213,19 +214,19 @@ func ShowDexPage() *widgets.QTabWidget {
 	widget.Layout().AddWidget(amountTokens)
 	amountTokens.ConnectTextChanged(func(amount string) {
 		if amount != "" {
-			gxy := amountQAD.Text()
-			if gxy != "" {
-				g, _ := strconv.ParseFloat(gxy, 64)
+			QAD := amountQAD.Text()
+			if QAD != "" {
+				g, _ := strconv.ParseFloat(QAD, 64)
 				t, _ := strconv.ParseFloat(amount, 64)
 				if g > 0 {
-					price = common.RoundGXY(g / t)
-					priceToken.SetText(fmt.Sprintf("My Price GXY/%s = %f", symbol, price))
+					price = common.RoundCoin(g / t)
+					priceToken.SetText(fmt.Sprintf("My Price QAD/%s = %f", symbol, price))
 					if poolCoin > 0 {
-						priceBid = common.CalcNewDEXPrice(t, 0, poolToken, poolCoin, true)
-						priceAsk = common.CalcNewDEXPrice(t, 0, poolToken, poolCoin, false)
-						poolPriceToken.SetText(fmt.Sprintf("New pool Price GXY/%s = %f/%f", symbol, priceAsk, priceBid))
+						priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
+						priceAsk = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
+						poolPriceToken.SetText(fmt.Sprintf("New pool Price QAD/%s = %f/%f", symbol, priceAsk, priceBid))
 						if tradeButton.IsChecked() {
-							amountQAD.SetText(fmt.Sprintf("Amount of GXY = %f/%f", t*priceAsk, t*priceBid))
+							amountQAD.SetText(fmt.Sprintf("Amount of QAD = %f/%f", t*priceAsk, t*priceBid))
 						}
 					}
 				}
@@ -234,23 +235,23 @@ func ShowDexPage() *widgets.QTabWidget {
 	})
 
 	amountQAD = widgets.NewQLineEdit(nil)
-	amountQAD.SetPlaceholderText("Amount of GXY")
+	amountQAD.SetPlaceholderText("Amount of QAD")
 	widget.Layout().AddWidget(amountQAD)
-	amountQAD.ConnectTextChanged(func(gxy string) {
-		if gxy != "" {
+	amountQAD.ConnectTextChanged(func(QAD string) {
+		if QAD != "" {
 			amount := amountTokens.Text()
 			if amount != "" {
-				g, _ := strconv.ParseFloat(gxy, 64)
+				g, _ := strconv.ParseFloat(QAD, 64)
 				t, _ := strconv.ParseFloat(amount, 64)
 				if g > 0 {
-					price = common.RoundGXY(g / t)
-					priceToken.SetText(fmt.Sprintf("My Price GXY/%s = %f", symbol, price))
+					price = common.RoundCoin(g / t)
+					priceToken.SetText(fmt.Sprintf("My Price QAD/%s = %f", symbol, price))
 					if poolCoin > 0 {
-						priceBid = common.CalcNewDEXPrice(t, 0, poolToken, poolCoin, true)
-						priceAsk = common.CalcNewDEXPrice(t, 0, poolToken, poolCoin, false)
-						poolPriceToken.SetText(fmt.Sprintf("New pool Price GXY/%s = %f/%f", symbol, priceAsk, priceBid))
+						priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
+						priceAsk = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
+						poolPriceToken.SetText(fmt.Sprintf("New pool Price QAD/%s = %f/%f", symbol, priceAsk, priceBid))
 						if tradeButton.IsChecked() {
-							amountQAD.SetText(fmt.Sprintf("Amount of GXY = %f/%f", t*priceAsk, t*priceBid))
+							amountQAD.SetText(fmt.Sprintf("Amount of QAD = %f/%f", t*priceAsk, t*priceBid))
 						}
 					}
 				}
@@ -258,12 +259,12 @@ func ShowDexPage() *widgets.QTabWidget {
 		}
 	})
 	priceToken = widgets.NewQLineEdit(nil)
-	priceToken.SetPlaceholderText("Price of token in GXY")
+	priceToken.SetPlaceholderText("Price of token in QAD")
 	priceToken.SetEnabled(false)
 	widget.Layout().AddWidget(priceToken)
 
 	poolPriceToken = widgets.NewQLineEdit(nil)
-	poolPriceToken.SetPlaceholderText("Price of token you get in GXY")
+	poolPriceToken.SetPlaceholderText("Price of token you get in QAD")
 	widget.Layout().AddWidget(poolPriceToken)
 
 	poolTokensButton = widgets.NewQPushButton2("Add liquidity to Pool", nil)
@@ -281,7 +282,7 @@ func ShowDexPage() *widgets.QTabWidget {
 			coinAddr := common.Address{}
 			coinAddr.Init(common.Hex2Bytes(coin[0]))
 			sender := common.Address{}
-			sender.Init(wallet.MainWallet.Address.GetByte())
+			sender.Init(MainWallet.Address.GetBytes())
 			MakeTransaction(sender, coinAddr)
 		}
 	})
@@ -316,7 +317,7 @@ func ShowDexPage() *widgets.QTabWidget {
 			coinAddr := common.Address{}
 			coinAddr.Init(common.Hex2Bytes(coin[0]))
 			sender := common.Address{}
-			sender.Init(wallet.MainWallet.Address.GetByte())
+			sender.Init(MainWallet.Address.GetBytes())
 			MakeTrade(sender, coinAddr, true)
 		}
 
@@ -334,7 +335,7 @@ func ShowDexPage() *widgets.QTabWidget {
 			coinAddr := common.Address{}
 			coinAddr.Init(common.Hex2Bytes(coin[0]))
 			sender := common.Address{}
-			sender.Init(wallet.MainWallet.Address.GetByte())
+			sender.Init(MainWallet.Address.GetBytes())
 			MakeTrade(sender, coinAddr, false)
 		}
 	})
@@ -376,23 +377,45 @@ func GetAllTokens() map[string]stateDB.TokenInfo {
 func GetBalance(addr common.Address, coin common.Address) int64 {
 
 	m := []byte("GTBL")
-	m = append(m, addr.GetByte()...)
-	m = append(m, coin.GetByte()...)
+	m = append(m, addr.GetBytes()...)
+	m = append(m, coin.GetBytes()...)
 	clientrpc.InRPC <- m
 	var reply []byte
 	reply = <-clientrpc.OutRPC
 	if string(reply) == "Timeout" {
 		return 0
 	}
-	if len(reply) == 8 {
-		ts := common.GetInt64FromByte(reply)
+	if len(reply) == 32 {
+		ts := common.GetInt64FromSCByteLittleEndian(reply)
 		return ts
 	}
 	return 0
 }
 
+func GetAccountDex(coin common.Address) account.DexAccount {
+
+	m := []byte("ADEX")
+	m = append(m, coin.GetBytes()...)
+	clientrpc.InRPC <- m
+	var reply []byte
+	reply = <-clientrpc.OutRPC
+	if string(reply) == "Timeout" {
+		return account.DexAccount{}
+	}
+	if len(reply) > 8 {
+		dexAcc := account.DexAccount{}
+		err := common.Unmarshal(reply, common.DexAccountsDBPrefix, &dexAcc)
+		if err != nil {
+			return account.DexAccount{}
+		}
+
+		return dexAcc
+	}
+	return account.DexAccount{}
+}
+
 func GetAccount(a common.Address) (account.Account, error) {
-	inb := append([]byte("ACCT"), a.GetByte()...)
+	inb := append([]byte("ACCT"), a.GetBytes()...)
 	clientrpc.InRPC <- inb
 	var re, reply []byte
 	var acc account.Account
@@ -401,7 +424,7 @@ func GetAccount(a common.Address) (account.Account, error) {
 	if string(reply) == "Timeout" {
 		return account.Account{}, fmt.Errorf("timeout")
 	}
-	err := json.Unmarshal(re, &acc)
+	err = acc.Unmarshal(re)
 	if err != nil {
 		log.Println("cannot unmarshal account")
 		return account.Account{}, err
@@ -413,32 +436,25 @@ func GetAllPoolsInfo() string {
 	txt := "Pools sizes:\n"
 	ti := GetAllTokens()
 	for addr, info := range ti {
-		dex := common.GetDelegatedAccountByteForDEX(256, common.Hex2Bytes(addr[:]))
-		coinAddrTmp := common.Address{}
-		coinAddrTmp.Init(common.Hex2Bytes(addr[:]))
+		a := common.Address{}
+		a.Init(common.Hex2Bytes(addr))
+		accDex := GetAccountDex(a)
 
-		balCoin := GetBalance(dex, coinAddrTmp)
-		humanReadable = account.Int64toFloat64ByDecimals(balCoin, info.Decimals)
+		tokenPoolFloat := account.Int64toFloat64ByDecimals(accDex.TokenPool, info.Decimals)
+		coinPoolFloat := account.Int64toFloat64ByDecimals(accDex.CoinPool, common.Decimals)
 		symb := strings.Trim(info.Symbols, string(byte(0)))
-		tmptxt := fmt.Sprintln(addr, " = ", humanReadable, " ", symb)
+		tmptxt := fmt.Sprintln(addr, " = ", tokenPoolFloat, " ", symb)
 		txt += tmptxt
 		txt += "Users provided liquidity into pool:\n"
-		dexAcc, _ := GetAccount(dex)
-		humanReadableGXY = 0
-		for a, v := range dexAcc.GXYAddresses {
-			vr := account.Int64toFloat64ByDecimals(v, common.Decimals)
-			humanReadableGXY += vr
-			tmptxt := fmt.Sprintln(a, " = ", vr, " GXY")
-			txt += tmptxt
+
+		if tokenPoolFloat > 0 {
+			price = common.RoundCoin(coinPoolFloat / tokenPoolFloat)
 		}
-		if humanReadableGXY > 0 {
-			price = common.RoundGXY(humanReadableGXY / humanReadable)
-		}
-		tmptxt = fmt.Sprintf("Pool price GXY/%s = %f", symb, price)
+		tmptxt = fmt.Sprintf("Pool price QAD/%s = %f", symb, price)
 		txt += tmptxt
-		if bytes.Compare(coinAddrTmp.GetByte(), coinAddr.GetByte()) == 0 {
-			poolCoin = humanReadableGXY
-			poolToken = humanReadable
+		if bytes.Compare(a.GetBytes(), coinAddr.GetBytes()) == 0 {
+			poolCoin = coinPoolFloat
+			poolToken = tokenPoolFloat
 		}
 
 		//price for chart
@@ -453,15 +469,14 @@ func GetAllPoolsInfo() string {
 func GetAllTokensAccountInfo(a common.Address, symbolAddr common.Address) string {
 	txt := "My Address:\n" + a.GetHex() + "\n\nMy Holding:\n"
 	myacc, _ := GetAccount(a)
-	l := len(myacc.LastCheck)
-	myBal := myacc.GetBalanceConfirmedFloat(myacc.LastCheck[l-1])
-	txt += fmt.Sprintln(myBal, " GXY\n\nTokens:")
+	myBal := myacc.GetBalanceConfirmedFloat()
+	txt += fmt.Sprintln(myBal, " QAD\n\nTokens:")
 	ti := GetAllTokens()
 	for addr, info := range ti {
 
 		coinAddr := common.Address{}
 		coinAddr.Init(common.Hex2Bytes(addr[:]))
-		if bytes.Compare(coinAddr.GetByte(), symbolAddr.GetByte()) == 0 {
+		if bytes.Compare(coinAddr.GetBytes(), symbolAddr.GetBytes()) == 0 {
 			symbol = strings.Trim(info.Symbols, string(byte(0)))
 		}
 		balCoin := GetBalance(a, coinAddr)
@@ -473,26 +488,28 @@ func GetAllTokensAccountInfo(a common.Address, symbolAddr common.Address) string
 	txt += "\nMy Tokens in Pools:\n"
 
 	for addr, info := range ti {
-		dex := common.GetDelegatedAccountByteForDEX(256, common.Hex2Bytes(addr[:]))
+		a := common.Address{}
+		a.Init(common.Hex2Bytes(addr))
+		accDex := GetAccountDex(a)
 		coinAddr := common.Address{}
 		coinAddr.Init(common.Hex2Bytes(addr[:]))
 		symb := strings.Trim(info.Symbols, string(byte(0)))
-		dexAcc, _ := GetAccount(dex)
-		if bal, ok := dexAcc.StakingAddresses[a.GetHex()]; ok {
-			humanReadable = account.Int64toFloat64ByDecimals(bal, info.Decimals)
+
+		if bal, ok := accDex.Balances[a.ByteValue]; ok {
+			humanReadable = account.Int64toFloat64ByDecimals(bal.TokenBalance, info.Decimals)
 
 			tmptxt := fmt.Sprintln(addr, " = ", humanReadable, " ", symb)
 			txt += tmptxt
 		}
-		if bal, ok := dexAcc.GXYAddresses[a.GetHex()]; ok {
-			humanReadableGXY = account.Int64toFloat64ByDecimals(bal, common.Decimals)
-			tmptxt := fmt.Sprintln(addr, " = ", humanReadableGXY, " GXY")
+		if bal, ok := accDex.Balances[a.ByteValue]; ok {
+			humanReadableQAD = account.Int64toFloat64ByDecimals(bal.CoinBalance, common.Decimals)
+			tmptxt := fmt.Sprintln(addr, " = ", humanReadableQAD, " QAD")
 			txt += tmptxt
 		}
-		//if humanReadableGXY > 0 {
-		//	price = common.RoundGXY(humanReadableGXY / humanReadable)
+		//if humanReadableQAD > 0 {
+		//	price = common.RoundQAD(humanReadableQAD / humanReadable)
 		//}
-		//tmptxt := fmt.Sprintf("My price GXY/%s = %f", symb, price)
+		//tmptxt := fmt.Sprintf("My price QAD/%s = %f", symb, price)
 		//txt += tmptxt
 	}
 	AmountLabelData.SetPlainText(txt)
@@ -510,7 +527,7 @@ func MakeTransaction(sender, coinAddr common.Address) {
 		defer func(nfo *string) {
 			widgets.QMessageBox_Information(nil, "Info", *nfo, widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 		}(info)
-		if !wallet.MainWallet.Check() {
+		if !MainWallet.Check() {
 			v = fmt.Sprint("Load wallet first")
 			info = &v
 			return
@@ -528,33 +545,33 @@ func MakeTransaction(sender, coinAddr common.Address) {
 			return
 		}
 
-		gxy, err := strconv.ParseFloat(amountQAD.Text(), 64)
+		QAD, err := strconv.ParseFloat(amountQAD.Text(), 64)
 		if err != nil {
 			v = fmt.Sprint(err)
 			info = &v
 			return
 		}
-		gxyam := int64(gxy * math.Pow10(int(common.Decimals)))
-		if float64(gxyam) != gxy*math.Pow10(int(common.Decimals)) {
+		QADam := int64(QAD * math.Pow10(int(common.Decimals)))
+		if float64(QADam) != QAD*math.Pow10(int(common.Decimals)) {
 			v = fmt.Sprint("Precision needs to be not larger than", common.Decimals, " digits")
 			info = &v
 			return
 		}
-		operation := uint8(2)
+		operation := 2
 		if removePoolButton.IsChecked() {
 			am *= -1
 			af *= -1
-			gxyam = 0
+			QADam = 0
 			operation = 5
 		}
-		if removePoolButtonGXY.IsChecked() {
-			gxyam *= -1
+		if removePoolButtonQAD.IsChecked() {
+			QADam *= -1
 			am = 0
 			af = 0
 			operation = 6
 		}
-		//if -gxyam > myAcc.GetBalance() {
-		//	v = fmt.Sprint("Not enough GXY balance at account")
+		//if -QADam > myAcc.GetBalance() {
+		//	v = fmt.Sprint("Not enough QAD balance at account")
 		//	info = &v
 		//	return
 		//}
@@ -563,57 +580,66 @@ func MakeTransaction(sender, coinAddr common.Address) {
 			info = &v
 			return
 		}
-		ar := common.GetDelegatedAccountAddressForDEX(256, coinAddr)
-		txd := stakingDefinition.StakeData{
-			DelegatedAccount: ar,
-			Amount:           am,
-			AmountGXY:        gxyam,
-			Operation:        operation,
-			CoinAddress:      coinAddr,
+		ar := common.GetDelegatedAccountAddress(int16(512 + operation))
+		txd := transactionsDefinition.TxData{
+			Recipient: ar,
+			Amount:    QADam,
+			OptData:   common.GetByteInt64(am),
+			Pubkey:    common.PubKey{},
 		}
-		par := stakingDefinition.StakeParam{
-			ChainID: ChainID,
-			Sender:  sender,
-			Time:    common.GetCurrentTimeStampInSecond(),
-			Nonce:   int16(rand.Intn(0xffff)),
+
+		par := transactionsDefinition.TxParam{
+			ChainID:     ChainID,
+			Sender:      sender,
+			SendingTime: common.GetCurrentTimeStampInSecond(),
+			Nonce:       int16(rand.Intn(0xffff)),
 		}
-		tx := stakingDefinition.StakeTransaction{
-			StakeData:   txd,
-			StakeParam:  par,
-			HHash:       common.HHash{},
-			Signature:   common.Signature{},
-			Height:      0,
-			HeightFinal: 0,
+		tx := transactionsDefinition.Transaction{
+			TxData:          txd,
+			TxParam:         par,
+			Hash:            common.Hash{},
+			Signature:       common.Signature{},
+			Height:          0,
+			GasPrice:        0,
+			GasUsage:        0,
+			ContractAddress: coinAddr,
+			OutputLogs:      nil,
 		}
 		clientrpc.InRPC <- []byte("STAT")
 		var reply []byte
 		reply = <-clientrpc.OutRPC
-		st := statistics.MainStats{}
-		err = json.Unmarshal(reply, &st)
+		st := &statistics.MainStats{}
+		err = common.Unmarshal(reply, common.StatDBPrefix, st)
 		if err != nil {
 			v = fmt.Sprint("Can not unmarshal statistics", err)
 			info = &v
 			return
 		}
 		tx.Height = st.Heights
-		tx.HHash = tx.CalcHHash()
-		sig, err := stakingType.SignTransaction(tx)
+		tx.GasUsage = tx.GasUsageEstimate()
+		err = tx.CalcHashAndSet()
+		if err != nil {
+			v = fmt.Sprint("Can not calculate hash", err)
+			info = &v
+			return
+		}
+		err = tx.Sign(MainWallet)
 		if err != nil {
 			v = fmt.Sprint(err)
 			info = &v
 			return
 		}
-		tx.Signature = sig
-		msg := message2.GenerateStakingTransactionMsg([]stakingDefinition.StakeTransaction{tx}, "staking")
-		msg.BaseMessage.ChainID = ChainID
-		tmm, err := json.Marshal(msg)
+		msg, err := transactionServices.GenerateTransactionMsg([]transactionsDefinition.Transaction{tx}, []byte("tx"), [2]byte{'T', 'T'})
 		if err != nil {
 			v = fmt.Sprint(err)
 			info = &v
 			return
 		}
-		clientrpc.InRPC <- append([]byte("STAK"), tmm...)
+		tmm := msg.GetBytes()
+		clientrpc.InRPC <- append([]byte("TRAN"), tmm...)
 		<-clientrpc.OutRPC
+		v = string(reply)
+		info = &v
 
 	}
 }
@@ -628,7 +654,7 @@ func MakeTrade(sender, coinAddr common.Address, isBuy bool) {
 		defer func(nfo *string) {
 			widgets.QMessageBox_Information(nil, "Info", *nfo, widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 		}(info)
-		if !wallet.MainWallet.Check() {
+		if !MainWallet.Check() {
 			v = fmt.Sprint("Load wallet first")
 			info = &v
 			return
@@ -645,7 +671,7 @@ func MakeTrade(sender, coinAddr common.Address, isBuy bool) {
 			info = &v
 			return
 		}
-		var operation uint8
+		var operation int
 		operation = 3
 		if !isBuy {
 			am *= -1
@@ -657,57 +683,66 @@ func MakeTrade(sender, coinAddr common.Address, isBuy bool) {
 			info = &v
 			return
 		}
-		ar := common.GetDelegatedAccountAddressForDEX(256, coinAddr)
-		txd := stakingDefinition.StakeData{
-			DelegatedAccount: ar,
-			Amount:           am,
-			AmountGXY:        0,
-			Operation:        operation, // 3 - buy, 4 - sell
-			CoinAddress:      coinAddr,
+		ar := common.GetDelegatedAccountAddress(int16(512 + operation))
+		txd := transactionsDefinition.TxData{
+			Recipient: ar,
+			Amount:    am,
+			OptData:   common.GetByteInt64(am),
+			Pubkey:    common.PubKey{},
 		}
-		par := stakingDefinition.StakeParam{
-			ChainID: ChainID,
-			Sender:  sender,
-			Time:    common.GetCurrentTimeStampInSecond(),
-			Nonce:   int16(rand.Intn(0xffff)),
+
+		par := transactionsDefinition.TxParam{
+			ChainID:     ChainID,
+			Sender:      sender,
+			SendingTime: common.GetCurrentTimeStampInSecond(),
+			Nonce:       int16(rand.Intn(0xffff)),
 		}
-		tx := stakingDefinition.StakeTransaction{
-			StakeData:   txd,
-			StakeParam:  par,
-			HHash:       common.HHash{},
-			Signature:   common.Signature{},
-			Height:      0,
-			HeightFinal: 0,
+		tx := transactionsDefinition.Transaction{
+			TxData:          txd,
+			TxParam:         par,
+			Hash:            common.Hash{},
+			Signature:       common.Signature{},
+			Height:          0,
+			GasPrice:        0,
+			GasUsage:        0,
+			ContractAddress: coinAddr,
+			OutputLogs:      nil,
 		}
 		clientrpc.InRPC <- []byte("STAT")
 		var reply []byte
 		reply = <-clientrpc.OutRPC
-		st := statistics.MainStats{}
-		err = json.Unmarshal(reply, &st)
+		st := &statistics.MainStats{}
+		err = common.Unmarshal(reply, common.StatDBPrefix, st)
 		if err != nil {
 			v = fmt.Sprint("Can not unmarshal statistics", err)
 			info = &v
 			return
 		}
 		tx.Height = st.Heights
-		tx.HHash = tx.CalcHHash()
-		sig, err := stakingType.SignTransaction(tx)
+		tx.GasUsage = tx.GasUsageEstimate()
+		err = tx.CalcHashAndSet()
+		if err != nil {
+			v = fmt.Sprint("Can not calculate hash", err)
+			info = &v
+			return
+		}
+		err = tx.Sign(MainWallet)
 		if err != nil {
 			v = fmt.Sprint(err)
 			info = &v
 			return
 		}
-		tx.Signature = sig
-		msg := message2.GenerateStakingTransactionMsg([]stakingDefinition.StakeTransaction{tx}, "staking")
-		msg.BaseMessage.ChainID = ChainID
-		tmm, err := json.Marshal(msg)
+		msg, err := transactionServices.GenerateTransactionMsg([]transactionsDefinition.Transaction{tx}, []byte("tx"), [2]byte{'T', 'T'})
 		if err != nil {
 			v = fmt.Sprint(err)
 			info = &v
 			return
 		}
-		clientrpc.InRPC <- append([]byte("STAK"), tmm...)
+		tmm := msg.GetBytes()
+		clientrpc.InRPC <- append([]byte("TRAN"), tmm...)
 		<-clientrpc.OutRPC
+		v = string(reply)
+		info = &v
 
 	}
 }
@@ -717,7 +752,7 @@ func MakeTrade(sender, coinAddr common.Address, isBuy bool) {
 //
 //	chart := charts.NewQChart(nil, 0)
 //	chart.AddSeries(PriceTokenSeries)
-//	chart.SetTitle(fmt.Sprintf("Prices of GXY/%s from DEX", symbol))
+//	chart.SetTitle(fmt.Sprintf("Prices of QAD/%s from DEX", symbol))
 //	chart.SetAnimationOptions(charts.QChart__SeriesAnimations)
 //
 //	chart.CreateDefaultAxes()

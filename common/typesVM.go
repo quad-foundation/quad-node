@@ -91,6 +91,23 @@ func GetInt64FromSCByte(bs []byte) int64 {
 	return int64(binary.BigEndian.Uint64(bs[3*8:]))
 }
 
+func GetInt64FromSCByteLittleEndian(bs []byte) int64 {
+	return int64(binary.LittleEndian.Uint64(bs[3*8:]))
+}
+
+// Int64ToBytesLittleEndian konwertuje int64 na tablicę 8 bajtów w formacie Little Endian.
+func Int64ToBytesLittleEndian(value int64) []byte {
+	bs := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bs, uint64(value))
+	return bs
+}
+
+func Int64ToBytes(value int64) []byte {
+	bs := make([]byte, 8)
+	binary.BigEndian.PutUint64(bs, uint64(value))
+	return bs
+}
+
 // HexToHash sets byte representation of s to hash.
 // If b is larger than len(h), b will be cropped from the left.
 func HexToHash(s string) Hash { return BytesToHash(FromHex(s)) }

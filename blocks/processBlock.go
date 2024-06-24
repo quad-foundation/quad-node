@@ -135,7 +135,8 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, int64, error) {
 		return 0, 0, fmt.Errorf("block supply checking fails")
 	}
 	staked, rewarded := GetSupplyInStakedAccounts()
-	if GetSupplyInAccounts()+staked+rewarded+reward+lastBlock.BlockFee != block.GetBlockSupply() {
+	coinsInDex := account.GetCoinLiquidityInDex()
+	if GetSupplyInAccounts()+staked+rewarded+reward+lastBlock.BlockFee-coinsInDex != block.GetBlockSupply() {
 		return 0, 0, fmt.Errorf("block supply checking fails vs account balances")
 	}
 	return reward, totalFee, nil
@@ -299,14 +300,16 @@ func CheckBlockAndTransferFunds(newBlock *Block, lastBlock Block, merkleTrie *tr
 		return fmt.Errorf("not enough staked coins to be a node or not valid operetional account")
 	}
 
+	if EvaluateSmartContracts(newBlock) == false {
+		return fmt.Errorf("evaluation of smart contracts in block fails")
+	}
+
 	reward, totalFee, err := CheckBlockTransfers(*newBlock, lastBlock)
 	if err != nil {
 		return err
 	}
 	newBlock.BlockFee = totalFee + lastBlock.BlockFee
-	if EvaluateSmartContracts(newBlock) == false {
-		return fmt.Errorf("evaluation of smart contracts in block fails")
-	}
+
 	hashes := newBlock.GetBlockTransactionsHashes()
 	log.Println("Number of transactions in block: ", len(hashes))
 
