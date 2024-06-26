@@ -7,9 +7,9 @@ contract Coin {
     // accessible from other contracts
     address public minter;
     mapping (address => int64) public balances;
-    string public constant name = "WONABRU TOKEN 5";
-    string public constant symbol = "WNB5";
-    uint8 public constant decimals = 8;
+    string public constant name = "WONABRU TOKEN";
+    string public constant symbol = "WNB";
+    uint8 public constant decimals = 2;
   
     string store = "heja";
 
