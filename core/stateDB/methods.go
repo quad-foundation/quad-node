@@ -54,7 +54,13 @@ func (sa *StateAccount) GetSnapShotNum(height int64) (int, bool) {
 }
 
 func (sa *StateAccount) CreateAccount(a common.Address) {
-	(*sa).Accounts[a.ByteValue] = account.GetAccountByAddressBytes(a.GetBytes())
+	addrb := [common.AddressLength]byte{}
+	copy(addrb[:], a.ByteValue[:])
+	acc := account.Account{
+		Balance: 0,
+		Address: addrb,
+	}
+	(*sa).Accounts[a.ByteValue] = acc
 }
 
 func (sa *StateAccount) GetAllRegisteredTokens() map[[common.AddressLength]byte]TokenInfo {
@@ -77,7 +83,7 @@ func (sa *StateAccount) AddBalance(common.Address, *big.Int) {
 
 }
 func (sa *StateAccount) GetBalance(common.Address) *big.Int {
-	return new(big.Int).SetInt64(1000000000000)
+	return new(big.Int).SetInt64(0)
 }
 
 func (sa *StateAccount) GetNonce(a common.Address) uint64 {

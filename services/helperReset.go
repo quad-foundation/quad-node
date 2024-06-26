@@ -20,6 +20,23 @@ func AdjustShiftInPastInReset(height int64) {
 	}
 }
 
+func RevertVMToBlockHeight(height int64) bool {
+	blocks.StateMutex.Lock()
+	defer blocks.StateMutex.Unlock()
+	lastNum := 0
+	for h, n := range blocks.State.HeightToSnapShotNum {
+		if h > height {
+			continue
+		}
+		if n > lastNum {
+			lastNum = n
+		}
+	}
+
+	blocks.State.RevertToSnapshot(lastNum)
+	return true
+}
+
 func ResetAccountsAndBlocksSync(height int64) {
 	if height < 0 {
 		log.Println("try to reset from negative height")
@@ -46,6 +63,15 @@ func ResetAccountsAndBlocksSync(height int64) {
 	if err != nil {
 		log.Println(err)
 	}
+	hd, err := account.LastHeightStoredInDexAccounts()
+	if err != nil {
+		log.Println(err)
+	}
+
+	if RevertVMToBlockHeight(height) == false {
+		log.Println("reverting VM to height ", height, " fails.")
+	}
+
 	for i := hb; i > height; i-- {
 		err := blocks.RemoveBlockFromDB(i)
 		if err != nil {
@@ -64,6 +90,13 @@ func ResetAccountsAndBlocksSync(height int64) {
 			log.Println(err)
 		}
 	}
+	for i := hd; i > height; i-- {
+		err := account.RemoveDexAccountsFromDB(i)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
 	hm, err := transactionsPool.LastHeightStoredInMerleTrie()
 	if err != nil {
 		log.Println(err)

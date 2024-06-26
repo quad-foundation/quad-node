@@ -1,8 +1,10 @@
 package account
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/quad-foundation/quad-node/common"
+	"log"
 	"math"
 )
 
@@ -17,6 +19,23 @@ func GetAccountByAddressBytes(address []byte) Account {
 	addrb := [common.AddressLength]byte{}
 	copy(addrb[:], address[:common.AddressLength])
 	return Accounts.AllAccounts[addrb]
+}
+
+func SetAccountByAddressBytes(address []byte) Account {
+	dexAccount := GetAccountByAddressBytes(address)
+	if bytes.Compare(dexAccount.Address[:], address) != 0 {
+		log.Println("no account found, will be created")
+		addrb := [common.AddressLength]byte{}
+		copy(addrb[:], address[:common.AddressLength])
+		dexAccount = Account{
+			Balance: 0,
+			Address: addrb,
+		}
+		AccountsRWMutex.Lock()
+		Accounts.AllAccounts[addrb] = dexAccount
+		AccountsRWMutex.Unlock()
+	}
+	return dexAccount
 }
 
 // GetBalanceConfirmedFloat get amount of confirmed QAD in human-readable format

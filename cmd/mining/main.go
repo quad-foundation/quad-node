@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/quad-foundation/quad-node/account"
+	"github.com/quad-foundation/quad-node/blocks"
 	"github.com/quad-foundation/quad-node/common"
 	memDatabase "github.com/quad-foundation/quad-node/database"
 	"github.com/quad-foundation/quad-node/genesis"
@@ -44,6 +45,15 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// DEX acount init
+
+	allDexAccounts := map[[20]byte]account.DexAccount{}
+	account.DexAccounts = account.DexAccountsType{AllDexAccounts: allDexAccounts}
+	err = account.StoreDexAccounts(0)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	for i := 1; i < 256; i++ {
 		del := common.GetDelegatedAccountAddress(int16(i))
 		delbytes := [common.AddressLength]byte{}
@@ -71,6 +81,13 @@ func main() {
 		log.Fatal(err)
 	}
 	defer account.StoreAccounts(-1)
+
+	err = account.LoadDexAccounts(-1)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer account.StoreDexAccounts(-1)
+
 	err = account.LoadStakingAccounts(-1)
 	if err != nil {
 		log.Fatal(err)
@@ -81,6 +98,9 @@ func main() {
 
 	err = memDatabase.MainDB.Put(append(common.PubKeyDBPrefix[:], w.Address.GetBytes()...),
 		w.PublicKey.GetBytes())
+
+	blocks.InitStateDB()
+
 	genesis.InitGenesis()
 
 	//firstDel := common.GetDelegatedAccountAddress(1)

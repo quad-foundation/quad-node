@@ -213,6 +213,13 @@ func GetByteInt64(u int64) []byte {
 	return tmp
 }
 
+// GetByteInt64 converts an int64 value to a byte slice.
+func GetByteUInt64(u uint64) []byte {
+	tmp := make([]byte, 8)
+	binary.LittleEndian.PutUint64(tmp, u)
+	return tmp
+}
+
 // GetInt64FromByte converts a byte slice to an int64 value.
 func GetInt64FromByte(bs []byte) int64 {
 	return int64(binary.LittleEndian.Uint64(bs))

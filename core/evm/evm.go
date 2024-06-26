@@ -496,13 +496,13 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 }
 
 // Create creates a new contract using code as deployment code.
-func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.Int, nonce uint64) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
 	codeAndHash := &codeAndHash{code: code}
 	b := [32]byte{}
 	hval := common.RightPadBytes(common.GetByteInt64(value.Int64()), 32)
 	copy(b[:], hval)
 	contractAddr = crypto.CreateAddress2(caller.Address(), b, codeAndHash.Hash().Bytes())
-	//contractAddr = crypto.CreateAddress(caller.Address(), evm.StateDB.GetNonce(caller.Address()))
+	contractAddr = crypto.CreateAddress(contractAddr, nonce)
 	return evm.create(caller, codeAndHash, gas, value, contractAddr, CREATE)
 }
 

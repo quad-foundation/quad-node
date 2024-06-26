@@ -21,8 +21,11 @@ import (
 	"database/sql/driver"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/quad-foundation/quad-node/common/hexutil"
+	"math"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -60,6 +63,22 @@ func GetStringFromSCBytes(code []byte, startIndex uint) string {
 	return st
 }
 
+func RoundCoin(v float64) float64 {
+	return math.Round(v*math.Pow10(int(Decimals))) * math.Pow10(-int(Decimals))
+}
+
+func RoundToken(v float64, decimal int) float64 {
+	return math.Round(v*math.Pow10(decimal)) * math.Pow10(-decimal)
+}
+
+func CalcNewDEXPrice(myTokens, myCoins, poolAmountTokens, poolAmountCoins float64) float64 {
+	price := 0.0
+	if poolAmountTokens+myTokens > 0 {
+		price = (poolAmountCoins + myCoins) / (poolAmountTokens + myTokens)
+	}
+	return price
+}
+
 // IsHexAddress verifies whether a string can represent a valid hex-encoded
 // Ethereum address or not.
 func IsHexVMAddress(s string) bool {
@@ -75,6 +94,12 @@ func GetUintFromSCByte(bs []byte) uint {
 
 func GetInt64FromSCByte(bs []byte) int64 {
 	return int64(binary.BigEndian.Uint64(bs[3*8:]))
+}
+
+func GetInt64ToBytesSC(value int64) []byte {
+	bs := make([]byte, 32)
+	binary.BigEndian.PutUint64(bs[24:32], uint64(value))
+	return bs
 }
 
 // HexToHash sets byte representation of s to hash.
@@ -210,4 +235,79 @@ func (h *UnprefixedHash) UnmarshalText(input []byte) error {
 // MarshalText encodes the hash as hex.
 func (h UnprefixedHash) MarshalText() ([]byte, error) {
 	return []byte(hex.EncodeToString(h[:])), nil
+}
+
+// MarshalText returns the hex representation of a.
+func (a Address) MarshalText() ([]byte, error) {
+	return hexutil.Bytes(a.GetBytes()).MarshalText()
+}
+
+// UnmarshalText parses a hash in hex syntax.
+func (a *Address) UnmarshalText(input []byte) error {
+	return hexutil.UnmarshalFixedText("Address", input, a.GetBytes())
+}
+
+// UnmarshalJSON parses a hash in hex syntax.
+func (a *Address) UnmarshalJSON(input []byte) error {
+	return hexutil.UnmarshalFixedJSON(addressT, input, a.GetBytes())
+}
+
+// MixedcaseAddress retains the original string, which may or may not be
+// correctly checksummed
+type MixedcaseAddress struct {
+	addr     Address
+	original string
+}
+
+// NewMixedcaseAddress constructor (mainly for testing)
+func NewMixedcaseAddress(addr Address) MixedcaseAddress {
+	return MixedcaseAddress{addr: addr, original: addr.Hex()}
+}
+
+// NewMixedcaseAddressFromString is mainly meant for unit-testing
+func NewMixedcaseAddressFromString(hexaddr string) (*MixedcaseAddress, error) {
+	if !IsHexVMAddress(hexaddr) {
+		return nil, errors.New("invalid address")
+	}
+	a := FromHex(hexaddr)
+	return &MixedcaseAddress{addr: BytesToVMAddress(a), original: hexaddr}, nil
+}
+
+// UnmarshalJSON parses MixedcaseAddress
+func (ma *MixedcaseAddress) UnmarshalJSON(input []byte) error {
+	if err := hexutil.UnmarshalFixedJSON(addressT, input, ma.addr.GetBytes()); err != nil {
+		return err
+	}
+	return json.Unmarshal(input, &ma.original)
+}
+
+// MarshalJSON marshals the original value
+func (ma *MixedcaseAddress) MarshalJSON() ([]byte, error) {
+	if strings.HasPrefix(ma.original, "0x") || strings.HasPrefix(ma.original, "0X") {
+		return json.Marshal(fmt.Sprintf("0x%s", ma.original[2:]))
+	}
+	return json.Marshal(fmt.Sprintf("0x%s", ma.original))
+}
+
+// Address returns the address
+func (ma *MixedcaseAddress) Address() Address {
+	return ma.addr
+}
+
+// String implements fmt.Stringer
+func (ma *MixedcaseAddress) String() string {
+	if ma.ValidChecksum() {
+		return fmt.Sprintf("%s [chksum ok]", ma.original)
+	}
+	return fmt.Sprintf("%s [chksum INVALID]", ma.original)
+}
+
+// ValidChecksum returns true if the address has valid checksum
+func (ma *MixedcaseAddress) ValidChecksum() bool {
+	return ma.original == ma.addr.Hex()
+}
+
+// Original returns the mixed-case input string
+func (ma *MixedcaseAddress) Original() string {
+	return ma.original
 }

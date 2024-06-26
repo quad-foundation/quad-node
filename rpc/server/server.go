@@ -7,6 +7,7 @@ import (
 	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/blocks"
 	"github.com/quad-foundation/quad-node/common"
+	"github.com/quad-foundation/quad-node/core/stateDB"
 	"github.com/quad-foundation/quad-node/services/transactionServices"
 	"github.com/quad-foundation/quad-node/statistics"
 	"github.com/quad-foundation/quad-node/tcpip"
@@ -64,12 +65,12 @@ func (l *Listener) Send(line []byte, reply *[]byte) error {
 		handleDETS(byt, reply)
 	case "STAK":
 		handleSTAK(byt, reply)
-	//case "ACCS":
-	//	handleACCS(reply)
-	//case "LTKN":
-	//	handleLTKN(reply)
-	//case "GTBL":
-	//	handleGTBL(byt, reply)
+	case "ADEX":
+		handleADEX(byt, reply)
+	case "LTKN":
+		handleLTKN(byt, reply)
+	case "GTBL":
+		handleGTBL(byt, reply)
 	default:
 		*reply = []byte("Invalid operation")
 	}
@@ -87,6 +88,60 @@ func handleWALL(line []byte, reply *[]byte) {
 	*reply = r
 }
 
+func handleGTBL(byt []byte, reply *[]byte) {
+	if len(byt) == 2*common.AddressLength {
+		addr := common.Address{}
+		addr.Init(byt[:common.AddressLength])
+		coin := common.Address{}
+		coin.Init(byt[common.AddressLength : 2*common.AddressLength])
+		inputs := stateDB.BalanceOfFunc
+		ba := common.LeftPadBytes(addr.GetBytes(), 32)
+		inputs = append(inputs, ba...)
+
+		h := common.GetHeight()
+
+		bl, err := blocks.LoadBlock(h)
+		if err != nil {
+			*reply = []byte(fmt.Sprint(err))
+			return
+		}
+
+		output, _, _, _, _, err := blocks.GetViewFunctionReturns(coin, inputs, bl)
+		if err != nil {
+			*reply = []byte("Some error in SC query GTBL")
+			return
+		}
+		*reply = common.Hex2Bytes(output)
+	} else {
+		*reply = []byte("Invalid query GTBL")
+	}
+}
+
+func handleLTKN(line []byte, reply *[]byte) {
+	blocks.StateMutex.RLock()
+	accs := blocks.State.GetAllRegisteredTokens()
+	blocks.StateMutex.RUnlock()
+	if len(accs) > 0 {
+		newAccs := map[string]stateDB.TokenInfo{}
+		for k, v := range accs {
+			newAccs[hex.EncodeToString(k[:])] = v
+		}
+		am, err := json.Marshal(newAccs)
+		if err != nil {
+			*reply = []byte(fmt.Sprint(err))
+			return
+		}
+		*reply = am
+	}
+}
+
+func handleADEX(byt []byte, reply *[]byte) {
+
+	dexAcc := account.GetDexAccountByAddressBytes(byt[:common.AddressLength])
+	marshal := dexAcc.Marshal()
+	*reply = marshal
+}
+
 func handleVIEW(line []byte, reply *[]byte) {
 	m := blocks.PasiveFunction{}
 
@@ -102,9 +157,9 @@ func handleVIEW(line []byte, reply *[]byte) {
 		return
 	}
 
-	l, _, _, _, _, err := blocks.GetViewFunctionReturns(m.Address, m.OptData, bl)
+	l, logs, _, _, _, err := blocks.GetViewFunctionReturns(m.Address, m.OptData, bl)
 	if err != nil {
-		*reply = []byte(fmt.Sprint(err))
+		*reply = []byte(fmt.Sprint(logs))
 	}
 	*reply, _ = hex.DecodeString(l)
 }

@@ -170,6 +170,7 @@ func OnMessage(addr string, m []byte) {
 			err := blocks.CheckBlockAndTransferFunds(&block, oldBlock, merkleTries[index])
 			if err != nil {
 				log.Println(err)
+				services.RevertVMToBlockHeight(oldBlock.GetHeader().Height)
 				return
 			}
 			// storing blocks

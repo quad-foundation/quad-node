@@ -161,6 +161,7 @@ func OnMessage(addr string, m []byte) {
 				}
 				err = blocks.CheckBlockAndTransferFunds(&newBlock, lastBlock, merkleTrie)
 				if err != nil {
+					services.RevertVMToBlockHeight(lastBlock.GetHeader().Height)
 					log.Println("check transfer transactions in block fails", err)
 					return
 				}

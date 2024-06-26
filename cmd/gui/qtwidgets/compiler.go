@@ -95,7 +95,7 @@ func ShowSmartContractPage() *widgets.QTabWidget {
 							log.Println("error in number conversion", err, "Type of ", s, "Currently not implemented")
 							break
 						}
-						b = common.LeftPadBytes(common.GetByteInt64(bi), 32)
+						b = common.LeftPadBytes(common.GetInt64ToBytesSC(bi), 32)
 					}
 
 					hv += common.Bytes2Hex(b)
@@ -233,7 +233,7 @@ func ShowSmartContractPage() *widgets.QTabWidget {
 			info = &v
 			return
 		}
-		cmd := exec.Command("solc", "--evm-version", "istanbul", "--bin", "smartContracts/contract.sol")
+		cmd := exec.Command("solc", "--evm-version", "paris", "--bin", "smartContracts/contract.sol") //
 		var out bytes.Buffer
 		cmd.Stdout = &out
 		err = cmd.Run()
@@ -248,7 +248,7 @@ func ShowSmartContractPage() *widgets.QTabWidget {
 		SmartContractData.SetText(outputData.ToPlainText())
 		Recipient.SetText("0")
 		Amount.SetText("0")
-		cmd = exec.Command("solc", "--evm-version", "istanbul", "--abi", "smartContracts/contract.sol")
+		cmd = exec.Command("solc", "--evm-version", "paris", "--abi", "smartContracts/contract.sol") //
 		cmd.Stdout = &out
 		err = cmd.Run()
 		if err != nil {
