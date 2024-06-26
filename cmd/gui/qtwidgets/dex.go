@@ -117,10 +117,10 @@ func ShowDexPage() *widgets.QTabWidget {
 				t, _ := strconv.ParseFloat(amount, 64)
 
 				price = common.RoundToken(g/t, int(common.Decimals+TokenList[coinAddr.GetHex()].Decimals))
-				priceToken.SetText(fmt.Sprintf("My Price QAD/%s = %f", symbol, price))
+				priceToken.SetText(fmt.Sprintf("My Price %s/QAD = %f", symbol, price))
 				if poolCoin > 0 {
 					priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
-					poolPriceToken.SetText(fmt.Sprintf("New pool Price QAD/%s = %f", symbol, priceBid))
+					poolPriceToken.SetText(fmt.Sprintf("New pool Price %s/QAD = %f", symbol, priceBid))
 				}
 
 			}
@@ -175,22 +175,19 @@ func ShowDexPage() *widgets.QTabWidget {
 	widget.Layout().AddWidget(tradeButton)
 	tradeButton.ConnectClicked(func(bool) {
 		amountTokens.SetEnabled(true)
-		amountQAD.SetEnabled(true)
+		amountQAD.SetEnabled(false)
 		amount := amountTokens.Text()
-		qad := amountQAD.Text()
 		if amount != "" {
 			t, _ := strconv.ParseFloat(amount, 64)
-			g, _ := strconv.ParseFloat(qad, 64)
+			g := common.RoundCoin(poolCoin / poolToken * t)
 			amountQAD.SetText(fmt.Sprintf("%f", g))
-			if tradeButton.IsChecked() {
-				g *= -1
-			}
 
+			g *= -1
 			price = common.RoundCoin(math.Abs(g / t))
 			priceToken.SetText(fmt.Sprintf("My Price %s/QAD = %f", symbol, price))
 			if poolCoin > 0 {
-				priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
-				priceAsk = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
+				priceBid = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
+				priceAsk = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
 				poolPriceToken.SetText(fmt.Sprintf("New pool Price %s/QAD = %f/%f", symbol, priceAsk, priceBid))
 			}
 
@@ -493,7 +490,7 @@ func GetAllTokensAccountInfo(a common.Address, symbolAddr common.Address) string
 }
 
 func MakeTransaction(sender, coinAddr common.Address) {
-	balance := GetBalance(sender, coinAddr)
+	//balance := GetBalance(sender, coinAddr)
 	//myAcc, _ := GetAccount(sender)
 	ti, ok := TokenList[coinAddr.GetHex()]
 	if ok {
@@ -515,12 +512,6 @@ func MakeTransaction(sender, coinAddr common.Address) {
 			return
 		}
 		am := int64(af * math.Pow10(int(ti.Decimals)))
-		if float64(am) != af*math.Pow10(int(ti.Decimals)) {
-			v = fmt.Sprint("Precision needs to be not larger than", ti.Decimals, " digits")
-			info = &v
-			return
-		}
-
 		QAD, err := strconv.ParseFloat(amountQAD.Text(), 64)
 		if err != nil {
 			v = fmt.Sprint(err)
@@ -528,22 +519,11 @@ func MakeTransaction(sender, coinAddr common.Address) {
 			return
 		}
 		QADam := int64(QAD * math.Pow10(int(common.Decimals)))
-		if float64(QADam) != QAD*math.Pow10(int(common.Decimals)) {
-			v = fmt.Sprint("Precision needs to be not larger than", common.Decimals, " digits")
-			info = &v
-			return
-		}
 		operation := 2
 		if removePoolButton.IsChecked() {
-			am *= -1
-			af *= -1
-			QADam = 0
 			operation = 5
 		}
 		if removePoolButtonQAD.IsChecked() {
-			QADam *= -1
-			am = 0
-			af = 0
 			operation = 6
 		}
 		//if -QADam > myAcc.GetBalance() {
@@ -551,11 +531,11 @@ func MakeTransaction(sender, coinAddr common.Address) {
 		//	info = &v
 		//	return
 		//}
-		if af > float64(balance) {
-			v = fmt.Sprint("Not enough balance at account")
-			info = &v
-			return
-		}
+		//if float64(balance)+af < 0 {
+		//	v = fmt.Sprint("Not enough balance at account")
+		//	info = &v
+		//	return
+		//}
 		ar := common.GetDelegatedAccountAddress(int16(512 + operation))
 		txd := transactionsDefinition.TxData{
 			Recipient: ar,

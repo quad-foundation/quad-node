@@ -63,7 +63,7 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 	amountCoinFloat := account.Int64toFloat64ByDecimals(tx.TxData.Amount, common.Decimals)
 
 	if coinPoolAmount > 0 && tokenPoolAmount > 0 {
-		price = common.RoundCoin((tokenPoolAmount + amountTokenFloat) / (coinPoolAmount + amountCoinFloat))
+		price = common.RoundCoin(tokenPoolAmount / coinPoolAmount)
 	}
 	// dex account where all tokens liquidity are stored
 	dex := common.GetDexAccountAddress()
@@ -76,34 +76,28 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 		if price > 0 {
 			amount := common.RoundCoin(1.0 / price * amountTokenFloat)
 			amountCoinInt64 = int64(amount * math.Pow10(int(common.Decimals)))
-		} else {
-			amountCoinInt64 = int64(0)
+			amountTokenInt64 = int64(amountTokenFloat * math.Pow10(int(ti.Decimals)))
 		}
-		amountTokenInt64 *= -1
 	case 6: // withdraw Coin
 		if price > 0 {
 			amount := common.RoundToken(price*amountCoinFloat, int(ti.Decimals))
 			amountTokenInt64 = int64(amount * math.Pow10(int(ti.Decimals)))
-		} else {
-			amountTokenInt64 = int64(0)
+			amountCoinInt64 = int64(amountCoinFloat * math.Pow10(int(common.Decimals)))
 		}
-		amountCoinInt64 *= -1
-	case 3: // buy
+	case 3: //buy
+		price = common.RoundCoin((tokenPoolAmount - amountTokenFloat) / coinPoolAmount)
 		if price > 0 {
-			amount := common.RoundToken(price*amountCoinFloat, int(ti.Decimals))
-			amountTokenInt64 = int64(amount * math.Pow10(int(ti.Decimals)))
-		} else {
-			amountTokenInt64 = 0
-		}
-		amountCoinInt64 *= -1
-	case 4: // sell
-		if price > 0 {
-			amount := common.RoundCoin(1.0 / price * amountTokenFloat)
+			amount := common.RoundCoin(-1.0 / price * amountTokenFloat)
 			amountCoinInt64 = int64(amount * math.Pow10(int(common.Decimals)))
-		} else {
-			amountCoinInt64 = 0
+			amountTokenInt64 = int64(amountTokenFloat * math.Pow10(int(ti.Decimals)))
 		}
-		amountTokenInt64 *= -1
+	case 4: //sell
+		price = common.RoundCoin((tokenPoolAmount + amountTokenFloat) / coinPoolAmount)
+		if price > 0 {
+			amount := common.RoundCoin(-1.0 / price * amountTokenFloat)
+			amountCoinInt64 = int64(amount * math.Pow10(int(common.Decimals)))
+			amountTokenInt64 = int64(amountTokenFloat * math.Pow10(int(ti.Decimals)))
+		}
 	default:
 		return nil, common.Address{}, 0, 0, 0, fmt.Errorf("wrong operation on dex")
 	}

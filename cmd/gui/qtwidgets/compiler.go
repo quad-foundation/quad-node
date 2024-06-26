@@ -233,7 +233,7 @@ func ShowSmartContractPage() *widgets.QTabWidget {
 			info = &v
 			return
 		}
-		cmd := exec.Command("solc", "--evm-version", "petersburg", "--bin", "smartContracts/contract.sol") //
+		cmd := exec.Command("solc", "--evm-version", "paris", "--bin", "smartContracts/contract.sol") //
 		var out bytes.Buffer
 		cmd.Stdout = &out
 		err = cmd.Run()
@@ -248,7 +248,7 @@ func ShowSmartContractPage() *widgets.QTabWidget {
 		SmartContractData.SetText(outputData.ToPlainText())
 		Recipient.SetText("0")
 		Amount.SetText("0")
-		cmd = exec.Command("solc", "--evm-version", "petersburg", "--abi", "smartContracts/contract.sol") //
+		cmd = exec.Command("solc", "--evm-version", "paris", "--abi", "smartContracts/contract.sol") //
 		cmd.Stdout = &out
 		err = cmd.Run()
 		if err != nil {
