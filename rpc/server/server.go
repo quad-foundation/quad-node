@@ -162,9 +162,9 @@ func handleVIEW(line []byte, reply *[]byte) {
 		return
 	}
 
-	l, _, _, _, _, err := blocks.GetViewFunctionReturns(m.Address, m.OptData, bl)
+	l, logs, _, _, _, err := blocks.GetViewFunctionReturns(m.Address, m.OptData, bl)
 	if err != nil {
-		*reply = []byte(fmt.Sprint(err))
+		*reply = []byte(fmt.Sprint(logs))
 	}
 	*reply, _ = hex.DecodeString(l)
 }

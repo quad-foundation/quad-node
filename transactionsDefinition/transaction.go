@@ -34,7 +34,7 @@ func (mt *Transaction) GetParam() TxParam {
 func (mt *Transaction) GasUsageEstimate() int64 {
 	gas := len(mt.TxData.OptData) * 100
 	gas += len(mt.TxData.Pubkey.GetBytes()) * 100
-	return int64(gas) + 500000
+	return int64(gas) + 30000
 }
 
 func (mt *Transaction) GetGasUsage() int64 {

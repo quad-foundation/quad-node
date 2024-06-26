@@ -121,9 +121,9 @@ func ShowDexPage() *widgets.QTabWidget {
 					if poolCoin > 0 {
 						priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
 						poolPriceToken.SetText(fmt.Sprintf("New pool Price QAD/%s = %f", symbol, priceBid))
-						if tradeButton.IsChecked() {
-							amountQAD.SetText(fmt.Sprintf("Amount of QAD = %f", t*priceBid))
-						}
+						//if tradeButton.IsChecked() {
+						//	amountQAD.SetText(fmt.Sprintf("Amount of QAD = %f", t*priceBid))
+						//}
 					}
 				}
 			}

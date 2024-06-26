@@ -1,8 +1,7 @@
 package memDatabase
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/quad-foundation/quad-node/common"
 	"github.com/syndtr/goleveldb/leveldb"
 	"sync"
 )
@@ -17,7 +16,6 @@ type AnyBlockchainDB interface {
 	Get(k []byte) ([]byte, error)
 	IsKey(key []byte) (bool, error)
 	Delete(key []byte) error
-	Reader(root common.Hash) trie.Reader
 	GetLdb() *leveldb.DB
 	GetNode(common.Hash) ([]byte, error)
 }

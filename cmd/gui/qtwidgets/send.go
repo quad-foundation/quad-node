@@ -135,7 +135,7 @@ func ShowSendPage() *widgets.QTabWidget {
 			Hash:      common.Hash{},
 			Signature: common.Signature{},
 			Height:    0,
-			GasPrice:  int64(rand.Intn(0x000000ff)),
+			GasPrice:  int64(rand.Intn(0x0000000f)),
 			GasUsage:  0,
 		}
 		clientrpc.InRPC <- []byte("STAT")

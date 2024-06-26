@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/quad-foundation/quad-node/crypto/blake2b"
 	"log"
 	"time"
@@ -21,6 +20,16 @@ func GetDelegatedAccountAddress(id int16) Address {
 	ba := make([]byte, a.GetLength()-2)
 	binary.BigEndian.PutUint16(b, uint16(id))
 	b = append(b, ba...)
+	err := a.Init(b)
+	if err != nil {
+		panic(err)
+	}
+	return a
+}
+
+func GetDexAccountAddress() Address {
+	a := Address{}
+	b := Hex2Bytes("0123456789012345678901234567890123456789")
 	err := a.Init(b)
 	if err != nil {
 		panic(err)
@@ -126,7 +135,7 @@ func ContainsKeyOfList(keys [][2]byte, searchKey [2]byte) bool {
 	return false
 }
 
-func ContainsKeyInMap(keys [][common.AddressLength]byte, searchKey [common.AddressLength]byte) bool {
+func ContainsKeyInMap(keys [][AddressLength]byte, searchKey [AddressLength]byte) bool {
 	for _, key := range keys {
 		if key == searchKey {
 			return true

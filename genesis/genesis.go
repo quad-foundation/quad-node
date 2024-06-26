@@ -308,6 +308,7 @@ func Load(path string) (Genesis, error) {
 	if mainWallet.PublicKey.GetBytes() != nil &&
 		genesis.OperatorPubKey[:100] != mainWallet.PublicKey.GetHex()[:100] &&
 		delegatedAccount.GetHex() == del1.GetHex() {
+		log.Println(mainWallet.PublicKey.GetHex())
 		log.Fatal("Main Wallet address should be the same as in config genesis.json file")
 	}
 	return genesis, nil

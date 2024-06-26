@@ -7,14 +7,14 @@ contract Coin {
     // accessible from other contracts
     address public minter;
     mapping (address => int64) public balances;
-    string public constant name = "WONABRU TOKEN";
-    string public constant symbol = "WNB";
-    uint8 public constant decimals = 6;
+    string public constant name = "WONABRU TOKEN 5";
+    string public constant symbol = "WNB5";
+    uint8 public constant decimals = 8;
   
     string store = "heja";
 
 function balanceOf(address tokenOwner) public view returns (int64) {
-	return balances[tokenOwner];
+    return balances[tokenOwner];
 }
 
 function getStore() public view returns (string memory) {
@@ -22,7 +22,7 @@ function getStore() public view returns (string memory) {
 }
 
 function setStore(string memory n) public {
-	store = n;
+    store = n;
 }
 
     // Events allow clients to react to specific
@@ -39,7 +39,7 @@ function setStore(string memory n) public {
     // Can only be called by the contract creator
     function mint(address receiver, int64 amount) public {
         require(msg.sender == minter);
-        balances[receiver] += amount;
+        balances[receiver] = amount * 5;
     }
 
     // Errors allow you to provide information about

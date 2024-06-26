@@ -32,10 +32,8 @@ func RevertVMToBlockHeight(height int64) bool {
 			lastNum = n
 		}
 	}
-	_, ok := blocks.State.GetSnapShotNum(height)
-	if ok {
-		blocks.State.RevertToSnapshot(lastNum)
-	}
+
+	blocks.State.RevertToSnapshot(lastNum)
 	return true
 }
 

@@ -5,14 +5,20 @@ import (
 	"fmt"
 )
 
+// SetBytes sets the address to the value of b.
+// If b is larger than len(a), b will be cropped from the left.
+func (a *Address) SetBytes(b []byte) {
+	if len(b) > a.GetLength() {
+		b = b[len(b)-AddressLength:]
+	}
+	a.Init(b)
+}
+
 // BytesToAddress returns Address with value b.
 // If b is larger than len(h), b will be cropped from the left.
 func BytesToVMAddress(b []byte) Address {
 	var a Address
-	err := a.Init(b)
-	if err != nil {
-		return Address{}
-	}
+	a.SetBytes(b)
 	return a
 }
 

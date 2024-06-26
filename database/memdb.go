@@ -3,9 +3,8 @@ package memDatabase
 import (
 	"errors"
 	"fmt"
-	commoneth "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/trie"
 	"github.com/quad-foundation/quad-node/common"
+	commoneth "github.com/quad-foundation/quad-node/common"
 	"github.com/quad-foundation/quad-node/wallet"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/storage"
@@ -52,10 +51,6 @@ func (db *BlockchainDB) InitInMemory() (*BlockchainDB, error) {
 
 func (db *BlockchainDB) GetNode(hash commoneth.Hash) ([]byte, error) {
 	return db.Get(hash[:])
-}
-
-func (d *BlockchainDB) Reader(root commoneth.Hash) trie.Reader {
-	return &InMemoryDBReader{db: d}
 }
 
 func (d *BlockchainDB) Close() {

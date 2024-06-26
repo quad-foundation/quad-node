@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/quad-foundation/quad-node/account"
+	"github.com/quad-foundation/quad-node/blocks"
 	"github.com/quad-foundation/quad-node/common"
 	memDatabase "github.com/quad-foundation/quad-node/database"
 	"github.com/quad-foundation/quad-node/genesis"
@@ -97,6 +98,9 @@ func main() {
 
 	err = memDatabase.MainDB.Put(append(common.PubKeyDBPrefix[:], w.Address.GetBytes()...),
 		w.PublicKey.GetBytes())
+
+	blocks.InitStateDB()
+
 	genesis.InitGenesis()
 
 	//firstDel := common.GetDelegatedAccountAddress(1)

@@ -9,9 +9,7 @@ var height int64
 var heightMax int64
 var heightMutex sync.RWMutex
 var heightMaxMutex sync.RWMutex
-var BalanceMutex sync.RWMutex
 var BlockMutex sync.RWMutex
-var SyncingMutex sync.Mutex
 var IsSyncing = atomic.Bool{}
 
 func GetHeight() int64 {

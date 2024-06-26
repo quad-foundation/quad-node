@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/common"
@@ -25,7 +26,9 @@ type PasiveFunction struct {
 	Height  int64          `json:"height"`
 }
 
-func init() {
+func InitStateDB() {
+	StateMutex.Lock()
+	defer StateMutex.Unlock()
 	State = stateDB.CreateStateDB()
 }
 
@@ -62,6 +65,8 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 	if coinPoolAmount > 0 && tokenPoolAmount > 0 {
 		price = common.RoundCoin((tokenPoolAmount + amountTokenFloat) / (coinPoolAmount + amountCoinFloat))
 	}
+	// dex account where all tokens liquidity are stored
+	dex := common.GetDexAccountAddress()
 
 	switch operation {
 	case 2: // add liquidity
@@ -108,6 +113,20 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 		return nil, common.Address{}, 0, 0, 0, fmt.Errorf("no account found in dex transfer")
 	}
 
+	dexAccount := account.SetAccountByAddressBytes(dex.GetBytes())
+
+	if dexAccount.Balance-amountCoinInt64 < 0 {
+		return nil, common.Address{}, 0, 0, 0, fmt.Errorf("not enough coins in dex account")
+	}
+	balanceDexToken, err := GetBalance(tx.ContractAddress, dex)
+	if err != nil {
+		return nil, common.Address{}, 0, 0, 0, err
+	}
+
+	if balanceDexToken-amountTokenInt64 < 0 {
+		return nil, common.Address{}, 0, 0, 0, fmt.Errorf("not enough tokens in dex account")
+	}
+
 	if senderAccount.Balance+amountCoinInt64 < 0 {
 		return nil, common.Address{}, 0, 0, 0, fmt.Errorf("not enough coins in account")
 	}
@@ -123,23 +142,26 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 	}
 
 	var fromAccountAddress common.Address
-	var optData []byte
+	var optData string
 
 	if amountTokenInt64 > 0 {
 		dexByte := common.LeftPadBytes(senderAccount.Address[:], 32)
-		amountByte := common.LeftPadBytes(common.Int64ToBytes(amountTokenInt64), 32)
-		optData = append(stateDB.TransferFunc, dexByte...)
-		optData = append(optData, amountByte...)
-		fromAccountAddress = tx.ContractAddress
+		amountByte := common.LeftPadBytes(common.GetByteInt64(amountTokenInt64), 32)
+		optData += common.Bytes2Hex(stateDB.TransferFunc)
+		optData += common.Bytes2Hex(dexByte)
+		optData += common.Bytes2Hex(amountByte)
+		fromAccountAddress = dex
 	} else if amountTokenInt64 < 0 {
-		dexByte := common.LeftPadBytes(tx.ContractAddress.GetBytes(), 32)
-		amountByte := common.LeftPadBytes(common.Int64ToBytes(-amountTokenInt64), 32)
-		optData = append(stateDB.TransferFunc, dexByte...)
-		optData = append(optData, amountByte...)
+		dexByte := common.LeftPadBytes(dex.GetBytes(), 32)
+		amountByte := common.LeftPadBytes(common.GetByteInt64(-amountTokenInt64), 32)
+		optData += common.Bytes2Hex(stateDB.TransferFunc)
+		optData += common.Bytes2Hex(dexByte)
+		optData += common.Bytes2Hex(amountByte)
 		fromAccountAddress = sender
 	}
-	log.Println(common.Bytes2Hex(optData))
-	return optData, fromAccountAddress, amountCoinInt64, amountTokenInt64, price, nil
+
+	log.Println(optData)
+	return common.Hex2Bytes(optData), fromAccountAddress, amountCoinInt64, amountTokenInt64, price, nil
 }
 
 func EvaluateSCForBlock(bl Block) (bool, map[[common.HashLength]byte]string, map[[common.HashLength]byte]common.Address, map[[common.AddressLength]byte][]byte, map[[common.HashLength]byte][]byte) {
@@ -181,15 +203,21 @@ func EvaluateSCForBlock(bl Block) (bool, map[[common.HashLength]byte]string, map
 				return false, logs, map[[common.HashLength]byte]common.Address{}, map[[common.AddressLength]byte][]byte{}, map[[common.HashLength]byte][]byte{}
 			}
 			aa := [common.AddressLength]byte{}
+			da := [common.AddressLength]byte{}
 			copy(aa[:], t.TxParam.Sender.GetBytes())
+			dex := common.GetDexAccountAddress()
+			copy(da[:], dex.GetBytes())
 			// transfering coins QAD
-			if coinAmount < 0 {
-				err = AddBalance(aa, coinAmount)
-				if err != nil {
-					return false, nil, nil, nil, nil
-				}
-			} else {
 
+			err = AddBalance(aa, coinAmount)
+			if err != nil {
+				log.Println(err)
+				return false, nil, nil, nil, nil
+			}
+			err = AddBalance(da, -coinAmount)
+			if err != nil {
+				log.Println(err)
+				return false, nil, nil, nil, nil
 			}
 
 			ba := [common.AddressLength]byte{}
@@ -205,10 +233,10 @@ func EvaluateSCForBlock(bl Block) (bool, map[[common.HashLength]byte]string, map
 			accDex := account.GetDexAccountByAddressBytes(t.ContractAddress.GetBytes())
 
 			accDex.TokenPrice = int64(price * math.Pow10(int(common.Decimals+ti.Decimals)))
-			accDex.TokenPool += tokenAmount
-			accDex.CoinPool += coinAmount
-			coinAmountTmp := accDex.Balances[aa].CoinBalance + coinAmount
-			tokenAmountTmp := accDex.Balances[aa].TokenBalance + tokenAmount
+			accDex.TokenPool += -tokenAmount
+			accDex.CoinPool += -coinAmount
+			coinAmountTmp := accDex.Balances[aa].CoinBalance - coinAmount
+			tokenAmountTmp := accDex.Balances[aa].TokenBalance - tokenAmount
 			balances := accDex.Balances
 			if balances == nil {
 				balances = make(map[[common.AddressLength]byte]account.CoinTokenDetails)
@@ -228,6 +256,7 @@ func EvaluateSCForBlock(bl Block) (bool, map[[common.HashLength]byte]string, map
 		if len(t.TxData.OptData) == 0 {
 			continue
 		}
+
 		l, ret, address, _, err := EvaluateSC(t, bl)
 		if t.TxData.Recipient == common.EmptyAddress() {
 			code := t.TxData.OptData
@@ -256,16 +285,14 @@ func EvaluateSCForBlock(bl Block) (bool, map[[common.HashLength]byte]string, map
 			}
 		}
 		if err != nil {
+			log.Println(err)
 			return false, logs, map[[common.HashLength]byte]common.Address{}, map[[common.AddressLength]byte][]byte{}, map[[common.HashLength]byte][]byte{}
 		}
 		//TODO we should refund left gas
 		//t.GasUsage -= int64(leftOverGas)
 		t.ContractAddress = address
 		outputLogs := []byte(l)
-		//if err != nil {
-		//	log.Println(err)
-		//	return false, logs, map[[common.HashLength]byte]common.Address{}, map[[common.AddressLength]byte][]byte{}, map[[common.HashLength]byte][]byte{}
-		//}
+
 		t.OutputLogs = outputLogs[:]
 		err = t.StoreToDBPoolTx(poolprefix)
 		if err != nil {
@@ -296,7 +323,10 @@ func EvaluateSC(tx transactionsDefinition.Transaction, bl Block) (logs string, r
 	blockCtx := vm.BlockContext{
 		CanTransfer: nil,
 		Transfer:    nil,
-		GetHash:     func(height uint64) common.Hash { return bl.GetBlockHash() },
+		GetHash: func(height uint64) common.Hash {
+			hashBytes, _ := LoadHashOfBlock(int64(height))
+			return common.BytesToHash(hashBytes)
+		},
 		Coinbase:    common.EmptyAddress(),
 		GasLimit:    uint64(common.MaxGasUsage) * uint64(gasMult),
 		BlockNumber: new(big.Int).SetInt64(bl.GetHeader().Height),
@@ -318,7 +348,7 @@ func EvaluateSC(tx transactionsDefinition.Transaction, bl Block) (logs string, r
 	}
 	txCtx := vm.TxContext{
 		Origin:   tx.TxParam.Sender,
-		GasPrice: new(big.Int).SetInt64(tx.GasPrice),
+		GasPrice: new(big.Int).SetInt64(0),
 	}
 	StateMutex.Lock()
 	defer StateMutex.Unlock()
@@ -327,19 +357,21 @@ func EvaluateSC(tx transactionsDefinition.Transaction, bl Block) (logs string, r
 	defer VM.Cancel()
 
 	VM.Origin = origin
-	VM.GasPrice = new(big.Int).SetInt64(tx.GasPrice)
-	nonce := new(big.Int).SetInt64(int64(tx.TxParam.Nonce))
+	VM.GasPrice = new(big.Int).SetInt64(0)
+	nonce := uint64(tx.TxParam.Nonce)
 
 	if tx.TxData.Recipient == common.EmptyAddress() {
-		ret, address, leftOverGas, err = VM.Create(vm.AccountRef(origin), code, uint64(tx.GasUsage)*uint64(gasMult), nonce)
+		ret, address, leftOverGas, err = VM.Create(vm.AccountRef(origin), code, uint64(tx.GasUsage)*uint64(gasMult), new(big.Int).SetInt64(0), nonce)
 
 		if err != nil {
+			log.Println(err)
 			return logger.ToString(), ret, address, leftOverGas, err
 		}
 	} else {
 		address = tx.TxData.Recipient
 		ret, leftOverGas, err = VM.Call(vm.AccountRef(origin), address, code, uint64(tx.GasUsage)*uint64(gasMult), new(big.Int).SetInt64(0))
 		if err != nil {
+			log.Println(err)
 			return logger.ToString(), ret, address, leftOverGas, err
 		}
 	}
@@ -354,7 +386,10 @@ func EvaluateSCDex(tokenAddress common.Address, sender common.Address, optData [
 	blockCtx := vm.BlockContext{
 		CanTransfer: nil,
 		Transfer:    nil,
-		GetHash:     func(height uint64) common.Hash { return bl.GetBlockHash() },
+		GetHash: func(height uint64) common.Hash {
+			hashBytes, _ := LoadHashOfBlock(int64(height))
+			return common.BytesToHash(hashBytes)
+		},
 		Coinbase:    common.EmptyAddress(),
 		GasLimit:    uint64(common.MaxGasUsage) * uint64(gasMult),
 		BlockNumber: new(big.Int).SetInt64(bl.GetHeader().Height),
@@ -376,10 +411,12 @@ func EvaluateSCDex(tokenAddress common.Address, sender common.Address, optData [
 	}
 	txCtx := vm.TxContext{
 		Origin:   tx.TxParam.Sender,
-		GasPrice: new(big.Int).SetInt64(tx.GasPrice),
+		GasPrice: new(big.Int).SetInt64(0),
 	}
 	StateMutex.Lock()
 	defer StateMutex.Unlock()
+
+	//nonce := new(big.Int).SetInt64(int64(tx.TxParam.Nonce))
 
 	VM = vm.NewEVM(blockCtx, txCtx, &State, params.AllEthashProtocolChanges, configCtx)
 	defer VM.Cancel()
@@ -387,7 +424,7 @@ func EvaluateSCDex(tokenAddress common.Address, sender common.Address, optData [
 	VM.Origin = sender
 	VM.GasPrice = new(big.Int).SetInt64(0)
 
-	ret, leftOverGas, err = VM.Call(vm.AccountRef(sender), tokenAddress, optData, uint64(tx.GasUsage)*uint64(gasMult), new(big.Int).SetInt64(0))
+	ret, leftOverGas, err = VM.Call(vm.AccountRef(sender), tokenAddress, optData, uint64(210000), new(big.Int).SetInt64(0))
 	if err != nil {
 		return logger.ToString(), ret, tokenAddress, leftOverGas, err
 	}
@@ -402,7 +439,10 @@ func GetViewFunctionReturns(contractAddr common.Address, OptData []byte, bl Bloc
 	blockCtx := vm.BlockContext{
 		CanTransfer: nil,
 		Transfer:    nil,
-		GetHash:     func(height uint64) common.Hash { return bl.GetBlockHash() },
+		GetHash: func(height uint64) common.Hash {
+			hashBytes, _ := LoadHashOfBlock(int64(height))
+			return common.BytesToHash(hashBytes)
+		},
 		Coinbase:    common.EmptyAddress(),
 		GasLimit:    uint64(common.MaxGasUsage),
 		BlockNumber: new(big.Int).SetInt64(bl.GetHeader().Height),
@@ -432,13 +472,21 @@ func GetViewFunctionReturns(contractAddr common.Address, OptData []byte, bl Bloc
 	defer VM.Cancel()
 
 	VM.Origin = origin
-	VM.GasPrice = new(big.Int).SetInt64(common.MaxGasUsage)
+	VM.GasPrice = new(big.Int).SetInt64(0)
 	ret, leftOverGas, err = VM.StaticCall(vm.AccountRef(origin), contractAddr, input, uint64(common.MaxGasUsage))
+	// Konwersja hex do bajtów
+	dataBytes, err := hex.DecodeString(logger.Output)
 	if err != nil {
-		return logger.Output, logs, ret, address, leftOverGas, err
+		log.Fatal(err)
 	}
 
-	return logger.Output, logger.ToString(), ret, address, leftOverGas, nil
+	// Konwersja bajtów do UTF-8
+	decodedString := string(dataBytes)
+	if err != nil {
+		return logger.Output, decodedString, ret, address, leftOverGas, err
+	}
+
+	return logger.Output, decodedString, ret, address, leftOverGas, nil
 }
 
 func IsTokenToRegister(code []byte) bool {
