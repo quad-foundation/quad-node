@@ -72,7 +72,10 @@ func RoundToken(v float64, decimal int) float64 {
 }
 
 func CalcNewDEXPrice(myTokens, myCoins, poolAmountTokens, poolAmountCoins float64) float64 {
-	price := (poolAmountTokens + myTokens) / (poolAmountCoins + myCoins)
+	price := 0.0
+	if poolAmountTokens+myTokens > 0 {
+		price = (poolAmountCoins + myCoins) / (poolAmountTokens + myTokens)
+	}
 	return price
 }
 

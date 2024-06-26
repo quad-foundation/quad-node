@@ -115,17 +115,14 @@ func ShowDexPage() *widgets.QTabWidget {
 			if amount != "" {
 				g, _ := strconv.ParseFloat(qad, 64)
 				t, _ := strconv.ParseFloat(amount, 64)
-				if g > 0 {
-					price = common.RoundToken(g/t, int(common.Decimals+TokenList[coinAddr.GetHex()].Decimals))
-					priceToken.SetText(fmt.Sprintf("My Price QAD/%s = %f", symbol, price))
-					if poolCoin > 0 {
-						priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
-						poolPriceToken.SetText(fmt.Sprintf("New pool Price QAD/%s = %f", symbol, priceBid))
-						//if tradeButton.IsChecked() {
-						//	amountQAD.SetText(fmt.Sprintf("Amount of QAD = %f", t*priceBid))
-						//}
-					}
+
+				price = common.RoundToken(g/t, int(common.Decimals+TokenList[coinAddr.GetHex()].Decimals))
+				priceToken.SetText(fmt.Sprintf("My Price QAD/%s = %f", symbol, price))
+				if poolCoin > 0 {
+					priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
+					poolPriceToken.SetText(fmt.Sprintf("New pool Price QAD/%s = %f", symbol, priceBid))
 				}
+
 			}
 		}
 	})
@@ -140,18 +137,14 @@ func ShowDexPage() *widgets.QTabWidget {
 			t, _ := strconv.ParseFloat(amount, 64)
 			g := common.RoundCoin(poolCoin / poolToken * t)
 			amountQAD.SetText(fmt.Sprintf("%f", g))
-			if g > 0 {
-				//price = common.RoundToken(g / t, int(common.Decimals + TokenList[coinAddr.GetHex()].Decimals))
-				priceToken.SetText(fmt.Sprintf("My Price QAD/%s = %f", symbol, priceAsk))
-				if poolCoin > 0 {
-					priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
-					priceAsk = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
-					poolPriceToken.SetText(fmt.Sprintf("New pool Price QAD/%s = %f/%f", symbol, priceAsk, priceBid))
-					if tradeButton.IsChecked() {
-						amountQAD.SetText(fmt.Sprintf("Amount of QAD = %f/%f", t*priceAsk, t*priceBid))
-					}
-				}
+
+			if poolCoin > 0 {
+				priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
+				priceAsk = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
+				poolPriceToken.SetText(fmt.Sprintf("New pool Price %s/QAD = %f/%f", symbol, priceAsk, priceBid))
 			}
+			priceToken.SetText(fmt.Sprintf("My Price %s/QAD = %f", symbol, priceAsk))
+
 		}
 	})
 
@@ -165,19 +158,16 @@ func ShowDexPage() *widgets.QTabWidget {
 		if qad != "" {
 
 			g, _ := strconv.ParseFloat(qad, 64)
-			t := common.RoundCoin(poolCoin / poolToken * g)
+			t := common.RoundCoin(poolToken / poolCoin * g)
 			amountTokens.SetText(fmt.Sprintf("%f", t))
-			if g > 0 {
-				priceToken.SetText(fmt.Sprintf("My Price QAD/%s = %f", symbol, priceAsk))
-				if poolCoin > 0 {
-					priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
-					priceAsk = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
-					poolPriceToken.SetText(fmt.Sprintf("New pool Price QAD/%s = %f/%f", symbol, priceAsk, priceBid))
-					if tradeButton.IsChecked() {
-						amountQAD.SetText(fmt.Sprintf("Amount of QAD = %f/%f", t*priceAsk, t*priceBid))
-					}
-				}
+
+			priceToken.SetText(fmt.Sprintf("My Price %s/QAD = %f", symbol, priceAsk))
+			if poolCoin > 0 {
+				priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
+				priceAsk = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
+				poolPriceToken.SetText(fmt.Sprintf("New pool Price %s/QAD = %f/%f", symbol, priceAsk, priceBid))
 			}
+
 		}
 	})
 
@@ -192,18 +182,18 @@ func ShowDexPage() *widgets.QTabWidget {
 			t, _ := strconv.ParseFloat(amount, 64)
 			g, _ := strconv.ParseFloat(qad, 64)
 			amountQAD.SetText(fmt.Sprintf("%f", g))
-			if g > 0 {
-				price = common.RoundCoin(g / t)
-				priceToken.SetText(fmt.Sprintf("My Price QAD/%s = %f", symbol, price))
-				if poolCoin > 0 {
-					priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
-					priceAsk = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
-					poolPriceToken.SetText(fmt.Sprintf("New pool Price QAD/%s = %f/%f", symbol, priceAsk, priceBid))
-					if tradeButton.IsChecked() {
-						amountQAD.SetText(fmt.Sprintf("Amount of QAD = %f/%f", t*priceAsk, t*priceBid))
-					}
-				}
+			if tradeButton.IsChecked() {
+				g *= -1
 			}
+
+			price = common.RoundCoin(math.Abs(g / t))
+			priceToken.SetText(fmt.Sprintf("My Price %s/QAD = %f", symbol, price))
+			if poolCoin > 0 {
+				priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
+				priceAsk = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
+				poolPriceToken.SetText(fmt.Sprintf("New pool Price %s/QAD = %f/%f", symbol, priceAsk, priceBid))
+			}
+
 		}
 	})
 
@@ -218,18 +208,18 @@ func ShowDexPage() *widgets.QTabWidget {
 			if QAD != "" {
 				g, _ := strconv.ParseFloat(QAD, 64)
 				t, _ := strconv.ParseFloat(amount, 64)
-				if g > 0 {
-					price = common.RoundCoin(g / t)
-					priceToken.SetText(fmt.Sprintf("My Price QAD/%s = %f", symbol, price))
-					if poolCoin > 0 {
-						priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
-						priceAsk = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
-						poolPriceToken.SetText(fmt.Sprintf("New pool Price QAD/%s = %f/%f", symbol, priceAsk, priceBid))
-						if tradeButton.IsChecked() {
-							amountQAD.SetText(fmt.Sprintf("Amount of QAD = %f/%f", t*priceAsk, t*priceBid))
-						}
-					}
+				if tradeButton.IsChecked() {
+					g *= -1
 				}
+
+				price = common.RoundCoin(math.Abs(g / t))
+				priceToken.SetText(fmt.Sprintf("My Price %s/QAD = %f", symbol, price))
+				if poolCoin > 0 {
+					priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
+					priceAsk = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
+					poolPriceToken.SetText(fmt.Sprintf("New pool Price %s/QAD = %f/%f", symbol, priceAsk, priceBid))
+				}
+
 			}
 		}
 	})
@@ -243,18 +233,18 @@ func ShowDexPage() *widgets.QTabWidget {
 			if amount != "" {
 				g, _ := strconv.ParseFloat(QAD, 64)
 				t, _ := strconv.ParseFloat(amount, 64)
-				if g > 0 {
-					price = common.RoundCoin(g / t)
-					priceToken.SetText(fmt.Sprintf("My Price QAD/%s = %f", symbol, price))
-					if poolCoin > 0 {
-						priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
-						priceAsk = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
-						poolPriceToken.SetText(fmt.Sprintf("New pool Price QAD/%s = %f/%f", symbol, priceAsk, priceBid))
-						if tradeButton.IsChecked() {
-							amountQAD.SetText(fmt.Sprintf("Amount of QAD = %f/%f", t*priceAsk, t*priceBid))
-						}
-					}
+				if tradeButton.IsChecked() {
+					g *= -1
 				}
+
+				price = common.RoundCoin(math.Abs(g / t))
+				priceToken.SetText(fmt.Sprintf("My Price %s/QAD = %f", symbol, price))
+				if poolCoin > 0 {
+					priceBid = common.CalcNewDEXPrice(t, g, poolToken, poolCoin)
+					priceAsk = common.CalcNewDEXPrice(-t, -g, poolToken, poolCoin)
+					poolPriceToken.SetText(fmt.Sprintf("New pool Price %s/QAD = %f/%f", symbol, priceAsk, priceBid))
+				}
+
 			}
 		}
 	})

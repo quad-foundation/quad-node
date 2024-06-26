@@ -37,7 +37,7 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 	amountToken := common.GetInt64FromByte(tx.TxData.OptData)
 	sender := tx.TxParam.Sender
 	tokenAddress := tx.ContractAddress
-	if operation == 2 && (tx.TxData.Amount < 0 || amountToken < 0) || (operation == 3 || operation == 4) && (amountToken == 0 || tx.TxData.Amount != 0) || operation == 5 && amountToken == 0 || operation == 6 && tx.TxData.Amount == 0 {
+	if operation == 2 && (tx.TxData.Amount < 0 || amountToken < 0) || (operation == 3 || operation == 4) && (amountToken == 0) || operation == 5 && amountToken == 0 || operation == 6 && tx.TxData.Amount == 0 {
 		return nil, common.Address{}, 0, 0, 0, fmt.Errorf("withdraw one can perform on one currency the second should be 0")
 	}
 
