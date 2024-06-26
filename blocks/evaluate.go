@@ -146,14 +146,14 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 
 	if amountTokenInt64 > 0 {
 		dexByte := common.LeftPadBytes(senderAccount.Address[:], 32)
-		amountByte := common.LeftPadBytes(common.GetByteInt64(amountTokenInt64), 32)
+		amountByte := common.LeftPadBytes(common.GetInt64ToBytesSC(amountTokenInt64), 32)
 		optData += common.Bytes2Hex(stateDB.TransferFunc)
 		optData += common.Bytes2Hex(dexByte)
 		optData += common.Bytes2Hex(amountByte)
 		fromAccountAddress = dex
 	} else if amountTokenInt64 < 0 {
 		dexByte := common.LeftPadBytes(dex.GetBytes(), 32)
-		amountByte := common.LeftPadBytes(common.GetByteInt64(-amountTokenInt64), 32)
+		amountByte := common.LeftPadBytes(common.GetInt64ToBytesSC(-amountTokenInt64), 32)
 		optData += common.Bytes2Hex(stateDB.TransferFunc)
 		optData += common.Bytes2Hex(dexByte)
 		optData += common.Bytes2Hex(amountByte)

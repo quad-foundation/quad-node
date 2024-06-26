@@ -386,7 +386,7 @@ func GetBalance(addr common.Address, coin common.Address) int64 {
 		return 0
 	}
 	if len(reply) == 32 {
-		ts := common.GetInt64FromSCByteLittleEndian(reply)
+		ts := common.GetInt64FromSCByte(reply)
 		return ts
 	}
 	return 0
@@ -404,7 +404,7 @@ func GetAccountDex(coin common.Address) account.DexAccount {
 	}
 	if len(reply) > 8 {
 		dexAcc := account.DexAccount{}
-		err := common.Unmarshal(reply, common.DexAccountsDBPrefix, &dexAcc)
+		err := dexAcc.Unmarshal(reply)
 		if err != nil {
 			return account.DexAccount{}
 		}
@@ -443,15 +443,13 @@ func GetAllPoolsInfo() string {
 		tokenPoolFloat := account.Int64toFloat64ByDecimals(accDex.TokenPool, info.Decimals)
 		coinPoolFloat := account.Int64toFloat64ByDecimals(accDex.CoinPool, common.Decimals)
 		symb := strings.Trim(info.Symbols, string(byte(0)))
-		tmptxt := fmt.Sprintln(addr, " = ", tokenPoolFloat, " ", symb)
-		txt += tmptxt
-		txt += "Users provided liquidity into pool:\n"
 
+		txt += fmt.Sprintln(addr, " = ", tokenPoolFloat, " ", symb)
+		txt += fmt.Sprintln("Users provided liquidity into pool: ", coinPoolFloat, " QAD")
 		if tokenPoolFloat > 0 {
 			price = common.RoundCoin(coinPoolFloat / tokenPoolFloat)
 		}
-		tmptxt = fmt.Sprintf("Pool price QAD/%s = %f", symb, price)
-		txt += tmptxt
+		txt += fmt.Sprintf("Pool price %s/QAD = %f", symb, price)
 		if bytes.Compare(a.GetBytes(), coinAddr.GetBytes()) == 0 {
 			poolCoin = coinPoolFloat
 			poolToken = tokenPoolFloat
@@ -491,26 +489,14 @@ func GetAllTokensAccountInfo(a common.Address, symbolAddr common.Address) string
 		a := common.Address{}
 		a.Init(common.Hex2Bytes(addr))
 		accDex := GetAccountDex(a)
-		coinAddr := common.Address{}
-		coinAddr.Init(common.Hex2Bytes(addr[:]))
 		symb := strings.Trim(info.Symbols, string(byte(0)))
 
-		if bal, ok := accDex.Balances[a.ByteValue]; ok {
+		if bal, ok := accDex.Balances[myacc.Address]; ok {
 			humanReadable = account.Int64toFloat64ByDecimals(bal.TokenBalance, info.Decimals)
-
-			tmptxt := fmt.Sprintln(addr, " = ", humanReadable, " ", symb)
-			txt += tmptxt
-		}
-		if bal, ok := accDex.Balances[a.ByteValue]; ok {
+			txt += fmt.Sprintln(addr, " = ", humanReadable, " ", symb)
 			humanReadableQAD = account.Int64toFloat64ByDecimals(bal.CoinBalance, common.Decimals)
-			tmptxt := fmt.Sprintln(addr, " = ", humanReadableQAD, " QAD")
-			txt += tmptxt
+			txt += fmt.Sprintln(addr, " = ", humanReadableQAD, " QAD")
 		}
-		//if humanReadableQAD > 0 {
-		//	price = common.RoundQAD(humanReadableQAD / humanReadable)
-		//}
-		//tmptxt := fmt.Sprintf("My price QAD/%s = %f", symb, price)
-		//txt += tmptxt
 	}
 	AmountLabelData.SetPlainText(txt)
 	return txt

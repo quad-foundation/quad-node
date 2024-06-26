@@ -138,12 +138,7 @@ func handleLTKN(line []byte, reply *[]byte) {
 func handleADEX(byt []byte, reply *[]byte) {
 
 	dexAcc := account.GetDexAccountByAddressBytes(byt[:common.AddressLength])
-
-	marshal, err := common.Marshal(dexAcc, common.DexAccountsDBPrefix)
-	if err != nil {
-		*reply = []byte(fmt.Sprint(err))
-		return
-	}
+	marshal := dexAcc.Marshal()
 	*reply = marshal
 }
 

@@ -93,18 +93,7 @@ func GetInt64FromSCByte(bs []byte) int64 {
 	return int64(binary.BigEndian.Uint64(bs[3*8:]))
 }
 
-func GetInt64FromSCByteLittleEndian(bs []byte) int64 {
-	return int64(binary.LittleEndian.Uint64(bs[3*8:]))
-}
-
-// Int64ToBytesLittleEndian konwertuje int64 na tablicę 8 bajtów w formacie Little Endian.
-func Int64ToBytesLittleEndian(value int64) []byte {
-	bs := make([]byte, 32)
-	binary.LittleEndian.PutUint64(bs[24:32], uint64(value))
-	return bs
-}
-
-func Int64ToBytes(value int64) []byte {
+func GetInt64ToBytesSC(value int64) []byte {
 	bs := make([]byte, 32)
 	binary.BigEndian.PutUint64(bs[24:32], uint64(value))
 	return bs
