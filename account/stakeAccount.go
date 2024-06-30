@@ -243,11 +243,12 @@ func GetStakedInDelegatedAccount(n int) ([]Account, float64, Account) {
 	for _, sa := range StakingAccounts[n].AllStakingAccounts {
 		acc := Account{
 			Balance: sa.StakedBalance,
-			Address: sa.Address,
+			Address: [20]byte{},
 		}
+		copy(acc.Address[:], sa.Address[:])
 		if intAcc.Balance < sa.StakedBalance && sa.OperationalAccount {
 			intAcc.Balance = sa.StakedBalance
-			intAcc.Address = sa.Address
+			copy(intAcc.Address[:], sa.Address[:])
 		}
 		sum += sa.StakedBalance
 		accs = append(accs, acc)

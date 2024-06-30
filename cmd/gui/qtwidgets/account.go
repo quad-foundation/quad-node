@@ -66,7 +66,7 @@ func UpdateAccountStats() {
 	uncRewards := 0.0
 
 	var stakeAccs [256]account.StakingAccount
-	for i := 1; i < 6; i++ { // should be 256
+	for i := 1; i < 4; i++ { // should be 256
 		inb = append([]byte("STAK"), MainWallet.Address.GetBytes()...)
 		inb = append(inb, byte(i))
 		clientrpc.InRPC <- inb
