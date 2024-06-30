@@ -171,6 +171,10 @@ func OnMessage(addr string, m []byte) {
 			err := blocks.CheckBlockAndTransferFunds(&block, oldBlock, merkleTries[index])
 			if err != nil {
 				log.Println(err)
+				hashesMissing := blocks.IsAllTransactions(block)
+				if len(hashesMissing) > 0 {
+					transactionServices.SendGT(addr, hashesMissing)
+				}
 				services.RevertVMToBlockHeight(oldBlock.GetHeader().Height)
 				return
 			}
