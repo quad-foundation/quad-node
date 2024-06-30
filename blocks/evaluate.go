@@ -128,10 +128,10 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 		return nil, common.Address{}, 0, 0, 0, fmt.Errorf("not enough tokens in account")
 	}
 
-	if accDex.Balances[senderAccount.Address].CoinBalance-amountCoinInt64 < 0 {
+	if accDex.Balances[senderAccount.Address].CoinBalance-amountCoinInt64 < 0 && operation == 6 {
 		return nil, common.Address{}, 0, 0, 0, fmt.Errorf("not enough coins in dex account")
 	}
-	if accDex.Balances[senderAccount.Address].TokenBalance-amountTokenInt64 < 0 {
+	if accDex.Balances[senderAccount.Address].TokenBalance-amountTokenInt64 < 0 && operation == 5 {
 		return nil, common.Address{}, 0, 0, 0, fmt.Errorf("not enough tokens in dex account")
 	}
 
