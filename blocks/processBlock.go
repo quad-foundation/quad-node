@@ -311,10 +311,8 @@ func CheckBlockAndTransferFunds(newBlock *Block, lastBlock Block, merkleTrie *tr
 	if GetSupplyInAccounts()+staked+rewarded+reward+lastBlock.BlockFee != newBlock.GetBlockSupply() {
 		return fmt.Errorf("block supply checking fails vs account balances")
 	}
-
 	hashes := newBlock.GetBlockTransactionsHashes()
 	log.Println("Number of transactions in block: ", len(hashes))
-
 	err = ProcessBlockPubKey(*newBlock)
 	if err != nil {
 		return err
