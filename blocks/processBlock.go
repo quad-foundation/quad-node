@@ -72,16 +72,20 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, int64, error) {
 		hash := tx.GetBytes()
 		poolTx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionPoolHashesDBPrefix[:], hash)
 		if err != nil {
-			poolTx, err = transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], hash)
-			if err != nil {
-				return 0, 0, err
-			}
-			err = transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionDBPrefix[:], hash)
-			if err != nil {
-				return 0, 0, err
-			}
-			err = poolTx.StoreToDBPoolTx(common.TransactionPoolHashesDBPrefix[:])
-			if err != nil {
+			if common.IsSyncing.Load() {
+				poolTx, err = transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], hash)
+				if err != nil {
+					return 0, 0, err
+				}
+				err = transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionDBPrefix[:], hash)
+				if err != nil {
+					return 0, 0, err
+				}
+				err = poolTx.StoreToDBPoolTx(common.TransactionPoolHashesDBPrefix[:])
+				if err != nil {
+					return 0, 0, err
+				}
+			} else {
 				return 0, 0, err
 			}
 		}
