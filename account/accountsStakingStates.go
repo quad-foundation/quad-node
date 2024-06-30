@@ -2,6 +2,7 @@ package account
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"github.com/quad-foundation/quad-node/common"
 	memDatabase "github.com/quad-foundation/quad-node/database"
@@ -52,9 +53,9 @@ func (at *StakingAccountsType) Unmarshal(data []byte) error {
 		}
 
 		// The rest of the data is for the StakingAccount; unmarshal it
-		nb := common.GetInt32FromByte(buffer.Next(4))
+		nb := int(binary.BigEndian.Uint32(buffer.Next(4)))
 
-		if err := acc.Unmarshal(buffer.Next(int(nb))); err != nil {
+		if err := acc.Unmarshal(buffer.Next(nb)); err != nil {
 			return fmt.Errorf("failed to unmarshal account: %w", err)
 		}
 
