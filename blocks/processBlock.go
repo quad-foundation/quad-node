@@ -257,7 +257,9 @@ func RemoveAllTransactionsRelatedToBlock(newBlock Block) {
 func EvaluateSmartContracts(bl *Block) bool {
 	height := (*bl).GetHeader().Height
 	if ok, logs, addresses, codes, _ := EvaluateSCForBlock(*bl); ok {
+		StateMutex.Lock()
 		State.SetSnapShotNum(height, State.Snapshot())
+		StateMutex.Unlock()
 		for th, a := range addresses {
 
 			prefix := common.OutputLogsHashesDBPrefix[:]
