@@ -150,6 +150,7 @@ func OnMessage(addr string, m []byte) {
 				transactionServices.SendGT(addr, hashesMissing)
 			}
 		}
+		common.IsSyncing.Store(true)
 		was = false
 		for i := 0; i < len(blcks); i++ {
 			block := blcks[i]
