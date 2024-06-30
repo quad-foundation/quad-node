@@ -179,3 +179,11 @@ func BytesWithLenToBytes(b []byte) ([]byte, []byte, error) {
 	}
 	return b[4 : 4+lb], b[4+lb:], nil
 }
+
+func BoolToByte(b bool) byte {
+	if b {
+		return 1
+	} else {
+		return 0
+	}
+}
