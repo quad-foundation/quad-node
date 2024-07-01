@@ -92,10 +92,13 @@ func init() {
 	}
 	delegatedAccount = GetDelegatedAccountAddress(int16(da))
 
-	//DefaultPercentageReward int16 = 1000 // 1%
+	//DefaultPercentageReward int16 = 1000 // 0.001
 	v, err := strconv.Atoi(os.Getenv("REWARD_PERCENTAGE"))
 	if err != nil {
 		log.Fatal("Error getting REWARD_PERCENTAGE")
 	}
 	rewardPercentage = float64(v) / 1000.0
+	if rewardPercentage > 0.5 {
+		log.Fatal("reward for operational account has to be less than 50%")
+	}
 }

@@ -82,7 +82,7 @@ func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 		BaseHeader:       bh,
 		BlockHeaderHash:  bhHash,
 		BlockTimeStamp:   common.GetCurrentTimeStampInSecond(),
-		RewardPercentage: common.GetRewardPercentage(),
+		RewardPercentage: int16(common.GetRewardPercentage() * 1000),
 		Supply:           supply,
 	}
 
