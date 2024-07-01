@@ -237,6 +237,16 @@ func ProcessBlockTransfers(block Block, reward int64) error {
 	if sum <= 0 {
 		return fmt.Errorf("no staked amount in delegated account which was rewarded")
 	}
+
+	rewardPerc := common.GetRewardPercentage()
+	rewardOper := int64(float64(reward) * rewardPerc)
+
+	err = account.Reward(addr[:], rewardOper, block.GetHeader().Height, n)
+	if err != nil {
+		return err
+	}
+
+	reward -= rewardOper
 	rest := reward
 	for _, acc := range staked {
 		if acc.Balance > 0 {

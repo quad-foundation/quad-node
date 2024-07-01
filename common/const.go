@@ -58,9 +58,7 @@ var (
 
 var chainID = int16(23)
 var delegatedAccount Address
-var rewardPercentage int16
-var genesisAccounts []Address
-var genesisAccountsStake []Address
+var rewardPercentage float64
 var ShiftToPastInReset int64
 
 func GetChainID() int16 {
@@ -74,7 +72,7 @@ func SetChainID(chainid int16) {
 func GetDelegatedAccount() Address {
 	return delegatedAccount
 }
-func GetRewardPercentage() int16 {
+func GetRewardPercentage() float64 {
 	return rewardPercentage
 }
 func init() {
@@ -99,5 +97,5 @@ func init() {
 	if err != nil {
 		log.Fatal("Error getting REWARD_PERCENTAGE")
 	}
-	rewardPercentage = int16(v)
+	rewardPercentage = float64(v) / 1000.0
 }
