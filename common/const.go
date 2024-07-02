@@ -58,9 +58,7 @@ var (
 
 var chainID = int16(23)
 var delegatedAccount Address
-var rewardPercentage int16
-var genesisAccounts []Address
-var genesisAccountsStake []Address
+var rewardPercentage float64
 var ShiftToPastInReset int64
 
 func GetChainID() int16 {
@@ -74,7 +72,7 @@ func SetChainID(chainid int16) {
 func GetDelegatedAccount() Address {
 	return delegatedAccount
 }
-func GetRewardPercentage() int16 {
+func GetRewardPercentage() float64 {
 	return rewardPercentage
 }
 func init() {
@@ -94,10 +92,13 @@ func init() {
 	}
 	delegatedAccount = GetDelegatedAccountAddress(int16(da))
 
-	//DefaultPercentageReward int16 = 1000 // 1%
+	//DefaultPercentageReward int16 = 1000 // 0.001
 	v, err := strconv.Atoi(os.Getenv("REWARD_PERCENTAGE"))
 	if err != nil {
 		log.Fatal("Error getting REWARD_PERCENTAGE")
 	}
-	rewardPercentage = int16(v)
+	rewardPercentage = float64(v) / 1000.0
+	if rewardPercentage > 0.5 {
+		log.Fatal("reward for operational account has to be less than 50%")
+	}
 }

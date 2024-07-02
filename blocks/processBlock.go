@@ -72,7 +72,22 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, int64, error) {
 		hash := tx.GetBytes()
 		poolTx, err := transactionsDefinition.LoadFromDBPoolTx(common.TransactionPoolHashesDBPrefix[:], hash)
 		if err != nil {
-			return 0, 0, err
+			if common.IsSyncing.Load() {
+				poolTx, err = transactionsDefinition.LoadFromDBPoolTx(common.TransactionDBPrefix[:], hash)
+				if err != nil {
+					return 0, 0, err
+				}
+				err = transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionDBPrefix[:], hash)
+				if err != nil {
+					return 0, 0, err
+				}
+				err = poolTx.StoreToDBPoolTx(common.TransactionPoolHashesDBPrefix[:])
+				if err != nil {
+					return 0, 0, err
+				}
+			} else {
+				return 0, 0, err
+			}
 		}
 		err = checkTransactionInDBAndInMarkleTrie(hash)
 		if err != nil {
@@ -222,6 +237,16 @@ func ProcessBlockTransfers(block Block, reward int64) error {
 	if sum <= 0 {
 		return fmt.Errorf("no staked amount in delegated account which was rewarded")
 	}
+
+	rewardPerc := common.GetRewardPercentage()
+	rewardOper := int64(float64(reward) * rewardPerc)
+
+	err = account.Reward(addr[:], rewardOper, block.GetHeader().Height, n)
+	if err != nil {
+		return err
+	}
+
+	reward -= rewardOper
 	rest := reward
 	for _, acc := range staked {
 		if acc.Balance > 0 {
@@ -257,7 +282,9 @@ func RemoveAllTransactionsRelatedToBlock(newBlock Block) {
 func EvaluateSmartContracts(bl *Block) bool {
 	height := (*bl).GetHeader().Height
 	if ok, logs, addresses, codes, _ := EvaluateSCForBlock(*bl); ok {
+		StateMutex.Lock()
 		State.SetSnapShotNum(height, State.Snapshot())
+		StateMutex.Unlock()
 		for th, a := range addresses {
 
 			prefix := common.OutputLogsHashesDBPrefix[:]
@@ -311,10 +338,8 @@ func CheckBlockAndTransferFunds(newBlock *Block, lastBlock Block, merkleTrie *tr
 	if GetSupplyInAccounts()+staked+rewarded+reward+lastBlock.BlockFee != newBlock.GetBlockSupply() {
 		return fmt.Errorf("block supply checking fails vs account balances")
 	}
-
 	hashes := newBlock.GetBlockTransactionsHashes()
 	log.Println("Number of transactions in block: ", len(hashes))
-
 	err = ProcessBlockPubKey(*newBlock)
 	if err != nil {
 		return err

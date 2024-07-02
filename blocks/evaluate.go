@@ -128,10 +128,10 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 		return nil, common.Address{}, 0, 0, 0, fmt.Errorf("not enough tokens in account")
 	}
 
-	if accDex.Balances[senderAccount.Address].CoinBalance-amountCoinInt64 < 0 {
+	if accDex.Balances[senderAccount.Address].CoinBalance-amountCoinInt64 < 0 && (operation == 6 || operation == 5) {
 		return nil, common.Address{}, 0, 0, 0, fmt.Errorf("not enough coins in dex account")
 	}
-	if accDex.Balances[senderAccount.Address].TokenBalance-amountTokenInt64 < 0 {
+	if accDex.Balances[senderAccount.Address].TokenBalance-amountTokenInt64 < 0 && (operation == 6 || operation == 5) {
 		return nil, common.Address{}, 0, 0, 0, fmt.Errorf("not enough tokens in dex account")
 	}
 
@@ -177,8 +177,9 @@ func EvaluateSCForBlock(bl Block) (bool, map[[common.HashLength]byte]string, map
 		addressRecipient := t.TxData.Recipient
 		n, err := account.IntDelegatedAccountFromAddress(addressRecipient)
 		if err == nil && n > 512 { // 514 == operation 2 etc...
+			operation := n - 512
 			//DEX checking transaction
-			dexOptData, fromAddress, coinAmount, tokenAmount, price, err := GenerateOptDataDEX(t, n-512)
+			dexOptData, fromAddress, coinAmount, tokenAmount, price, err := GenerateOptDataDEX(t, operation)
 			log.Printf("Token Price: %v\n", price)
 			if err != nil {
 				log.Println(err)
@@ -229,17 +230,21 @@ func EvaluateSCForBlock(bl Block) (bool, map[[common.HashLength]byte]string, map
 			accDex.TokenPrice = int64(price * math.Pow10(int(common.Decimals+ti.Decimals)))
 			accDex.TokenPool += -tokenAmount
 			accDex.CoinPool += -coinAmount
-			coinAmountTmp := accDex.Balances[aa].CoinBalance - coinAmount
-			tokenAmountTmp := accDex.Balances[aa].TokenBalance - tokenAmount
-			balances := accDex.Balances
-			if balances == nil {
-				balances = make(map[[common.AddressLength]byte]account.CoinTokenDetails)
+
+			if operation == 2 || operation > 4 { // no sell or buy
+				balances := accDex.Balances
+				if balances == nil {
+					balances = make(map[[common.AddressLength]byte]account.CoinTokenDetails)
+				}
+				coinAmountTmp := accDex.Balances[aa].CoinBalance - coinAmount
+				tokenAmountTmp := accDex.Balances[aa].TokenBalance - tokenAmount
+				balances[aa] = account.CoinTokenDetails{
+					CoinBalance:  coinAmountTmp,
+					TokenBalance: tokenAmountTmp,
+				}
+				accDex.Balances = balances
 			}
-			balances[aa] = account.CoinTokenDetails{
-				CoinBalance:  coinAmountTmp,
-				TokenBalance: tokenAmountTmp,
-			}
-			accDex.Balances = balances
+
 			account.SetDexAccountByAddressBytes(t.ContractAddress.GetBytes(), accDex)
 
 			continue

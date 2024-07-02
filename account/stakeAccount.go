@@ -163,6 +163,7 @@ func (sa StakingAccount) Marshal() []byte {
 	buffer.Write(sa.DelegatedAccount[:])
 	// Address length and Address
 	buffer.Write(sa.Address[:])
+	buffer.Write([]byte{common.BoolToByte(sa.OperationalAccount)})
 	// StakingDetails count
 	buffer.Write(common.GetByteInt64(int64(len(sa.StakingDetails))))
 
@@ -196,7 +197,10 @@ func (sa *StakingAccount) Unmarshal(data []byte) error {
 	// Address
 	copy(sa.DelegatedAccount[:], buffer.Next(common.AddressLength))
 	copy(sa.Address[:], buffer.Next(common.AddressLength))
-
+	sa.OperationalAccount = false
+	if buffer.Next(1)[0] > 0 {
+		sa.OperationalAccount = true
+	}
 	// StakingDetails
 	detailsCount := common.GetInt64FromByte(buffer.Next(8))
 	sa.StakingDetails = make(map[int64][]StakingDetail, detailsCount)
@@ -243,11 +247,12 @@ func GetStakedInDelegatedAccount(n int) ([]Account, float64, Account) {
 	for _, sa := range StakingAccounts[n].AllStakingAccounts {
 		acc := Account{
 			Balance: sa.StakedBalance,
-			Address: sa.Address,
+			Address: [20]byte{},
 		}
+		copy(acc.Address[:], sa.Address[:])
 		if intAcc.Balance < sa.StakedBalance && sa.OperationalAccount {
 			intAcc.Balance = sa.StakedBalance
-			intAcc.Address = sa.Address
+			copy(intAcc.Address[:], sa.Address[:])
 		}
 		sum += sa.StakedBalance
 		accs = append(accs, acc)
