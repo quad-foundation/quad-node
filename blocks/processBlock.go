@@ -344,6 +344,11 @@ func CheckBlockAndTransferFunds(newBlock *Block, lastBlock Block, merkleTrie *tr
 	if err != nil {
 		return err
 	}
+	head := newBlock.GetHeader()
+	if head.Verify() == false {
+		return fmt.Errorf("header fails to verify")
+	}
+
 	err = merkleTrie.StoreTree(newBlock.GetHeader().Height)
 	if err != nil {
 		return err
