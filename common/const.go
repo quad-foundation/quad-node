@@ -20,7 +20,7 @@ var (
 	MaxGasPrice               int64   = 100000
 	MaxTransactionsPerBlock   int16   = 32000
 	MaxTransactionInPool              = 1000000
-	ConfirmationsNumber       int64   = 6
+	MaxPeersConnected         int     = 6
 	NumberOfHashesInBucket    int64   = 32
 	NumberOfBlocksInBucket    int64   = 20
 	MinStakingForNode         int64   = 100000000000000

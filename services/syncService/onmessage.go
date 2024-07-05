@@ -9,6 +9,7 @@ import (
 	"github.com/quad-foundation/quad-node/services"
 	"github.com/quad-foundation/quad-node/services/transactionServices"
 	"github.com/quad-foundation/quad-node/statistics"
+	"github.com/quad-foundation/quad-node/tcpip"
 	"github.com/quad-foundation/quad-node/transactionsPool"
 	"log"
 )
@@ -42,7 +43,16 @@ func OnMessage(addr string, m []byte) {
 
 		txn := amsg.(message.TransactionsMessage).GetTransactionsBytes()
 		h := common.GetHeight()
+		if tcpip.GetPeersCount() < common.MaxPeersConnected {
+			peers := tcpip.GetIPsfrombytes(txn[[2]byte{'P', 'P'}])
 
+			for _, ip := range peers {
+				tcpip.AddNewPeer(ip, tcpip.NonceTopic)
+				if tcpip.GetPeersCount() > common.MaxPeersConnected {
+					break
+				}
+			}
+		}
 		lastOtherHeight := common.GetInt64FromByte(txn[[2]byte{'L', 'H'}][0])
 		common.SetHeightMax(lastOtherHeight)
 		lastOtherBlockHashBytes := txn[[2]byte{'L', 'B'}][0]

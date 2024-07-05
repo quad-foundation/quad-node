@@ -37,6 +37,9 @@ func generateSyncMsgHeight() []byte {
 		return []byte("")
 	}
 	n.TransactionsBytes[[2]byte{'L', 'B'}] = [][]byte{lastBlockHash}
+
+	peers := tcpip.GetIPsConnected()
+	n.TransactionsBytes[[2]byte{'P', 'P'}] = peers
 	nb := n.GetBytes()
 	return nb
 }

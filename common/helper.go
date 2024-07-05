@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/quad-foundation/quad-node/crypto/blake2b"
 	"log"
@@ -37,15 +38,22 @@ func GetDexAccountAddress() Address {
 	return a
 }
 
-func CheckDelegatedAccountAddress(daddr Address) bool {
-
-	n := GetInt16FromByte(daddr.GetBytes())
-	return n > 0 && n < 256
+func GetIDFromDelegatedAccountAddress(a Address) (int16, error) {
+	if a.GetLength() < 2 {
+		return 0, errors.New("address length is too short")
+	}
+	data := a.GetBytes()
+	id := binary.BigEndian.Uint16(data[:2])
+	return int16(id), nil
 }
 
 func NumericalDelegatedAccountAddress(daddr Address) int16 {
-	if CheckDelegatedAccountAddress(daddr) {
-		n := GetInt16FromByte(daddr.GetBytes())
+
+	n, err := GetIDFromDelegatedAccountAddress(daddr)
+	if err != nil {
+		return 0
+	}
+	if n > 0 && n < 256 {
 		return n
 	}
 	return 0

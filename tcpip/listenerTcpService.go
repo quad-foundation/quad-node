@@ -7,11 +7,8 @@ import (
 	"log"
 	"net"
 	"strings"
-	"sync"
 	"time"
 )
-
-var listnerMutex = &sync.Mutex{}
 
 func StartNewListener(sendChan <-chan []byte, topic [2]byte) {
 

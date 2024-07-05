@@ -17,7 +17,7 @@ import (
 var (
 	peersConnected   = map[string]string{}
 	oldPeers         = map[string]string{}
-	CheckCount       = 0
+	PeersCount       = 0
 	receiveMutex     = &sync.Mutex{}
 	waitChan         = make(chan []byte)
 	tcpConnections   = make(map[[2]byte]map[string]*net.TCPConn)
@@ -179,6 +179,50 @@ func GetPeersConnected() map[string]string {
 	return copyOfPeers
 }
 
+func GetIPsConnected() [][]byte {
+	PeersMutex.RLock()
+	defer PeersMutex.RUnlock()
+	uniqueIPs := make(map[string]struct{})
+	for key, value := range peersConnected {
+		if value == "NN" {
+			ip := key[2:]
+			uniqueIPs[ip] = struct{}{}
+		}
+	}
+	var ips [][]byte
+	for ip := range uniqueIPs {
+		parsedIP := net.ParseIP(ip).To4()
+		if parsedIP != nil {
+			ips = append(ips, parsedIP)
+		}
+	}
+	return ips
+}
+
+func GetIPsfrombytes(peers [][]byte) []string {
+	var ips []string
+	for _, ipb := range peers {
+		if len(ipb) == 4 {
+			ip := fmt.Sprintf("%d.%d.%d.%d", ipb[0], ipb[1], ipb[2], ipb[3])
+			ips = append(ips, ip)
+		}
+	}
+	return ips
+}
+
+func AddNewPeer(peer string, topic [2]byte) {
+	PeersMutex.Lock()
+	defer PeersMutex.Unlock()
+	topicip := string(topic[:]) + peer
+	peersConnected[topicip] = string(topic[:])
+}
+
+func GetPeersCount() int {
+	PeersMutex.RLock()
+	defer PeersMutex.RUnlock()
+	return PeersCount
+}
+
 func LookUpForNewPeersToConnect(chanPeer chan string) {
 	for {
 		PeersMutex.RLock()
@@ -188,6 +232,7 @@ func LookUpForNewPeersToConnect(chanPeer chan string) {
 				log.Println("Found new peer with ip", topicip)
 				oldPeers[topicip] = topic
 				chanPeer <- topicip
+				PeersCount = len(GetIPsConnected())
 			}
 		}
 		for topicip := range oldPeers {
