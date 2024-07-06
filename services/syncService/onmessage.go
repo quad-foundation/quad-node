@@ -48,6 +48,8 @@ func OnMessage(addr string, m []byte) {
 
 			for _, ip := range peers {
 				tcpip.AddNewPeer(ip, tcpip.NonceTopic)
+				tcpip.AddNewPeer(ip, tcpip.SyncTopic)
+				tcpip.AddNewPeer(ip, tcpip.TransactionTopic)
 				if tcpip.GetPeersCount() > common.MaxPeersConnected {
 					break
 				}
