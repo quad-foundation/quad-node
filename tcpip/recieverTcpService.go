@@ -223,7 +223,7 @@ func GetPeersCount() int {
 
 func LookUpForNewPeersToConnect(chanPeer chan string) {
 	for {
-		PeersMutex.RLock()
+		PeersMutex.Lock()
 		for topicip, topic := range peersConnected {
 			_, ok := oldPeers[topicip]
 			if ok == false {
@@ -240,7 +240,7 @@ func LookUpForNewPeersToConnect(chanPeer chan string) {
 				delete(oldPeers, topicip)
 			}
 		}
-		PeersMutex.RUnlock()
+		PeersMutex.Unlock()
 		time.Sleep(time.Second)
 	}
 }
