@@ -180,8 +180,6 @@ func GetPeersConnected() map[string]string {
 }
 
 func GetIPsConnected() [][]byte {
-	PeersMutex.RLock()
-	defer PeersMutex.RUnlock()
 	uniqueIPs := make(map[string]struct{})
 	for key, value := range peersConnected {
 		if value == "NN" {
