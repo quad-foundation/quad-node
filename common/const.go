@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 )
 
 var (
@@ -60,6 +61,7 @@ var chainID = int16(23)
 var delegatedAccount Address
 var rewardPercentage float64
 var ShiftToPastInReset int64
+var ShiftToPastMutex sync.RWMutex
 
 func GetChainID() int16 {
 	return chainID

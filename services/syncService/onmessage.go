@@ -142,7 +142,9 @@ func OnMessage(addr string, m []byte) {
 			}
 
 			if header.Height != index {
+				common.ShiftToPastMutex.RLock()
 				services.ResetAccountsAndBlocksSync(index - common.ShiftToPastInReset)
+				common.ShiftToPastMutex.RUnlock()
 				services.AdjustShiftInPastInReset(hmax)
 				panic("not relevant height vs index")
 			}
@@ -150,7 +152,9 @@ func OnMessage(addr string, m []byte) {
 			merkleTrie, err := blocks.CheckBaseBlock(block, oldBlock)
 			defer merkleTrie.Destroy()
 			if err != nil {
+				common.ShiftToPastMutex.RLock()
 				services.ResetAccountsAndBlocksSync(index - common.ShiftToPastInReset)
+				common.ShiftToPastMutex.RUnlock()
 				services.AdjustShiftInPastInReset(hmax)
 				panic(err)
 			}
