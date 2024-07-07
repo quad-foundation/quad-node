@@ -238,8 +238,6 @@ func EvaluateSCForBlock(bl Block) (bool, map[[common.HashLength]byte]string, map
 			accDex := account.GetDexAccountByAddressBytes(t.ContractAddress.GetBytes())
 
 			accDex.TokenPrice = int64(price * math.Pow10(int(common.Decimals+ti.Decimals)))
-			accDex.TokenPool += -tokenAmount
-			accDex.CoinPool += -coinAmount
 
 			if operation == 2 || operation > 4 { // no sell or buy
 				balances := accDex.Balances
@@ -253,8 +251,19 @@ func EvaluateSCForBlock(bl Block) (bool, map[[common.HashLength]byte]string, map
 					TokenBalance: tokenAmountTmp,
 				}
 				accDex.Balances = balances
-			}
+			} else {
+				coinPercentTmp := float64(-coinAmount) / float64(accDex.CoinPool)
+				tokenPercentTmp := float64(-tokenAmount) / float64(accDex.TokenPool)
 
+				for addr, acc := range accDex.Balances {
+					balances := accDex.Balances[addr]
+					balances.TokenBalance += int64(common.RoundToken(tokenPercentTmp*float64(acc.TokenBalance), int(ti.Decimals)))
+					balances.CoinBalance += int64(common.RoundToken(coinPercentTmp*float64(acc.CoinBalance), int(common.Decimals)))
+					accDex.Balances[addr] = balances
+				}
+			}
+			accDex.TokenPool += -tokenAmount
+			accDex.CoinPool += -coinAmount
 			account.SetDexAccountByAddressBytes(t.ContractAddress.GetBytes(), accDex)
 
 			continue
