@@ -68,7 +68,7 @@ func LoopSend(sendChan <-chan []byte, topic [2]byte) {
 					Send(tcpConn, s[2+l:])
 				} else {
 					fmt.Println("no connection to given ip", ipr, topic)
-					BanIP(ipr)
+					BanIP(ipr, topic)
 				}
 			}
 		case b := <-waitChan:

@@ -50,12 +50,15 @@ func OnMessage(addr string, m []byte) {
 				if _, ok := peersConnected[ip]; ok {
 					continue
 				}
-				if tcpip.IsIPBanned(ip, h) {
-					continue
+				if !tcpip.IsIPBanned(ip, h, tcpip.NonceTopic) {
+					tcpip.AddNewPeer(ip, tcpip.NonceTopic)
 				}
-				tcpip.AddNewPeer(ip, tcpip.NonceTopic)
-				tcpip.AddNewPeer(ip, tcpip.SyncTopic)
-				tcpip.AddNewPeer(ip, tcpip.TransactionTopic)
+				if !tcpip.IsIPBanned(ip, h, tcpip.SyncTopic) {
+					tcpip.AddNewPeer(ip, tcpip.SyncTopic)
+				}
+				if !tcpip.IsIPBanned(ip, h, tcpip.TransactionTopic) {
+					tcpip.AddNewPeer(ip, tcpip.TransactionTopic)
+				}
 				if tcpip.GetPeersCount() > common.MaxPeersConnected {
 					break
 				}
