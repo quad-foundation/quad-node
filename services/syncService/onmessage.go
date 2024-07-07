@@ -47,6 +47,9 @@ func OnMessage(addr string, m []byte) {
 			peers := tcpip.GetIPsfrombytes(txn[[2]byte{'P', 'P'}])
 
 			for _, ip := range peers {
+				if tcpip.IsIPBanned(ip, h) {
+					continue
+				}
 				tcpip.AddNewPeer(ip, tcpip.NonceTopic)
 				tcpip.AddNewPeer(ip, tcpip.SyncTopic)
 				tcpip.AddNewPeer(ip, tcpip.TransactionTopic)
