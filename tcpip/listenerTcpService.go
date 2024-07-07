@@ -3,7 +3,6 @@ package tcpip
 import (
 	"bytes"
 	"fmt"
-	"github.com/quad-foundation/quad-node/common"
 	"log"
 	"net"
 	"strings"
@@ -39,15 +38,16 @@ func StartNewListener(sendChan <-chan []byte, topic [2]byte) {
 	}
 }
 func LoopSend(sendChan <-chan []byte, topic [2]byte) {
+	var ipr string
 	for {
 		select {
 		case s := <-sendChan:
-			l := common.GetInt16FromByte(s[:2])
-			if len(s) < int(l)+2 {
-				log.Println("wrong message send")
+			if len(s) > 4 {
+				ipr = net.IPv4(s[0], s[1], s[2], s[3]).String()
+			} else {
+				log.Println("wrong message")
 				continue
 			}
-			ipr := string(s[2 : 2+l])
 			if ipr == "0.0.0.0" {
 				PeersMutex.RLock()
 				tmpConn := tcpConnections[topic]
@@ -55,7 +55,7 @@ func LoopSend(sendChan <-chan []byte, topic [2]byte) {
 				for k, tcpConn0 := range tmpConn {
 					if k != MyIP {
 						//log.Println("send to ipr", k)
-						Send(tcpConn0, s[2+l:])
+						Send(tcpConn0, s[4:])
 					}
 				}
 			} else {
@@ -65,7 +65,7 @@ func LoopSend(sendChan <-chan []byte, topic [2]byte) {
 				PeersMutex.RUnlock()
 				if ok {
 					//log.Println("send to ip", ipr)
-					Send(tcpConn, s[2+l:])
+					Send(tcpConn, s[4:])
 				} else {
 					fmt.Println("no connection to given ip", ipr, topic)
 					BanIP(ipr, topic)
@@ -94,10 +94,8 @@ func StartNewConnection(ip string, receiveChan chan []byte, topic [2]byte) {
 		log.Println("cannot create tcp address", err)
 		return
 	}
-	bmyip := []byte(ip)
-	lmyip := int16(len(bmyip))
-	blmyip := common.GetByteInt16(lmyip)
-	bmyip = append(blmyip, bmyip...)
+
+	bmyip := net.ParseIP(ip).To4()
 	tcpConn, err = net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
 		fmt.Println("connection to ip was unsuccessful", ip, topic, err)

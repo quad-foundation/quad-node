@@ -8,6 +8,7 @@ import (
 	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"github.com/quad-foundation/quad-node/transactionsPool"
 	"log"
+	"net"
 	"time"
 )
 
@@ -96,10 +97,8 @@ func SendGT(ip string, txsHashes [][]byte) {
 }
 
 func Send(addr string, nb []byte) {
-	bip := []byte(addr)
-	lip := common.GetByteInt16(int16(len(bip)))
-	lip = append(lip, bip...)
-	nb = append(lip, nb...)
+
+	nb = append(net.ParseIP(addr).To4(), nb...)
 	services.SendMutexTx.Lock()
 	services.SendChanTx <- nb
 	services.SendMutexTx.Unlock()
@@ -107,7 +106,7 @@ func Send(addr string, nb []byte) {
 
 func Spread(ignoreAddr string, nb []byte) {
 
-	var peers = tcpip.GetPeersConnected()
+	var peers = tcpip.GetPeersConnected(string(tcpip.TransactionTopic[:]))
 	for topicip, _ := range peers {
 		ip := topicip[2:]
 		if ip != ignoreAddr && ip != tcpip.MyIP {
@@ -133,13 +132,9 @@ Q:
 			if len(s) == 4 && string(s) == "EXIT" {
 				break Q
 			}
-			if len(s) > 2 {
-				l := common.GetInt16FromByte(s[:2])
-				if len(s) > 2+int(l) {
-					ipr := string(s[2 : 2+l])
-
-					OnMessage(ipr, s[2+l:])
-				}
+			if len(s) > 4 {
+				ipr := net.IPv4(s[0], s[1], s[2], s[3]).String()
+				OnMessage(ipr, s[4:])
 			}
 
 		case <-tcpip.Quit:

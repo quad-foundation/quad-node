@@ -7,6 +7,7 @@ import (
 	"github.com/quad-foundation/quad-node/services"
 	"github.com/quad-foundation/quad-node/tcpip"
 	"log"
+	"net"
 	"time"
 )
 
@@ -126,10 +127,7 @@ func SendGetHeaders(addr string, height int64) {
 }
 
 func Send(addr string, nb []byte) {
-	bip := []byte(addr)
-	lip := common.GetByteInt16(int16(len(bip)))
-	lip = append(lip, bip...)
-	nb = append(lip, nb...)
+	nb = append(net.ParseIP(addr).To4(), nb...)
 	services.SendMutexSync.Lock()
 	services.SendChanSync <- nb
 	services.SendMutexSync.Unlock()
@@ -160,13 +158,9 @@ Q:
 			if len(s) == 4 && string(s) == "EXIT" {
 				break Q
 			}
-			if len(s) > 2 {
-				l := common.GetInt16FromByte(s[:2])
-				if len(s) > 2+int(l) {
-					ipr := string(s[2 : 2+l])
-
-					OnMessage(ipr, s[2+l:])
-				}
+			if len(s) > 4 {
+				ipr := net.IPv4(s[0], s[1], s[2], s[3]).String()
+				OnMessage(ipr, s[4:])
 			}
 
 		case <-tcpip.Quit:

@@ -48,15 +48,17 @@ func OnMessage(addr string, m []byte) {
 
 		if tcpip.GetPeersCount() < common.MaxPeersConnected {
 			peers := tcpip.GetIPsfrombytes(txn[[2]byte{'P', 'P'}])
-			peersConnected := tcpip.GetPeersConnected()
+			peersConnectedNN := tcpip.GetPeersConnected(string(tcpip.NonceTopic[:]))
+			peersConnectedBB := tcpip.GetPeersConnected(string(tcpip.SyncTopic[:]))
+			peersConnectedTT := tcpip.GetPeersConnected(string(tcpip.TransactionTopic[:]))
 			for _, ip := range peers {
-				if _, ok := peersConnected[string(tcpip.NonceTopic[:])+ip]; !ok && !tcpip.IsIPBanned(ip, h, tcpip.NonceTopic) {
+				if _, ok := peersConnectedNN[string(tcpip.NonceTopic[:])+ip]; !ok && !tcpip.IsIPBanned(ip, h, tcpip.NonceTopic) {
 					tcpip.AddNewPeer(ip, tcpip.NonceTopic)
 				}
-				if _, ok := peersConnected[string(tcpip.SyncTopic[:])+ip]; !ok && !tcpip.IsIPBanned(ip, h, tcpip.SyncTopic) {
+				if _, ok := peersConnectedBB[string(tcpip.SyncTopic[:])+ip]; !ok && !tcpip.IsIPBanned(ip, h, tcpip.SyncTopic) {
 					tcpip.AddNewPeer(ip, tcpip.SyncTopic)
 				}
-				if _, ok := peersConnected[string(tcpip.TransactionTopic[:])+ip]; !ok && !tcpip.IsIPBanned(ip, h, tcpip.TransactionTopic) {
+				if _, ok := peersConnectedTT[string(tcpip.TransactionTopic[:])+ip]; !ok && !tcpip.IsIPBanned(ip, h, tcpip.TransactionTopic) {
 					tcpip.AddNewPeer(ip, tcpip.TransactionTopic)
 				}
 				if tcpip.GetPeersCount() > common.MaxPeersConnected {
