@@ -9,6 +9,7 @@ import (
 	"github.com/quad-foundation/quad-node/services"
 	"github.com/quad-foundation/quad-node/services/transactionServices"
 	"github.com/quad-foundation/quad-node/statistics"
+	"github.com/quad-foundation/quad-node/tcpip"
 	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"github.com/quad-foundation/quad-node/transactionsPool"
 	"log"
@@ -16,7 +17,10 @@ import (
 )
 
 func OnMessage(addr string, m []byte) {
-
+	h := common.GetHeight()
+	if tcpip.IsIPBanned(addr, h, tcpip.NonceTopic) {
+		return
+	}
 	//log.Println("New message nonce from:", addr)
 	msg := message.TransactionsMessage{}
 
@@ -73,8 +77,6 @@ func OnMessage(addr string, m []byte) {
 			return
 		}
 
-		h := common.GetHeight()
-
 		if nonceHeight < 1 || nonceHeight != h+1 {
 			//log.Print("nonce height invalid")
 			return
@@ -126,7 +128,6 @@ func OnMessage(addr string, m []byte) {
 	case "bl": //block
 		common.BlockMutex.Lock()
 		defer common.BlockMutex.Unlock()
-		h := common.GetHeight()
 		lastBlock, err := blocks.LoadBlock(h)
 		if err != nil {
 			panic(err)

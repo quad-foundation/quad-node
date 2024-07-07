@@ -15,7 +15,10 @@ import (
 )
 
 func OnMessage(addr string, m []byte) {
-
+	h := common.GetHeight()
+	if tcpip.IsIPBanned(addr, h, tcpip.SyncTopic) {
+		return
+	}
 	//log.Println("New message nonce from:", addr)
 	msg := message.TransactionsMessage{}
 
@@ -42,7 +45,7 @@ func OnMessage(addr string, m []byte) {
 	case "hi": // getheader
 
 		txn := amsg.(message.TransactionsMessage).GetTransactionsBytes()
-		h := common.GetHeight()
+
 		if tcpip.GetPeersCount() < common.MaxPeersConnected {
 			peers := tcpip.GetIPsfrombytes(txn[[2]byte{'P', 'P'}])
 			peersConnected := tcpip.GetPeersConnected()
@@ -110,7 +113,6 @@ func OnMessage(addr string, m []byte) {
 				}
 			}
 		}
-		h := common.GetHeight()
 		hmax := common.GetHeightMax()
 		if indices[len(indices)-1] <= h {
 			log.Println("shorter other chain")
