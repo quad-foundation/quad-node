@@ -42,7 +42,8 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 	}
 
 	accDex := account.GetDexAccountByAddressBytes(tokenAddress.GetBytes())
-	price := float64(0)
+	poolPrice := float64(0)
+	price := 0.0
 	var amountCoinInt64, amountTokenInt64 int64
 	balanceToken, err := GetBalance(tx.ContractAddress, sender)
 	if err != nil {
@@ -63,8 +64,9 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 	amountCoinFloat := account.Int64toFloat64ByDecimals(tx.TxData.Amount, common.Decimals)
 
 	if coinPoolAmount > 0 && tokenPoolAmount > 0 {
-		price = common.RoundCoin(tokenPoolAmount / coinPoolAmount)
+		poolPrice = common.RoundToken(coinPoolAmount/tokenPoolAmount, int(common.Decimals+ti.Decimals))
 	}
+
 	// dex account where all tokens liquidity are stored
 	dex := common.GetDexAccountAddress()
 
@@ -72,29 +74,37 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 	case 2: // add liquidity
 		amountCoinInt64 = int64(-amountCoinFloat * math.Pow10(int(common.Decimals)))
 		amountTokenInt64 = int64(-amountTokenFloat * math.Pow10(int(ti.Decimals)))
+		price = common.RoundToken(amountCoinFloat/amountTokenFloat, int(common.Decimals+ti.Decimals))
 	case 5: // withdraw token
-		if price > 0 {
-			amount := common.RoundCoin(1.0 / price * amountTokenFloat)
+		if poolPrice > 0 {
+			price = poolPrice
+			amount := common.RoundCoin(poolPrice * amountTokenFloat)
 			amountCoinInt64 = int64(amount * math.Pow10(int(common.Decimals)))
 			amountTokenInt64 = int64(amountTokenFloat * math.Pow10(int(ti.Decimals)))
 		}
 	case 6: // withdraw Coin
-		if price > 0 {
-			amount := common.RoundToken(price*amountCoinFloat, int(ti.Decimals))
+		if poolPrice > 0 {
+			price = poolPrice
+			amount := common.RoundToken(1.0/poolPrice*amountCoinFloat, int(ti.Decimals))
 			amountTokenInt64 = int64(amount * math.Pow10(int(ti.Decimals)))
 			amountCoinInt64 = int64(amountCoinFloat * math.Pow10(int(common.Decimals)))
 		}
 	case 3: //buy
-		price = common.RoundCoin((tokenPoolAmount - amountTokenFloat) / coinPoolAmount)
+		if coinPoolAmount > 0 && tokenPoolAmount-2*amountTokenFloat > 0 {
+			price = common.RoundToken(coinPoolAmount/(tokenPoolAmount-2*amountTokenFloat), int(common.Decimals+ti.Decimals))
+		}
 		if price > 0 {
-			amount := common.RoundCoin(-1.0 / price * amountTokenFloat)
+			amount := common.RoundCoin(-price * amountTokenFloat)
 			amountCoinInt64 = int64(amount * math.Pow10(int(common.Decimals)))
 			amountTokenInt64 = int64(amountTokenFloat * math.Pow10(int(ti.Decimals)))
 		}
 	case 4: //sell
-		price = common.RoundCoin((tokenPoolAmount + amountTokenFloat) / coinPoolAmount)
+		amountTokenFloat *= -1
+		if coinPoolAmount > 0 && tokenPoolAmount-2*amountTokenFloat > 0 {
+			price = common.RoundToken(coinPoolAmount/(tokenPoolAmount-2*amountTokenFloat), int(common.Decimals+ti.Decimals))
+		}
 		if price > 0 {
-			amount := common.RoundCoin(-1.0 / price * amountTokenFloat)
+			amount := common.RoundCoin(-price * amountTokenFloat)
 			amountCoinInt64 = int64(amount * math.Pow10(int(common.Decimals)))
 			amountTokenInt64 = int64(amountTokenFloat * math.Pow10(int(ti.Decimals)))
 		}
