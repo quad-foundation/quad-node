@@ -45,8 +45,11 @@ func OnMessage(addr string, m []byte) {
 		h := common.GetHeight()
 		if tcpip.GetPeersCount() < common.MaxPeersConnected {
 			peers := tcpip.GetIPsfrombytes(txn[[2]byte{'P', 'P'}])
-
+			peersConnected := tcpip.GetPeersConnected()
 			for _, ip := range peers {
+				if _, ok := peersConnected[ip]; ok {
+					continue
+				}
 				if tcpip.IsIPBanned(ip, h) {
 					continue
 				}
