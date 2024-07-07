@@ -15,11 +15,16 @@ import (
 	"github.com/quad-foundation/quad-node/transactionsPool"
 	"github.com/quad-foundation/quad-node/wallet"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"time"
 )
 
 func main() {
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 	//fmt.Print("Enter password: ")
 	//password, err := terminal.ReadPassword(0)
 	//if err != nil {

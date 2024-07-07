@@ -7,6 +7,7 @@ import (
 	"github.com/quad-foundation/quad-node/common"
 	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"log"
+	_ "net/http/pprof"
 )
 
 func CheckStakingTransaction(tx transactionsDefinition.Transaction, sumAmount int64, sumFee int64) bool {

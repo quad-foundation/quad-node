@@ -105,14 +105,13 @@ func (t *MerkleTree) GetRootHash() []byte {
 	return common.EmptyHash().GetBytes()
 }
 
-func BuildMerkleTree(height int64, blockTransactionsHashes [][]byte) (*MerkleTree, error) {
+func BuildMerkleTree(height int64, blockTransactionsHashes [][]byte, db *memDatabase.AnyBlockchainDB) (*MerkleTree, error) {
 
 	merkleNodes, _ := NewMerkleTree(blockTransactionsHashes)
 	tree := new(MerkleTree)
 	tree.Root = merkleNodes
 	tree.TxHashes = blockTransactionsHashes
-	db := memDatabase.NewInMemoryDB()
-	tree.DB = &db
+	tree.DB = db
 	err := tree.StoreTree(height)
 	if err != nil {
 		return nil, err

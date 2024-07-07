@@ -116,7 +116,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 		}
 		account.StakingAccounts[1].AllStakingAccounts[addrb] = as
 	}
-	genesisMerkleTrie, err := transactionsPool.BuildMerkleTree(0, blockTransactionsHashesBytes)
+	genesisMerkleTrie, err := transactionsPool.BuildMerkleTree(0, blockTransactionsHashesBytes, transactionsPool.GlobalMerkleTree.DB)
 	if err != nil {
 		log.Fatalf("cannot generate genesis merkleTrie %v", err)
 	}

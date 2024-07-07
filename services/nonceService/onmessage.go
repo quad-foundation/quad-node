@@ -99,7 +99,7 @@ func OnMessage(addr string, m []byte) {
 			transactionsHashes = append(transactionsHashes, tx.GetHash())
 			txsBytes = append(txsBytes, hash)
 		}
-		merkleTrie, err := transactionsPool.BuildMerkleTree(h+1, txsBytes)
+		merkleTrie, err := transactionsPool.BuildMerkleTree(h+1, txsBytes, transactionsPool.GlobalMerkleTree.DB)
 		defer merkleTrie.Destroy()
 		if err != nil {
 			panic("cannot build merkleTrie")

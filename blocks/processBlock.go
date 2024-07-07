@@ -9,6 +9,7 @@ import (
 	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"github.com/quad-foundation/quad-node/transactionsPool"
 	"log"
+	_ "net/http/pprof"
 )
 
 func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTree, error) {
@@ -39,7 +40,7 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 		hash := tx.GetBytes()
 		txsBytes = append(txsBytes, hash)
 	}
-	merkleTrie, err := transactionsPool.BuildMerkleTree(blockHeight, txsBytes)
+	merkleTrie, err := transactionsPool.BuildMerkleTree(blockHeight, txsBytes, transactionsPool.GlobalMerkleTree.DB)
 	if err != nil {
 		return nil, err
 	}
