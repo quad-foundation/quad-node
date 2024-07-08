@@ -146,28 +146,54 @@ func startPublishingSyncMsg() {
 }
 
 func StartSubscribingSyncMsg(ip string) {
-	recvChan := make(chan []byte)
-
+	recvChan := make(chan []byte, 100) // Use a buffered channel
+	quit := false
 	go tcpip.StartNewConnection(ip, recvChan, tcpip.SyncTopic)
 	log.Println("Enter connection receiving loop (sync msg)", ip)
-Q:
-
-	for {
+	for !quit {
 		select {
 		case s := <-recvChan:
 			if len(s) == 4 && string(s) == "EXIT" {
-				break Q
+				quit = true
+				break
 			}
 			if len(s) > 4 {
 				ipr := net.IPv4(s[0], s[1], s[2], s[3]).String()
 				OnMessage(ipr, s[4:])
 			}
-
 		case <-tcpip.Quit:
-			break Q
+			quit = true
 		default:
+			// Optional: Add a small sleep to prevent busy-waiting
+			time.Sleep(time.Millisecond)
 		}
-
 	}
 	log.Println("Exit connection receiving loop (sync msg)", ip)
 }
+
+//func StartSubscribingSyncMsg(ip string) {
+//	recvChan := make(chan []byte)
+//
+//	go tcpip.StartNewConnection(ip, recvChan, tcpip.SyncTopic)
+//	log.Println("Enter connection receiving loop (sync msg)", ip)
+//Q:
+//
+//	for {
+//		select {
+//		case s := <-recvChan:
+//			if len(s) == 4 && string(s) == "EXIT" {
+//				break Q
+//			}
+//			if len(s) > 4 {
+//				ipr := net.IPv4(s[0], s[1], s[2], s[3]).String()
+//				OnMessage(ipr, s[4:])
+//			}
+//
+//		case <-tcpip.Quit:
+//			break Q
+//		default:
+//		}
+//
+//	}
+//	log.Println("Exit connection receiving loop (sync msg)", ip)
+//}
