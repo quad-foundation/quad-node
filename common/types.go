@@ -9,13 +9,23 @@ import (
 )
 
 const (
-	AddressLength    int    = 20
-	PubKeyLength     int    = 897  //264608
-	PrivateKeyLength int    = 1281 //64
-	HashLength       int    = 32
-	ShortHashLength  int    = 8
-	SignatureLength  int    = 666          // 164
-	sigName          string = "Falcon-512" //"Rainbow-III-Compressed" //
+	AddressLength   int = 20
+	HashLength      int = 32
+	ShortHashLength int = 8
+)
+
+const (
+	PubKeyLength     int    = 264608
+	PrivateKeyLength int    = 64
+	SignatureLength  int    = 164
+	sigName          string = "Rainbow-III-Compressed"
+)
+
+const (
+	PubKeyLength2     int    = 897
+	PrivateKeyLength2 int    = 1281
+	SignatureLength2  int    = 666
+	sigName2          string = "Falcon-512"
 )
 
 func GetSigName() string {
