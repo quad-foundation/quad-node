@@ -33,7 +33,8 @@ type Genesis struct {
 }
 
 func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
-
+	//myWallet := wallet.GetActiveWallet()
+	//log.Println(myWallet.PublicKey.GetHex())
 	initSupplyWithoutStaked := common.InitSupply
 	for _, balance := range genesis.StakedBalances {
 		initSupplyWithoutStaked -= balance
@@ -141,18 +142,18 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 	}
 	signatureBlockHeaderMessage := bh.GetBytesWithoutSignature()
 	bh.SignatureMessage = signatureBlockHeaderMessage
-	_, err = common.CalcHashToByte(signatureBlockHeaderMessage)
+	hashb, err := common.CalcHashToByte(signatureBlockHeaderMessage)
 	if err != nil {
 		log.Fatalf("cannot calculate hash of genesis block header %v", err)
 	}
 
-	//myWallet := wallet.GetActiveWallet()
-	//sign, err := myWallet.Sign(hashb)
-	//if err != nil {
-	//	log.Fatalf("cannot sign genesis block header %v", err)
-	//}
-	//bh.Signature = *sign
-	//log.Println("Block Signature:", bh.Signature.GetHex())
+	myWallet := wallet.GetActiveWallet()
+	sign, err := myWallet.Sign(hashb)
+	if err != nil {
+		log.Fatalf("cannot sign genesis block header %v", err)
+	}
+	bh.Signature = *sign
+	log.Println("Block Signature:", bh.Signature.GetHex())
 
 	signature, err := common.GetSignatureFromString(genesis.Signature, addressOp1)
 	if err != nil {
@@ -236,12 +237,12 @@ func GenesisTransaction(sender common.Address, recipient common.Address, amount 
 	}
 	t.Signature = signature
 
-	//myWallet := wallet.GetActiveWallet()
-	//err = t.Sign(myWallet)
-	//if err != nil {
-	//	log.Fatal("Signing error", err)
-	//}
-	//println(t.Signature.GetHex())
+	myWallet := wallet.GetActiveWallet()
+	err = t.Sign(myWallet)
+	if err != nil {
+		log.Fatal("Signing error", err)
+	}
+	println(t.Signature.GetHex())
 
 	if t.Verify() == false {
 		log.Fatal("genesis transaction cannot be verified")
