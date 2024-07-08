@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-const bannedTime int64 = 10 //1440 * 7 * 6 // 7 days
+const bannedTime int64 = 1 //1440 * 7 * 6 // 7 days
 var bannedIP map[string]int64
 var bannedIPMutex sync.RWMutex
 
