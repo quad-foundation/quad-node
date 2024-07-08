@@ -10,7 +10,7 @@ func AddBalance(address [common.AddressLength]byte, addedAmount int64) error {
 	balance := int64(0)
 	account.AccountsRWMutex.Lock()
 
-	if IsInKeysOfMapAccounts(account.Accounts.AllAccounts, address) {
+	if _, ok := account.Accounts.AllAccounts[address]; ok {
 		balance = account.Accounts.AllAccounts[address].Balance
 	} else {
 		acc := account.Account{}

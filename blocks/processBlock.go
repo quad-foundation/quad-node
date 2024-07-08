@@ -108,7 +108,7 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, int64, error) {
 				copy(stakingAcc.Address[:], address.GetBytes())
 				copy(stakingAcc.DelegatedAccount[:], recipientAddress.GetBytes())
 			}
-			if IsInKeysOfMapStakingAccounts(stakingAccounts, stakingAcc.Address) {
+			if _, ok := stakingAccounts[stakingAcc.Address]; ok {
 				stakingAcc = stakingAccounts[stakingAcc.Address]
 			}
 			stakingAcc.StakedBalance += amount
@@ -129,7 +129,7 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, int64, error) {
 			transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionPoolHashesDBPrefix[:], poolTx.Hash.GetBytes())
 			return 0, 0, fmt.Errorf("no account found in check block transafer")
 		}
-		if IsInKeysOfMapAccounts(accounts, acc.Address) {
+		if _, ok := accounts[acc.Address]; ok {
 			acc = accounts[acc.Address]
 			acc.Balance -= total_amount
 			accounts[acc.Address] = acc
@@ -152,32 +152,6 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, int64, error) {
 	}
 
 	return reward, totalFee, nil
-}
-
-func ExtractKeysFromMapAccounts(m map[[common.AddressLength]byte]account.Account) [][common.AddressLength]byte {
-	keys := [][common.AddressLength]byte{}
-	for k, _ := range m {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-func ExtractKeysFromMapStakingAccounts(m map[[common.AddressLength]byte]account.StakingAccount) [][common.AddressLength]byte {
-	keys := [][common.AddressLength]byte{}
-	for k, _ := range m {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-func IsInKeysOfMapAccounts(m map[[common.AddressLength]byte]account.Account, searchKey [common.AddressLength]byte) bool {
-	keys := ExtractKeysFromMapAccounts(m)
-	return common.ContainsKeyInMap(keys, searchKey)
-}
-
-func IsInKeysOfMapStakingAccounts(m map[[common.AddressLength]byte]account.StakingAccount, searchKey [common.AddressLength]byte) bool {
-	keys := ExtractKeysFromMapStakingAccounts(m)
-	return common.ContainsKeyInMap(keys, searchKey)
 }
 
 func checkTransactionInDBAndInMarkleTrie(hash []byte) error {
