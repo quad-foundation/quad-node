@@ -10,7 +10,7 @@ import (
 
 func StartNewListener(sendChan <-chan []byte, topic [2]byte) {
 
-	conn, err := Listen("0.0.0.0", Ports[topic])
+	conn, err := Listen([4]byte{0, 0, 0, 0}, Ports[topic])
 	if err != nil {
 		panic(err)
 	}
@@ -130,7 +130,7 @@ func StartNewConnection(ip [4]byte, receiveChan chan []byte, topic [2]byte) {
 			if r == nil {
 				continue
 			}
-			if string(r) == "<-CLS->" {
+			if bytes.Compare(r, []byte("<-CLS->")) == 0 {
 				if reconectionTries > 50 {
 					CloseAndRemoveConnection(tcpConn)
 					fmt.Println("Closing connection (receive)", ip)
@@ -145,13 +145,13 @@ func StartNewConnection(ip [4]byte, receiveChan chan []byte, topic [2]byte) {
 				continue
 			}
 
-			if len(r) == 7 && string(r) == "QUITFOR" {
+			if len(r) == 7 && bytes.Compare(r, []byte("QUITFOR")) == 0 {
 				receiveChan <- []byte("EXIT")
 				CloseAndRemoveConnection(tcpConn)
 				fmt.Println("Closing connection (receive)", ip)
 				return
 			}
-			if len(r) == 4 && string(r) == "WAIT" {
+			if len(r) == 4 && bytes.Compare(r, []byte("WAIT")) == 0 {
 				waitChan <- topic[:]
 				continue
 			}

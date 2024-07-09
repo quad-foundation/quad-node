@@ -28,7 +28,7 @@ func main() {
 	mainWallet := wallet.GetActiveWallet()
 
 	go sendTransactions(mainWallet)
-	chanPeer := make(chan string)
+	chanPeer := make(chan []byte)
 
 	<-chanPeer
 }

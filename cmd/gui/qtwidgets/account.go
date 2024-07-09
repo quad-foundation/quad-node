@@ -1,6 +1,7 @@
 package qtwidgets
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/common"
@@ -19,7 +20,7 @@ func UpdateAccountStats() {
 	clientrpc.InRPC <- []byte("STAT")
 	var reply []byte
 	reply = <-clientrpc.OutRPC
-	if string(reply) == "Timeout" {
+	if bytes.Compare(reply, []byte("Timeout")) == 0 {
 		return
 	}
 	st := &statistics.MainStats{}
@@ -48,7 +49,7 @@ func UpdateAccountStats() {
 	var acc account.Account
 
 	re = <-clientrpc.OutRPC
-	if string(reply) == "Timeout" {
+	if bytes.Compare(reply, []byte("Timeout")) == 0 {
 		return
 	}
 	err = acc.Unmarshal(re)

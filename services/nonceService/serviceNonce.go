@@ -1,6 +1,7 @@
 package nonceServices
 
 import (
+	"bytes"
 	"github.com/quad-foundation/quad-node/blocks"
 	"github.com/quad-foundation/quad-node/common"
 	"github.com/quad-foundation/quad-node/message"
@@ -134,7 +135,7 @@ func StartSubscribingNonceMsg(ip [4]byte) {
 	for !quit {
 		select {
 		case s := <-recvChan:
-			if len(s) == 4 && string(s) == "EXIT" {
+			if len(s) == 4 && bytes.Compare(s, []byte("EXIT")) == 0 {
 				quit = true
 				break
 			}
@@ -163,7 +164,7 @@ func StartSubscribingNonceMsgSelf() {
 	for !quit {
 		select {
 		case s := <-recvChanSelf:
-			if len(s) == 4 && string(s) == "EXIT" {
+			if len(s) == 4 && bytes.Compare(s, []byte("EXIT")) == 0 {
 				recvChanExit <- s
 				quit = true
 				break

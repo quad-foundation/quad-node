@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -79,8 +80,8 @@ func getInternalIp() [4]byte {
 	}
 	return [4]byte{}
 }
-func Listen(ip string, port int) (*net.TCPListener, error) {
-	ipport := fmt.Sprint(ip, ":", port)
+func Listen(ip [4]byte, port int) (*net.TCPListener, error) {
+	ipport := fmt.Sprintf("%d.%d.%d.%d:%d", ip[0], ip[1], ip[2], ip[3], port)
 	protocol := "tcp"
 	addr, err := net.ResolveTCPAddr(protocol, ipport)
 	if err != nil {
@@ -153,15 +154,24 @@ func handleConnectionError(err error, topic [2]byte, conn *net.TCPConn) {
 func RegisterPeer(topic [2]byte, tcpConn *net.TCPConn) {
 	raddr := tcpConn.RemoteAddr().String()
 	ra := strings.Split(raddr, ":")
-	addrRemote := ra[0]
+	ips := strings.Split(ra[0], ".")
+	var ip [4]byte
+	for i := 0; i < 4; i++ {
+		num, err := strconv.Atoi(ips[i])
+		if err != nil {
+			fmt.Println("Invalid IP address segment:", ips[i])
+			return
+		}
+		ip[i] = byte(num)
+	}
 	var topicipBytes [6]byte
 	var addrRemoteBytes [4]byte
-	copy(topicipBytes[:], append(topic[:], addrRemote...))
-	copy(addrRemoteBytes[:], addrRemote)
+	copy(topicipBytes[:], append(topic[:], ip[:]...))
+	copy(addrRemoteBytes[:], ip[:])
 	PeersMutex.Lock()
 	defer PeersMutex.Unlock()
 	if _, ok := peersConnected[topicipBytes]; !ok {
-		log.Println("New connection from address", addrRemote, "on topic", topic)
+		log.Println("New connection from address", ra[0], "on topic", topic)
 		// Initialize the map for the topic if it doesn't exist
 		if _, ok := tcpConnections[topic]; !ok {
 			tcpConnections[topic] = make(map[[4]byte]*net.TCPConn)

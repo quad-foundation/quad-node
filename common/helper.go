@@ -115,16 +115,6 @@ func CalcHashFromBytes(b []byte) (Hash, error) {
 	return h, nil
 }
 
-func ExtractKeys(m map[[2]byte][]byte) []string {
-	keys := make([]string, 0, len(m))
-	kb := make([]byte, 2)
-	for k := range m {
-		copy(kb, k[:])
-		keys = append(keys, string(kb))
-	}
-	return keys
-}
-
 func ContainsKey(keys []string, searchKey string) bool {
 	for _, key := range keys {
 		if key == searchKey {
@@ -132,42 +122,6 @@ func ContainsKey(keys []string, searchKey string) bool {
 		}
 	}
 	return false
-}
-
-func ContainsKeyOfList(keys [][2]byte, searchKey [2]byte) bool {
-	for _, key := range keys {
-		if key == searchKey {
-			return true
-		}
-	}
-	return false
-}
-
-func ContainsKeyInMap(keys [][AddressLength]byte, searchKey [AddressLength]byte) bool {
-	for _, key := range keys {
-		if key == searchKey {
-			return true
-		}
-	}
-	return false
-}
-
-func ExtractKeysOfList(m map[[2]byte][][]byte) [][2]byte {
-	keys := [][2]byte{}
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-func IsInKeys2Byte(m map[[2]byte][]byte, searchKey string) bool {
-	keys := ExtractKeys(m)
-	return ContainsKey(keys, searchKey)
-}
-
-func IsInKeysOfList(m map[[2]byte][][]byte, searchKey [2]byte) bool {
-	keys := ExtractKeysOfList(m)
-	return ContainsKeyOfList(keys, searchKey)
 }
 
 func BytesToLenAndBytes(b []byte) []byte {

@@ -14,18 +14,18 @@ const (
 	ShortHashLength int = 8
 )
 
-const (
-	PubKeyLength     int    = 264608
-	PrivateKeyLength int    = 64
-	SignatureLength  int    = 164
-	sigName          string = "Rainbow-III-Compressed"
-)
+//const (
+//	PubKeyLength     int    = 264608
+//	PrivateKeyLength int    = 64
+//	SignatureLength  int    = 164
+//	sigName          string = "Rainbow-III-Compressed"
+//)
 
 const (
-	PubKeyLength2     int    = 897
-	PrivateKeyLength2 int    = 1281
-	SignatureLength2  int    = 666
-	sigName2          string = "Falcon-512"
+	PubKeyLength     int    = 897
+	PrivateKeyLength int    = 1281
+	SignatureLength  int    = 666
+	sigName          string = "Falcon-512"
 )
 
 func GetSigName() string {

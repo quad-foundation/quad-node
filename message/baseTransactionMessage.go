@@ -21,7 +21,7 @@ func (a TransactionsMessage) GetTransactionsBytes() map[[2]byte][][]byte {
 func (a TransactionsMessage) GetTransactionsFromBytes() (map[[2]byte][]transactionsDefinition.Transaction, error) {
 	txn := map[[2]byte][]transactionsDefinition.Transaction{}
 	for _, topic := range validTopics {
-		if common.IsInKeysOfList(a.TransactionsBytes, topic) {
+		if _, ok := a.TransactionsBytes[topic]; ok {
 			for _, tb := range a.TransactionsBytes[topic] {
 				tx := transactionsDefinition.Transaction{}
 				at, rest, err := tx.GetFromBytes(tb)
