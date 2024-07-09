@@ -127,7 +127,7 @@ func startPublishingNonceMsg() {
 }
 
 func StartSubscribingNonceMsg(ip [4]byte) {
-	recvChan := make(chan []byte, 100) // Use a buffered channel
+	recvChan := make(chan []byte, 10) // Use a buffered channel
 	quit := false
 	var ipr [4]byte
 	go tcpip.StartNewConnection(ip, recvChan, tcpip.NonceTopic)
@@ -154,8 +154,8 @@ func StartSubscribingNonceMsg(ip [4]byte) {
 }
 
 func StartSubscribingNonceMsgSelf() {
-	recvChanSelf := make(chan []byte, 100) // Use a buffered channel
-	recvChanExit := make(chan []byte, 100) // Use a buffered channel
+	recvChanSelf := make(chan []byte, 10) // Use a buffered channel
+	recvChanExit := make(chan []byte, 10) // Use a buffered channel
 	quit := false
 	var ip [4]byte
 	go tcpip.StartNewConnection(tcpip.MyIP, recvChanSelf, tcpip.SelfNonceTopic)

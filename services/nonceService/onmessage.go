@@ -182,6 +182,11 @@ func OnMessage(addr [4]byte, m []byte) {
 					log.Println(err)
 				}
 				statistics.UpdateStatistics(newBlock, lastBlock)
+				stats, err := statistics.LoadStats()
+				if err != nil {
+					return
+				}
+				log.Println("TPS: ", stats.MainStats.Tps)
 			}
 		}
 	default:

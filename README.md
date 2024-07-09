@@ -16,7 +16,9 @@ Compile OQS with `-DBUILD_SHARED_LIBS=ON` and install
     sudo ninja install
 
 Install prerequisites
-
+    
+    sudo apt update
+    sudo apt install librocksdb-dev
     sudo apt install libzmq3-dev
     sudo apt install pkg-config
     sudo apt install build-essential
