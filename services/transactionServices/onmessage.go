@@ -43,6 +43,10 @@ func OnMessage(addr [4]byte, m []byte) {
 		if err != nil {
 			return
 		}
+		if transactionsPool.PoolsTx.NumberOfTransactions() > common.MaxTransactionInPool {
+			//log.Println("no more transactions can be accepted to the pool")
+			return
+		}
 		// need to check transactions
 		for _, v := range txn {
 			for _, t := range v {
