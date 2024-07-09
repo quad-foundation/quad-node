@@ -16,7 +16,7 @@ var (
 	ValidationTag                     = "validationTag"
 	DifficultyMultiplier      int32   = 10
 	BlockTimeInterval         float32 = 10 // 10 sec.
-	DifficultyChange          float32 = 1
+	DifficultyChange          float32 = 10
 	MaxGasUsage               int64   = 137000000 // circa 65k transactions in block
 	MaxGasPrice               int64   = 100000
 	MaxTransactionsPerBlock   int16   = 32000
