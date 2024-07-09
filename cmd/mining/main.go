@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/blocks"
 	"github.com/quad-foundation/quad-node/common"
@@ -15,6 +16,9 @@ import (
 	"github.com/quad-foundation/quad-node/transactionsPool"
 	"github.com/quad-foundation/quad-node/wallet"
 	"log"
+	"strconv"
+	"strings"
+
 	//_ "net/http/pprof"
 	"os"
 	"time"
@@ -126,18 +130,30 @@ func main() {
 	go syncServices.StartSubscribingSyncMsg(tcpip.MyIP)
 	time.Sleep(time.Second)
 	if len(os.Args) > 1 {
-		ip := os.Args[1]
-
+		ips := strings.Split(os.Args[1], ".")
+		if len(ips) != 4 {
+			fmt.Println("Invalid IP address format")
+			return
+		}
+		var ip [4]byte
+		for i := 0; i < 4; i++ {
+			num, err := strconv.Atoi(ips[i])
+			if err != nil {
+				fmt.Println("Invalid IP address segment:", ips[i])
+				return
+			}
+			ip[i] = byte(num)
+		}
 		go transactionServices.StartSubscribingTransactionMsg(ip)
 		go nonceService.StartSubscribingNonceMsg(ip)
 		go syncServices.StartSubscribingSyncMsg(ip)
 	}
 	time.Sleep(time.Second)
 
-	chanPeer := make(chan string)
+	chanPeer := make(chan []byte)
 	go tcpip.LookUpForNewPeersToConnect(chanPeer)
 	topic := [2]byte{}
-
+	ip := [4]byte{}
 QF:
 	for {
 
@@ -145,7 +161,7 @@ QF:
 
 		case topicip := <-chanPeer:
 			copy(topic[:], topicip[:2])
-			ip := topicip[2:]
+			copy(ip[:], topicip[2:])
 
 			if topic[0] == 'T' {
 				go transactionServices.StartSubscribingTransactionMsg(ip)

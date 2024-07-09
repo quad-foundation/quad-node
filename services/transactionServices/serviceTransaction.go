@@ -1,6 +1,7 @@
 package transactionServices
 
 import (
+	"bytes"
 	"github.com/quad-foundation/quad-node/common"
 	"github.com/quad-foundation/quad-node/message"
 	"github.com/quad-foundation/quad-node/services"
@@ -8,7 +9,6 @@ import (
 	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"github.com/quad-foundation/quad-node/transactionsPool"
 	"log"
-	"net"
 	"time"
 )
 
@@ -73,7 +73,7 @@ Q:
 	}
 }
 
-func SendTransactionMsg(ip string, topic [2]byte) {
+func SendTransactionMsg(ip [4]byte, topic [2]byte) {
 	isync := common.IsSyncing.Load()
 	if isync == true {
 		return
@@ -87,7 +87,7 @@ func SendTransactionMsg(ip string, topic [2]byte) {
 	Send(ip, n.GetBytes())
 }
 
-func SendGT(ip string, txsHashes [][]byte) {
+func SendGT(ip [4]byte, txsHashes [][]byte) {
 	topic := tcpip.TransactionTopic
 	transactionMsg, err := GenerateTransactionMsgGT(txsHashes, []byte("st"), topic)
 	if err != nil {
@@ -96,20 +96,20 @@ func SendGT(ip string, txsHashes [][]byte) {
 	Send(ip, transactionMsg.GetBytes())
 }
 
-func Send(addr string, nb []byte) {
+func Send(addr [4]byte, nb []byte) {
 
-	nb = append(net.ParseIP(addr).To4(), nb...)
+	nb = append(addr[:], nb...)
 	services.SendMutexTx.Lock()
 	services.SendChanTx <- nb
 	services.SendMutexTx.Unlock()
 }
 
-func Spread(ignoreAddr string, nb []byte) {
-
-	var peers = tcpip.GetPeersConnected(string(tcpip.TransactionTopic[:]))
+func Spread(ignoreAddr [4]byte, nb []byte) {
+	var ip [4]byte
+	var peers = tcpip.GetPeersConnected(tcpip.TransactionTopic)
 	for topicip, _ := range peers {
-		ip := topicip[2:]
-		if ip != ignoreAddr && ip != tcpip.MyIP {
+		copy(ip[:], topicip[2:])
+		if bytes.Compare(ip[:], ignoreAddr[:]) != 0 && bytes.Compare(ip[:], tcpip.MyIP[:]) != 0 {
 			Send(ip, nb)
 		}
 	}
@@ -119,9 +119,10 @@ func startPublishingTransactionMsg() {
 	go tcpip.StartNewListener(services.SendChanTx, tcpip.TransactionTopic)
 }
 
-func StartSubscribingTransactionMsg(ip string) {
+func StartSubscribingTransactionMsg(ip [4]byte) {
 	recvChan := make(chan []byte, 100) // Use a buffered channel
 	quit := false
+	var ipr [4]byte
 	go tcpip.StartNewConnection(ip, recvChan, tcpip.TransactionTopic)
 	log.Println("Enter connection receiving loop (nonce msg)", ip)
 	for !quit {
@@ -132,7 +133,7 @@ func StartSubscribingTransactionMsg(ip string) {
 				break
 			}
 			if len(s) > 4 {
-				ipr := net.IPv4(s[0], s[1], s[2], s[3]).String()
+				copy(ipr[:], s[:4])
 				OnMessage(ipr, s[4:])
 			}
 		case <-tcpip.Quit:
@@ -144,30 +145,3 @@ func StartSubscribingTransactionMsg(ip string) {
 	}
 	log.Println("Exit connection receiving loop (nonce msg)", ip)
 }
-
-//func StartSubscribingTransactionMsg(ip string) {
-//	recvChan := make(chan []byte)
-//
-//	go tcpip.StartNewConnection(ip, recvChan, tcpip.TransactionTopic)
-//	log.Println("Enter connection receiving loop (nonce msg)", ip)
-//Q:
-//
-//	for {
-//		select {
-//		case s := <-recvChan:
-//			if len(s) == 4 && string(s) == "EXIT" {
-//				break Q
-//			}
-//			if len(s) > 4 {
-//				ipr := net.IPv4(s[0], s[1], s[2], s[3]).String()
-//				OnMessage(ipr, s[4:])
-//			}
-//
-//		case <-tcpip.Quit:
-//			break Q
-//		default:
-//		}
-//
-//	}
-//	log.Println("Exit connection receiving loop (nonce msg)", ip)
-//}

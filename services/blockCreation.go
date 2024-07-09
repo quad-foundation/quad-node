@@ -11,7 +11,6 @@ import (
 	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"github.com/quad-foundation/quad-node/transactionsPool"
 	"github.com/quad-foundation/quad-node/wallet"
-	"net"
 	"sync"
 )
 
@@ -121,8 +120,8 @@ func GenerateBlockMessage(bl blocks.Block) message.TransactionsMessage {
 	return atm
 }
 
-func SendNonce(ip string, nb []byte) {
-	nb = append(net.ParseIP(ip).To4(), nb...)
+func SendNonce(ip [4]byte, nb []byte) {
+	nb = append(ip[:], nb...)
 	SendMutexNonce.Lock()
 	SendChanNonce <- nb
 	SendMutexNonce.Unlock()
@@ -131,9 +130,10 @@ func SendNonce(ip string, nb []byte) {
 func BroadcastBlock(bl blocks.Block) {
 	atm := GenerateBlockMessage(bl)
 	nb := atm.GetBytes()
-	var peers = tcpip.GetPeersConnected(string(tcpip.NonceTopic[:]))
+	var ip [4]byte
+	var peers = tcpip.GetPeersConnected(tcpip.NonceTopic)
 	for topicip, _ := range peers {
-		ip := topicip[2:]
+		copy(ip[:], topicip[2:])
 		SendNonce(ip, nb)
 	}
 }

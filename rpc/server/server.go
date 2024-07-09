@@ -241,7 +241,7 @@ func handleSTAK(line []byte, reply *[]byte) {
 func handleTRAN(byt []byte, reply *[]byte) {
 
 	*reply = []byte("transaction sent")
-	transactionServices.OnMessage("toSend", byt)
+	transactionServices.OnMessage([4]byte{0, 0, 0, 0}, byt)
 
 }
 func handleSTAT(byt []byte, reply *[]byte) {

@@ -14,7 +14,7 @@ import (
 	"log"
 )
 
-func OnMessage(addr string, m []byte) {
+func OnMessage(addr [4]byte, m []byte) {
 	h := common.GetHeight()
 	if tcpip.IsIPBanned(addr, h, tcpip.SyncTopic) {
 		return
@@ -45,21 +45,28 @@ func OnMessage(addr string, m []byte) {
 	case "hi": // getheader
 
 		txn := amsg.(message.TransactionsMessage).GetTransactionsBytes()
-
+		var topicip [6]byte
+		var ip4 [4]byte
 		if tcpip.GetPeersCount() < common.MaxPeersConnected {
-			peers := tcpip.GetIPsfrombytes(txn[[2]byte{'P', 'P'}])
-			peersConnectedNN := tcpip.GetPeersConnected(string(tcpip.NonceTopic[:]))
-			peersConnectedBB := tcpip.GetPeersConnected(string(tcpip.SyncTopic[:]))
-			peersConnectedTT := tcpip.GetPeersConnected(string(tcpip.TransactionTopic[:]))
+			peers := txn[[2]byte{'P', 'P'}]
+			peersConnectedNN := tcpip.GetPeersConnected(tcpip.NonceTopic)
+			peersConnectedBB := tcpip.GetPeersConnected(tcpip.SyncTopic)
+			peersConnectedTT := tcpip.GetPeersConnected(tcpip.TransactionTopic)
+
 			for _, ip := range peers {
-				if _, ok := peersConnectedNN[string(tcpip.NonceTopic[:])+ip]; !ok && !tcpip.IsIPBanned(ip, h, tcpip.NonceTopic) {
-					tcpip.AddNewPeer(ip, tcpip.NonceTopic)
+				copy(ip4[:], ip)
+				copy(topicip[2:], ip)
+				copy(topicip[:2], tcpip.NonceTopic[:])
+				if _, ok := peersConnectedNN[topicip]; !ok && !tcpip.IsIPBanned(ip4, h, tcpip.NonceTopic) {
+					tcpip.AddNewPeer(ip4, tcpip.NonceTopic)
 				}
-				if _, ok := peersConnectedBB[string(tcpip.SyncTopic[:])+ip]; !ok && !tcpip.IsIPBanned(ip, h, tcpip.SyncTopic) {
-					tcpip.AddNewPeer(ip, tcpip.SyncTopic)
+				copy(topicip[:2], tcpip.SyncTopic[:])
+				if _, ok := peersConnectedBB[topicip]; !ok && !tcpip.IsIPBanned(ip4, h, tcpip.SyncTopic) {
+					tcpip.AddNewPeer(ip4, tcpip.SyncTopic)
 				}
-				if _, ok := peersConnectedTT[string(tcpip.TransactionTopic[:])+ip]; !ok && !tcpip.IsIPBanned(ip, h, tcpip.TransactionTopic) {
-					tcpip.AddNewPeer(ip, tcpip.TransactionTopic)
+				copy(topicip[:2], tcpip.TransactionTopic[:])
+				if _, ok := peersConnectedTT[topicip]; !ok && !tcpip.IsIPBanned(ip4, h, tcpip.TransactionTopic) {
+					tcpip.AddNewPeer(ip4, tcpip.TransactionTopic)
 				}
 				if tcpip.GetPeersCount() > common.MaxPeersConnected {
 					break

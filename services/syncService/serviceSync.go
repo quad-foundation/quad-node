@@ -7,7 +7,6 @@ import (
 	"github.com/quad-foundation/quad-node/services"
 	"github.com/quad-foundation/quad-node/tcpip"
 	"log"
-	"net"
 	"time"
 )
 
@@ -116,18 +115,18 @@ func generateSyncMsgSendHeaders(bHeight int64, height int64) []byte {
 	return nb
 }
 
-func SendHeaders(addr string, bHeight int64, height int64) {
+func SendHeaders(addr [4]byte, bHeight int64, height int64) {
 	n := generateSyncMsgSendHeaders(bHeight, height)
 	Send(addr, n)
 }
 
-func SendGetHeaders(addr string, height int64) {
+func SendGetHeaders(addr [4]byte, height int64) {
 	n := generateSyncMsgGetHeaders(height)
 	Send(addr, n)
 }
 
-func Send(addr string, nb []byte) {
-	nb = append(net.ParseIP(addr).To4(), nb...)
+func Send(addr [4]byte, nb []byte) {
+	nb = append(addr[:], nb...)
 	services.SendMutexSync.Lock()
 	services.SendChanSync <- nb
 	services.SendMutexSync.Unlock()
@@ -136,7 +135,7 @@ func Send(addr string, nb []byte) {
 func sendSyncMsgInLoop() {
 	for range time.Tick(time.Second * 5) {
 		n := generateSyncMsgHeight()
-		Send("0.0.0.0", n)
+		Send([4]byte{0, 0, 0, 0}, n)
 	}
 }
 
@@ -145,8 +144,9 @@ func startPublishingSyncMsg() {
 	go tcpip.StartNewListener(services.SendChanSync, tcpip.SyncTopic)
 }
 
-func StartSubscribingSyncMsg(ip string) {
+func StartSubscribingSyncMsg(ip [4]byte) {
 	recvChan := make(chan []byte, 100) // Use a buffered channel
+	var ipr [4]byte
 	quit := false
 	go tcpip.StartNewConnection(ip, recvChan, tcpip.SyncTopic)
 	log.Println("Enter connection receiving loop (sync msg)", ip)
@@ -158,7 +158,7 @@ func StartSubscribingSyncMsg(ip string) {
 				break
 			}
 			if len(s) > 4 {
-				ipr := net.IPv4(s[0], s[1], s[2], s[3]).String()
+				copy(ipr[:], s[:4])
 				OnMessage(ipr, s[4:])
 			}
 		case <-tcpip.Quit:
@@ -170,30 +170,3 @@ func StartSubscribingSyncMsg(ip string) {
 	}
 	log.Println("Exit connection receiving loop (sync msg)", ip)
 }
-
-//func StartSubscribingSyncMsg(ip string) {
-//	recvChan := make(chan []byte)
-//
-//	go tcpip.StartNewConnection(ip, recvChan, tcpip.SyncTopic)
-//	log.Println("Enter connection receiving loop (sync msg)", ip)
-//Q:
-//
-//	for {
-//		select {
-//		case s := <-recvChan:
-//			if len(s) == 4 && string(s) == "EXIT" {
-//				break Q
-//			}
-//			if len(s) > 4 {
-//				ipr := net.IPv4(s[0], s[1], s[2], s[3]).String()
-//				OnMessage(ipr, s[4:])
-//			}
-//
-//		case <-tcpip.Quit:
-//			break Q
-//		default:
-//		}
-//
-//	}
-//	log.Println("Exit connection receiving loop (sync msg)", ip)
-//}

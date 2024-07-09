@@ -16,7 +16,7 @@ import (
 	"runtime/debug"
 )
 
-func OnMessage(addr string, m []byte) {
+func OnMessage(addr [4]byte, m []byte) {
 	h := common.GetHeight()
 	if tcpip.IsIPBanned(addr, h, tcpip.NonceTopic) {
 		return

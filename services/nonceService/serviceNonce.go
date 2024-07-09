@@ -9,7 +9,6 @@ import (
 	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"github.com/quad-foundation/quad-node/wallet"
 	"log"
-	"net"
 	"time"
 )
 
@@ -94,7 +93,7 @@ Q:
 	}
 }
 
-func sendNonceMsg(ip string, topic [2]byte) {
+func sendNonceMsg(ip [4]byte, topic [2]byte) {
 	isync := common.IsSyncing.Load()
 	if isync == true {
 		return
@@ -107,8 +106,8 @@ func sendNonceMsg(ip string, topic [2]byte) {
 	Send(ip, n.GetBytes())
 }
 
-func Send(addr string, nb []byte) {
-	nb = append(net.ParseIP(addr).To4(), nb...)
+func Send(addr [4]byte, nb []byte) {
+	nb = append(addr[:], nb...)
 	services.SendMutexNonce.Lock()
 	services.SendChanNonce <- nb
 	services.SendMutexNonce.Unlock()
@@ -117,20 +116,19 @@ func Send(addr string, nb []byte) {
 func sendNonceMsgInLoop() {
 	for range time.Tick(time.Second * 10) {
 		var topic = [2]byte{'N', 'N'}
-		sendNonceMsg("0.0.0.0", topic)
+		sendNonceMsg([4]byte{0, 0, 0, 0}, topic)
 	}
 }
 
 func startPublishingNonceMsg() {
-
 	go tcpip.StartNewListener(services.SendChanNonce, tcpip.NonceTopic)
 	go tcpip.StartNewListener(services.SendChanSelfNonce, tcpip.SelfNonceTopic)
-
 }
 
-func StartSubscribingNonceMsg(ip string) {
+func StartSubscribingNonceMsg(ip [4]byte) {
 	recvChan := make(chan []byte, 100) // Use a buffered channel
 	quit := false
+	var ipr [4]byte
 	go tcpip.StartNewConnection(ip, recvChan, tcpip.NonceTopic)
 	log.Println("Enter connection receiving loop (nonce msg)", ip)
 	for !quit {
@@ -141,7 +139,7 @@ func StartSubscribingNonceMsg(ip string) {
 				break
 			}
 			if len(s) > 4 {
-				ipr := net.IPv4(s[0], s[1], s[2], s[3]).String()
+				copy(ipr[:], s[:4])
 				OnMessage(ipr, s[4:])
 			}
 		case <-tcpip.Quit:
@@ -158,6 +156,7 @@ func StartSubscribingNonceMsgSelf() {
 	recvChanSelf := make(chan []byte, 100) // Use a buffered channel
 	recvChanExit := make(chan []byte, 100) // Use a buffered channel
 	quit := false
+	var ip [4]byte
 	go tcpip.StartNewConnection(tcpip.MyIP, recvChanSelf, tcpip.SelfNonceTopic)
 	go sendNonceMsgInLoopSelf(recvChanExit)
 	log.Println("Enter connection receiving loop (nonce msg self)")
@@ -170,8 +169,8 @@ func StartSubscribingNonceMsgSelf() {
 				break
 			}
 			if len(s) > 4 {
-				ipr := net.IPv4(s[0], s[1], s[2], s[3]).String()
-				OnMessage(ipr, s[4:])
+				copy(ip[:], s[:4])
+				OnMessage(ip, s[4:])
 			}
 		case <-tcpip.Quit:
 			quit = true
@@ -183,59 +182,3 @@ func StartSubscribingNonceMsgSelf() {
 	}
 	log.Println("Exit connection receiving loop (nonce msg self)")
 }
-
-//func StartSubscribingNonceMsg(ip string) {
-//	recvChan := make(chan []byte)
-//
-//	go tcpip.StartNewConnection(ip, recvChan, tcpip.NonceTopic)
-//	log.Println("Enter connection receiving loop (nonce msg)", ip)
-//Q:
-//
-//	for {
-//		select {
-//		case s := <-recvChan:
-//			if len(s) == 4 && string(s) == "EXIT" {
-//				break Q
-//			}
-//			if len(s) > 4 {
-//				ipr := net.IPv4(s[0], s[1], s[2], s[3]).String()
-//				OnMessage(ipr, s[4:])
-//			}
-//
-//		case <-tcpip.Quit:
-//			break Q
-//		default:
-//		}
-//
-//	}
-//	log.Println("Exit connection receiving loop (nonce msg)", ip)
-//}
-//
-//func StartSubscribingNonceMsgSelf() {
-//	recvChanSelf := make(chan []byte)
-//	recvChanExit := make(chan []byte)
-//
-//	go tcpip.StartNewConnection(tcpip.MyIP, recvChanSelf, tcpip.SelfNonceTopic)
-//	go sendNonceMsgInLoopSelf(recvChanExit)
-//	log.Println("Enter connection receiving loop (nonce msg self)")
-//Q:
-//
-//	for {
-//		select {
-//		case s := <-recvChanSelf:
-//			if len(s) == 4 && string(s) == "EXIT" {
-//				recvChanExit <- s
-//				break Q
-//			}
-//			if len(s) > 4 {
-//				ipr := net.IPv4(s[0], s[1], s[2], s[3]).String()
-//				OnMessage(ipr, s[4:])
-//			}
-//		case <-tcpip.Quit:
-//			break Q
-//		default:
-//		}
-//
-//	}
-//	log.Println("Exit connection receiving loop (nonce msg self)")
-//}
