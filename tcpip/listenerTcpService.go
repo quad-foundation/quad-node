@@ -65,7 +65,7 @@ func LoopSend(sendChan <-chan []byte, topic [2]byte) {
 					//log.Println("send to ip", ipr)
 					Send(tcpConn, s[4:])
 				} else {
-					fmt.Println("no connection to given ip", ipr, topic)
+					//fmt.Println("no connection to given ip", ipr, topic)
 					//BanIP(ipr, topic)
 				}
 				PeersMutex.RUnlock()
