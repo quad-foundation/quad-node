@@ -51,18 +51,17 @@ func LoopSend(sendChan <-chan []byte, topic [2]byte) {
 			if ipr == "0.0.0.0" {
 				PeersMutex.RLock()
 				tmpConn := tcpConnections[topic]
-				PeersMutex.RUnlock()
 				for k, tcpConn0 := range tmpConn {
 					if k != MyIP {
 						//log.Println("send to ipr", k)
 						Send(tcpConn0, s[4:])
 					}
 				}
+				PeersMutex.RUnlock()
 			} else {
 				PeersMutex.RLock()
 				tcpConns := tcpConnections[topic]
 				tcpConn, ok := tcpConns[ipr]
-				PeersMutex.RUnlock()
 				if ok {
 					//log.Println("send to ip", ipr)
 					Send(tcpConn, s[4:])
@@ -70,6 +69,7 @@ func LoopSend(sendChan <-chan []byte, topic [2]byte) {
 					fmt.Println("no connection to given ip", ipr, topic)
 					//BanIP(ipr, topic)
 				}
+				PeersMutex.RUnlock()
 			}
 		case b := <-waitChan:
 			if bytes.Equal(b, topic[:]) {
