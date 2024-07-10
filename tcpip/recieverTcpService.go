@@ -118,7 +118,7 @@ func Send(conn *net.TCPConn, message []byte) {
 
 // Receive reads data from the connection and handles errors
 func Receive(topic [2]byte, conn *net.TCPConn) []byte {
-	const bufSize = 9192 //1048576
+	const bufSize = 1024 //1048576
 
 	if conn == nil {
 		return []byte("<-CLS->")
