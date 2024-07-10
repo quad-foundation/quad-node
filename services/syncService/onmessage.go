@@ -9,12 +9,16 @@ import (
 	"github.com/quad-foundation/quad-node/services"
 	"github.com/quad-foundation/quad-node/services/transactionServices"
 	"github.com/quad-foundation/quad-node/statistics"
+	"github.com/quad-foundation/quad-node/tcpip"
 	"github.com/quad-foundation/quad-node/transactionsPool"
 	"log"
 )
 
-func OnMessage(addr string, m []byte) {
-
+func OnMessage(addr [4]byte, m []byte) {
+	h := common.GetHeight()
+	if tcpip.IsIPBanned(addr, h, tcpip.SyncTopic) {
+		return
+	}
 	//log.Println("New message nonce from:", addr)
 	msg := message.TransactionsMessage{}
 
@@ -41,8 +45,34 @@ func OnMessage(addr string, m []byte) {
 	case "hi": // getheader
 
 		txn := amsg.(message.TransactionsMessage).GetTransactionsBytes()
-		h := common.GetHeight()
+		var topicip [6]byte
+		var ip4 [4]byte
+		if tcpip.GetPeersCount() < common.MaxPeersConnected {
+			peers := txn[[2]byte{'P', 'P'}]
+			peersConnectedNN := tcpip.GetPeersConnected(tcpip.NonceTopic)
+			peersConnectedBB := tcpip.GetPeersConnected(tcpip.SyncTopic)
+			peersConnectedTT := tcpip.GetPeersConnected(tcpip.TransactionTopic)
 
+			for _, ip := range peers {
+				copy(ip4[:], ip)
+				copy(topicip[2:], ip)
+				copy(topicip[:2], tcpip.NonceTopic[:])
+				if _, ok := peersConnectedNN[topicip]; !ok && !tcpip.IsIPBanned(ip4, h, tcpip.NonceTopic) {
+					tcpip.AddNewPeer(ip4, tcpip.NonceTopic)
+				}
+				copy(topicip[:2], tcpip.SyncTopic[:])
+				if _, ok := peersConnectedBB[topicip]; !ok && !tcpip.IsIPBanned(ip4, h, tcpip.SyncTopic) {
+					tcpip.AddNewPeer(ip4, tcpip.SyncTopic)
+				}
+				copy(topicip[:2], tcpip.TransactionTopic[:])
+				if _, ok := peersConnectedTT[topicip]; !ok && !tcpip.IsIPBanned(ip4, h, tcpip.TransactionTopic) {
+					tcpip.AddNewPeer(ip4, tcpip.TransactionTopic)
+				}
+				if tcpip.GetPeersCount() > common.MaxPeersConnected {
+					break
+				}
+			}
+		}
 		lastOtherHeight := common.GetInt64FromByte(txn[[2]byte{'L', 'H'}][0])
 		common.SetHeightMax(lastOtherHeight)
 		lastOtherBlockHashBytes := txn[[2]byte{'L', 'B'}][0]
@@ -52,7 +82,7 @@ func OnMessage(addr string, m []byte) {
 			if err != nil {
 				panic(err)
 			}
-			if bytes.Compare(lastOtherBlockHashBytes, lastBlockHashBytes) != 0 {
+			if !bytes.Equal(lastOtherBlockHashBytes, lastBlockHashBytes) {
 				SendGetHeaders(addr, lastOtherHeight)
 			}
 			common.IsSyncing.Store(false)
@@ -89,7 +119,6 @@ func OnMessage(addr string, m []byte) {
 				}
 			}
 		}
-		h := common.GetHeight()
 		hmax := common.GetHeightMax()
 		if indices[len(indices)-1] <= h {
 			log.Println("shorter other chain")
@@ -116,7 +145,7 @@ func OnMessage(addr string, m []byte) {
 				if err != nil {
 					panic("cannot load block hash")
 				}
-				if bytes.Compare(block.BlockHash.GetBytes(), hashOfMyBlockBytes) == 0 {
+				if bytes.Equal(block.BlockHash.GetBytes(), hashOfMyBlockBytes) {
 					lastGoodBlock = index
 					continue
 				}
@@ -132,7 +161,9 @@ func OnMessage(addr string, m []byte) {
 			}
 
 			if header.Height != index {
+				common.ShiftToPastMutex.RLock()
 				services.ResetAccountsAndBlocksSync(index - common.ShiftToPastInReset)
+				common.ShiftToPastMutex.RUnlock()
 				services.AdjustShiftInPastInReset(hmax)
 				panic("not relevant height vs index")
 			}
@@ -140,7 +171,9 @@ func OnMessage(addr string, m []byte) {
 			merkleTrie, err := blocks.CheckBaseBlock(block, oldBlock)
 			defer merkleTrie.Destroy()
 			if err != nil {
+				common.ShiftToPastMutex.RLock()
 				services.ResetAccountsAndBlocksSync(index - common.ShiftToPastInReset)
+				common.ShiftToPastMutex.RUnlock()
 				services.AdjustShiftInPastInReset(hmax)
 				panic(err)
 			}

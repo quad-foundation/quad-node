@@ -27,7 +27,7 @@ func Stake(accb []byte, amount int64, height int64, delegatedAccount int, operat
 		return fmt.Errorf("wrong address length, must be %v", common.AddressLength)
 	}
 	acc := GetStakingAccountByAddressBytes(accb, delegatedAccount)
-	if bytes.Compare(acc.Address[:], accb) != 0 {
+	if !bytes.Equal(acc.Address[:], accb) {
 		copy(acc.Address[:], accb)
 	}
 	StakingRWMutex.Lock()
@@ -58,7 +58,7 @@ func Unstake(accb []byte, amount int64, height int64, delegatedAccount int) erro
 		return fmt.Errorf("wrong address length, must be %v", common.AddressLength)
 	}
 	acc := GetStakingAccountByAddressBytes(accb, delegatedAccount)
-	if bytes.Compare(acc.Address[:], accb) != 0 {
+	if !bytes.Equal(acc.Address[:], accb) {
 		return fmt.Errorf("no account present in unstaking account")
 	}
 	StakingRWMutex.Lock()
@@ -93,7 +93,7 @@ func Reward(accb []byte, reward int64, height int64, delegatedAccount int) error
 		return fmt.Errorf("wrong address length, must be %v", common.AddressLength)
 	}
 	acc := GetStakingAccountByAddressBytes(accb, delegatedAccount)
-	if bytes.Compare(acc.Address[:], accb) != 0 {
+	if !bytes.Equal(acc.Address[:], accb) {
 		return fmt.Errorf("no account present in rewarding account")
 	}
 	StakingRWMutex.Lock()
@@ -122,7 +122,7 @@ func WithdrawReward(accb []byte, amount int64, height int64, delegatedAccount in
 		return fmt.Errorf("wrong address length, must be %v", common.AddressLength)
 	}
 	acc := GetStakingAccountByAddressBytes(accb, delegatedAccount)
-	if bytes.Compare(acc.Address[:], accb) != 0 {
+	if !bytes.Equal(acc.Address[:], accb) {
 		return fmt.Errorf("no account present in withdraw rewarding")
 	}
 	StakingRWMutex.Lock()

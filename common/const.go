@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 )
 
 var (
@@ -14,13 +15,13 @@ var (
 	RewardRatio                       = 1e-7
 	ValidationTag                     = "validationTag"
 	DifficultyMultiplier      int32   = 10
-	BlockTimeInterval         float32 = 5 // 5 sec.
-	DifficultyChange          float32 = 5
+	BlockTimeInterval         float32 = 10 // 10 sec.
+	DifficultyChange          float32 = 10
 	MaxGasUsage               int64   = 137000000 // circa 65k transactions in block
 	MaxGasPrice               int64   = 100000
 	MaxTransactionsPerBlock   int16   = 32000
 	MaxTransactionInPool              = 1000000
-	ConfirmationsNumber       int64   = 6
+	MaxPeersConnected         int     = 6
 	NumberOfHashesInBucket    int64   = 32
 	NumberOfBlocksInBucket    int64   = 20
 	MinStakingForNode         int64   = 100000000000000
@@ -60,6 +61,7 @@ var chainID = int16(23)
 var delegatedAccount Address
 var rewardPercentage float64
 var ShiftToPastInReset int64
+var ShiftToPastMutex sync.RWMutex
 
 func GetChainID() int16 {
 	return chainID

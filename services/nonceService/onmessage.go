@@ -9,14 +9,18 @@ import (
 	"github.com/quad-foundation/quad-node/services"
 	"github.com/quad-foundation/quad-node/services/transactionServices"
 	"github.com/quad-foundation/quad-node/statistics"
+	"github.com/quad-foundation/quad-node/tcpip"
 	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"github.com/quad-foundation/quad-node/transactionsPool"
 	"log"
 	"runtime/debug"
 )
 
-func OnMessage(addr string, m []byte) {
-
+func OnMessage(addr [4]byte, m []byte) {
+	h := common.GetHeight()
+	if tcpip.IsIPBanned(addr, h, tcpip.NonceTopic) {
+		return
+	}
 	//log.Println("New message nonce from:", addr)
 	msg := message.TransactionsMessage{}
 
@@ -68,12 +72,10 @@ func OnMessage(addr string, m []byte) {
 			return
 		}
 		// checking if enough coins staked
-		if _, sumStaked, operationalAcc := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode || bytes.Compare(operationalAcc.Address[:], transaction.TxParam.Sender.GetBytes()) != 0 {
+		if _, sumStaked, operationalAcc := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode || !bytes.Equal(operationalAcc.Address[:], transaction.TxParam.Sender.GetBytes()) {
 			log.Println("not enough staked coins to be a node or not valid operational account")
 			return
 		}
-
-		h := common.GetHeight()
 
 		if nonceHeight < 1 || nonceHeight != h+1 {
 			//log.Print("nonce height invalid")
@@ -97,7 +99,7 @@ func OnMessage(addr string, m []byte) {
 			transactionsHashes = append(transactionsHashes, tx.GetHash())
 			txsBytes = append(txsBytes, hash)
 		}
-		merkleTrie, err := transactionsPool.BuildMerkleTree(h+1, txsBytes)
+		merkleTrie, err := transactionsPool.BuildMerkleTree(h+1, txsBytes, transactionsPool.GlobalMerkleTree.DB)
 		defer merkleTrie.Destroy()
 		if err != nil {
 			panic("cannot build merkleTrie")
@@ -126,7 +128,6 @@ func OnMessage(addr string, m []byte) {
 	case "bl": //block
 		common.BlockMutex.Lock()
 		defer common.BlockMutex.Unlock()
-		h := common.GetHeight()
 		lastBlock, err := blocks.LoadBlock(h)
 		if err != nil {
 			panic(err)
@@ -181,6 +182,11 @@ func OnMessage(addr string, m []byte) {
 					log.Println(err)
 				}
 				statistics.UpdateStatistics(newBlock, lastBlock)
+				stats, err := statistics.LoadStats()
+				if err != nil {
+					return
+				}
+				log.Println("TPS: ", stats.MainStats.Tps)
 			}
 		}
 	default:

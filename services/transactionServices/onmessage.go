@@ -3,13 +3,17 @@ package transactionServices
 import (
 	"github.com/quad-foundation/quad-node/common"
 	"github.com/quad-foundation/quad-node/message"
+	"github.com/quad-foundation/quad-node/tcpip"
 	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"github.com/quad-foundation/quad-node/transactionsPool"
 	"log"
 )
 
-func OnMessage(addr string, m []byte) {
-
+func OnMessage(addr [4]byte, m []byte) {
+	h := common.GetHeight()
+	if tcpip.IsIPBanned(addr, h, tcpip.TransactionTopic) {
+		return
+	}
 	//log.Println("New message nonce from:", addr)
 	msg := message.TransactionsMessage{}
 
@@ -37,6 +41,10 @@ func OnMessage(addr string, m []byte) {
 		msg = amsg.(message.TransactionsMessage)
 		txn, err := msg.GetTransactionsFromBytes()
 		if err != nil {
+			return
+		}
+		if transactionsPool.PoolsTx.NumberOfTransactions() > common.MaxTransactionInPool {
+			//log.Println("no more transactions can be accepted to the pool")
 			return
 		}
 		// need to check transactions

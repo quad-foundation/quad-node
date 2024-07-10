@@ -65,7 +65,7 @@ func (b *BaseHeader) GetBytes() []byte {
 
 func (bh *BaseHeader) Verify() bool {
 	signatureBlockHeaderMessage := bh.GetBytesWithoutSignature()
-	if bytes.Compare(signatureBlockHeaderMessage, bh.SignatureMessage) != 0 {
+	if !bytes.Equal(signatureBlockHeaderMessage, bh.SignatureMessage) {
 		return false
 	}
 	calcHash, err := common.CalcHashToByte(signatureBlockHeaderMessage)

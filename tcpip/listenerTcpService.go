@@ -3,19 +3,15 @@ package tcpip
 import (
 	"bytes"
 	"fmt"
-	"github.com/quad-foundation/quad-node/common"
 	"log"
 	"net"
-	"strings"
 	"sync"
 	"time"
 )
 
-var listnerMutex = &sync.Mutex{}
-
 func StartNewListener(sendChan <-chan []byte, topic [2]byte) {
 
-	conn, err := Listen("0.0.0.0", Ports[topic])
+	conn, err := Listen([4]byte{0, 0, 0, 0}, Ports[topic])
 	if err != nil {
 		panic(err)
 	}
@@ -27,7 +23,7 @@ func StartNewListener(sendChan <-chan []byte, topic [2]byte) {
 			tcpConn.Close()
 		}
 	}()
-	go LoopSend(sendChan, topic)
+	go LoopSend(sendChan, topic, 5)
 	for {
 		select {
 		case <-Quit:
@@ -41,54 +37,109 @@ func StartNewListener(sendChan <-chan []byte, topic [2]byte) {
 		}
 	}
 }
-func LoopSend(sendChan <-chan []byte, topic [2]byte) {
+
+func worker(sendChan <-chan []byte, topic [2]byte, wg *sync.WaitGroup) {
+	defer wg.Done()
+	var ipr [4]byte
+	for s := range sendChan {
+		if len(s) > 4 {
+			copy(ipr[:], s[:4])
+		} else {
+			log.Println("wrong message")
+			continue
+		}
+		PeersMutex.RLock()
+		if bytes.Equal(ipr[:], []byte{0, 0, 0, 0}) {
+			tmpConn := tcpConnections[topic]
+			for k, tcpConn0 := range tmpConn {
+				if !bytes.Equal(k[:], MyIP[:]) {
+					Send(tcpConn0, s[4:])
+				}
+			}
+		} else {
+			tcpConns := tcpConnections[topic]
+			tcpConn, ok := tcpConns[ipr]
+			if ok {
+				Send(tcpConn, s[4:])
+			} else {
+				// Handle no connection case
+			}
+		}
+		PeersMutex.RUnlock()
+	}
+}
+func LoopSend(sendChan <-chan []byte, topic [2]byte, numWorkers int) {
+	var wg sync.WaitGroup
+	// Start worker goroutines
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go worker(sendChan, topic, &wg)
+	}
 	for {
 		select {
-		case s := <-sendChan:
-			l := common.GetInt16FromByte(s[:2])
-			if len(s) < int(l)+2 {
-				log.Println("wrong message send")
-				continue
-			}
-			ipr := string(s[2 : 2+l])
-			if ipr == "0.0.0.0" {
-				PeersMutex.RLock()
-				tmpConn := tcpConnections[topic]
-				PeersMutex.RUnlock()
-				for k, tcpConn0 := range tmpConn {
-					if k != MyIP {
-						//log.Println("send to ipr", k)
-						Send(tcpConn0, s[2+l:])
-					}
-				}
-			} else {
-				PeersMutex.RLock()
-				tcpConns := tcpConnections[topic]
-				tcpConn, ok := tcpConns[ipr]
-				PeersMutex.RUnlock()
-				if ok {
-					//log.Println("send to ip", ipr)
-					Send(tcpConn, s[2+l:])
-				} else {
-					fmt.Println("no connection to given ip", ipr, topic)
-				}
-			}
 		case b := <-waitChan:
 			if bytes.Equal(b, topic[:]) {
 				time.Sleep(time.Millisecond * 10)
 			}
 		case <-Quit:
+			//close(sendChan)
+			wg.Wait()
 			return
 		default:
 		}
 	}
 }
-func StartNewConnection(ip string, receiveChan chan []byte, topic [2]byte) {
+
+//func LoopSend(sendChan <-chan []byte, topic [2]byte) {
+//	var ipr [4]byte
+//	for {
+//		select {
+//		case s := <-sendChan:
+//			if len(s) > 4 {
+//				copy(ipr[:], s[:4])
+//			} else {
+//				log.Println("wrong message")
+//				continue
+//			}
+//			PeersMutex.RLock()
+//			if bytes.Equal(ipr[:], []byte{0, 0, 0, 0}) {
+//
+//				tmpConn := tcpConnections[topic]
+//				for k, tcpConn0 := range tmpConn {
+//					if !bytes.Equal(k[:], MyIP[:]) {
+//						//log.Println("send to ipr", k)
+//						Send(tcpConn0, s[4:])
+//					}
+//				}
+//			} else {
+//				tcpConns := tcpConnections[topic]
+//				tcpConn, ok := tcpConns[ipr]
+//				if ok {
+//					//log.Println("send to ip", ipr)
+//					Send(tcpConn, s[4:])
+//				} else {
+//					//fmt.Println("no connection to given ip", ipr, topic)
+//					//BanIP(ipr, topic)
+//				}
+//
+//			}
+//			PeersMutex.RUnlock()
+//		case b := <-waitChan:
+//			if bytes.Equal(b, topic[:]) {
+//				time.Sleep(time.Millisecond * 10)
+//			}
+//		case <-Quit:
+//			return
+//		default:
+//		}
+//	}
+//}
+
+func StartNewConnection(ip [4]byte, receiveChan chan []byte, topic [2]byte) {
 	var tcpConn *net.TCPConn
-	a := strings.Split(ip, ":")
-	ip = a[0]
-	ipport := fmt.Sprint(ip, ":", Ports[topic])
-	if ip == "127.0.0.1" {
+
+	ipport := fmt.Sprintf("%d.%d.%d.%d:%d", ip[0], ip[1], ip[2], ip[3], Ports[topic])
+	if bytes.Equal(ip[:], []byte{127, 0, 0, 1}) {
 		ipport = fmt.Sprint(":", Ports[topic])
 	}
 	tcpAddr, err := net.ResolveTCPAddr("tcp", ipport)
@@ -96,10 +147,7 @@ func StartNewConnection(ip string, receiveChan chan []byte, topic [2]byte) {
 		log.Println("cannot create tcp address", err)
 		return
 	}
-	bmyip := []byte(ip)
-	lmyip := int16(len(bmyip))
-	blmyip := common.GetByteInt16(lmyip)
-	bmyip = append(blmyip, bmyip...)
+
 	tcpConn, err = net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
 		fmt.Println("connection to ip was unsuccessful", ip, topic, err)
@@ -137,7 +185,7 @@ func StartNewConnection(ip string, receiveChan chan []byte, topic [2]byte) {
 			if r == nil {
 				continue
 			}
-			if string(r) == "<-CLS->" {
+			if bytes.Equal(r, []byte("<-CLS->")) {
 				if reconectionTries > 50 {
 					CloseAndRemoveConnection(tcpConn)
 					fmt.Println("Closing connection (receive)", ip)
@@ -152,19 +200,19 @@ func StartNewConnection(ip string, receiveChan chan []byte, topic [2]byte) {
 				continue
 			}
 
-			if len(r) == 7 && string(r) == "QUITFOR" {
+			if len(r) == 7 && bytes.Equal(r, []byte("QUITFOR")) {
 				receiveChan <- []byte("EXIT")
 				CloseAndRemoveConnection(tcpConn)
 				fmt.Println("Closing connection (receive)", ip)
 				return
 			}
-			if len(r) == 4 && string(r) == "WAIT" {
+			if len(r) == 4 && bytes.Equal(r, []byte("WAIT")) {
 				waitChan <- topic[:]
 				continue
 			}
 			r = append(lastBytes, r...)
 			rs := bytes.Split(r, []byte("<-END->"))
-			if bytes.Compare(r[len(r)-7:], []byte("<-END->")) != 0 {
+			if !bytes.Equal(r[len(r)-7:], []byte("<-END->")) {
 				lastBytes = rs[len(rs)-1]
 				lastBytesNum = len(rs) - 1
 			} else {
@@ -174,7 +222,7 @@ func StartNewConnection(ip string, receiveChan chan []byte, topic [2]byte) {
 			//log.Println("receive from ip", ip, topic)
 			for _, e := range rs[:lastBytesNum] {
 				if len(e) > 0 {
-					receiveChan <- append(bmyip, e...)
+					receiveChan <- append(ip[:], e...)
 				}
 			}
 		}
@@ -186,13 +234,15 @@ func CloseAndRemoveConnection(tcpConn *net.TCPConn) {
 	}
 	PeersMutex.Lock()
 	defer PeersMutex.Unlock()
+	topicipBytes := [6]byte{}
 	for topic, c := range tcpConnections {
 		for k, v := range c {
 			if tcpConn.RemoteAddr().String() == v.RemoteAddr().String() {
 				fmt.Println("Closing connection (send)", topic, k)
 				tcpConnections[topic][k].Close()
+				copy(topicipBytes[:], append(topic[:], k[:]...))
 				delete(tcpConnections[topic], k)
-				delete(peersConnected, string(topic[:])+k)
+				delete(peersConnected, topicipBytes)
 			}
 		}
 	}

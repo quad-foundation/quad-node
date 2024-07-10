@@ -9,6 +9,8 @@ import (
 )
 
 func AdjustShiftInPastInReset(height int64) {
+	common.ShiftToPastMutex.Lock()
+	defer common.ShiftToPastMutex.Unlock()
 	h := common.GetHeight()
 	if height-h <= 0 {
 		common.ShiftToPastInReset = 1

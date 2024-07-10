@@ -8,6 +8,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/stretchr/testify v1.8.4
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c
 	github.com/therecipe/qt v0.0.0-20200904063919-c0c124a5770d
 	github.com/wonabru/bip39 v0.0.0-20220210115453-d4b48138ae51
 	golang.org/x/crypto v0.22.0

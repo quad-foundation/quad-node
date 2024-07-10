@@ -13,6 +13,7 @@ import (
 	"sync"
 )
 
+// uncomment to use levelDB
 type BlockchainDB struct {
 	ldb   *leveldb.DB
 	mutex sync.RWMutex
@@ -67,10 +68,7 @@ func (db *BlockchainDB) Put(k []byte, v []byte) error {
 	defer db.mutex.Unlock()
 	// Put a key-value pair into the database
 	err := db.ldb.Put(k, v, nil)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (db *BlockchainDB) LoadAllKeys(prefix []byte) ([][]byte, error) {

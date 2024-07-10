@@ -1,6 +1,7 @@
 package qtwidgets
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/common"
@@ -19,7 +20,7 @@ func UpdateAccountStats() {
 	clientrpc.InRPC <- []byte("STAT")
 	var reply []byte
 	reply = <-clientrpc.OutRPC
-	if string(reply) == "Timeout" {
+	if bytes.Equal(reply, []byte("Timeout")) {
 		return
 	}
 	st := &statistics.MainStats{}
@@ -48,7 +49,7 @@ func UpdateAccountStats() {
 	var acc account.Account
 
 	re = <-clientrpc.OutRPC
-	if string(reply) == "Timeout" {
+	if bytes.Equal(reply, []byte("Timeout")) {
 		return
 	}
 	err = acc.Unmarshal(re)
@@ -66,7 +67,7 @@ func UpdateAccountStats() {
 	uncRewards := 0.0
 
 	var stakeAccs [256]account.StakingAccount
-	for i := 1; i < 4; i++ { // should be 256
+	for i := 1; i < 5; i++ { // should be 256
 		inb = append([]byte("STAK"), MainWallet.Address.GetBytes()...)
 		inb = append(inb, byte(i))
 		clientrpc.InRPC <- inb

@@ -71,10 +71,15 @@ func RoundToken(v float64, decimal int) float64 {
 	return math.Round(v*math.Pow10(decimal)) * math.Pow10(-decimal)
 }
 
-func CalcNewDEXPrice(myTokens, myCoins, poolAmountTokens, poolAmountCoins float64) float64 {
+func CalcNewDEXPrice(myTokens, poolAmountTokens, poolAmountCoins float64) float64 {
+	pricePool := 0.0
+
+	if poolAmountTokens > 0 {
+		pricePool = poolAmountCoins / poolAmountTokens
+	}
 	price := 0.0
-	if poolAmountTokens+myTokens > 0 {
-		price = (poolAmountCoins + myCoins) / (poolAmountTokens + myTokens)
+	if pricePool > 0 && (poolAmountTokens+2*myTokens) > 0 {
+		price = poolAmountCoins / (poolAmountTokens + 2*myTokens)
 	}
 	return price
 }

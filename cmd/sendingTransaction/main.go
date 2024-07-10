@@ -28,7 +28,7 @@ func main() {
 	mainWallet := wallet.GetActiveWallet()
 
 	go sendTransactions(mainWallet)
-	chanPeer := make(chan string)
+	chanPeer := make(chan []byte)
 
 	<-chanPeer
 }
@@ -99,7 +99,7 @@ func sendTransactions(w *wallet.Wallet) {
 	count := int64(0)
 	start := common.GetCurrentTimeStampInSecond()
 
-	for range time.Tick(time.Millisecond * 200) {
+	for range time.Tick(time.Microsecond) {
 		var txs []transactionsDefinition.Transaction
 		for i := 0; i < batchSize; i++ {
 			tx := SampleTransaction(w)

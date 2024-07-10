@@ -42,7 +42,8 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 	}
 
 	accDex := account.GetDexAccountByAddressBytes(tokenAddress.GetBytes())
-	price := float64(0)
+	poolPrice := float64(0)
+	price := 0.0
 	var amountCoinInt64, amountTokenInt64 int64
 	balanceToken, err := GetBalance(tx.ContractAddress, sender)
 	if err != nil {
@@ -63,8 +64,9 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 	amountCoinFloat := account.Int64toFloat64ByDecimals(tx.TxData.Amount, common.Decimals)
 
 	if coinPoolAmount > 0 && tokenPoolAmount > 0 {
-		price = common.RoundCoin(tokenPoolAmount / coinPoolAmount)
+		poolPrice = common.RoundToken(coinPoolAmount/tokenPoolAmount, int(common.Decimals+ti.Decimals))
 	}
+
 	// dex account where all tokens liquidity are stored
 	dex := common.GetDexAccountAddress()
 
@@ -72,29 +74,37 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 	case 2: // add liquidity
 		amountCoinInt64 = int64(-amountCoinFloat * math.Pow10(int(common.Decimals)))
 		amountTokenInt64 = int64(-amountTokenFloat * math.Pow10(int(ti.Decimals)))
+		price = common.RoundToken(amountCoinFloat/amountTokenFloat, int(common.Decimals+ti.Decimals))
 	case 5: // withdraw token
-		if price > 0 {
-			amount := common.RoundCoin(1.0 / price * amountTokenFloat)
+		if poolPrice > 0 {
+			price = poolPrice
+			amount := common.RoundCoin(poolPrice * amountTokenFloat)
 			amountCoinInt64 = int64(amount * math.Pow10(int(common.Decimals)))
 			amountTokenInt64 = int64(amountTokenFloat * math.Pow10(int(ti.Decimals)))
 		}
 	case 6: // withdraw Coin
-		if price > 0 {
-			amount := common.RoundToken(price*amountCoinFloat, int(ti.Decimals))
+		if poolPrice > 0 {
+			price = poolPrice
+			amount := common.RoundToken(1.0/poolPrice*amountCoinFloat, int(ti.Decimals))
 			amountTokenInt64 = int64(amount * math.Pow10(int(ti.Decimals)))
 			amountCoinInt64 = int64(amountCoinFloat * math.Pow10(int(common.Decimals)))
 		}
 	case 3: //buy
-		price = common.RoundCoin((tokenPoolAmount - amountTokenFloat) / coinPoolAmount)
+		if coinPoolAmount > 0 && tokenPoolAmount-2*amountTokenFloat > 0 {
+			price = common.RoundToken(coinPoolAmount/(tokenPoolAmount-2*amountTokenFloat), int(common.Decimals+ti.Decimals))
+		}
 		if price > 0 {
-			amount := common.RoundCoin(-1.0 / price * amountTokenFloat)
+			amount := common.RoundCoin(-price * amountTokenFloat)
 			amountCoinInt64 = int64(amount * math.Pow10(int(common.Decimals)))
 			amountTokenInt64 = int64(amountTokenFloat * math.Pow10(int(ti.Decimals)))
 		}
 	case 4: //sell
-		price = common.RoundCoin((tokenPoolAmount + amountTokenFloat) / coinPoolAmount)
+		amountTokenFloat *= -1
+		if coinPoolAmount > 0 && tokenPoolAmount-2*amountTokenFloat > 0 {
+			price = common.RoundToken(coinPoolAmount/(tokenPoolAmount-2*amountTokenFloat), int(common.Decimals+ti.Decimals))
+		}
 		if price > 0 {
-			amount := common.RoundCoin(-1.0 / price * amountTokenFloat)
+			amount := common.RoundCoin(-price * amountTokenFloat)
 			amountCoinInt64 = int64(amount * math.Pow10(int(common.Decimals)))
 			amountTokenInt64 = int64(amountTokenFloat * math.Pow10(int(ti.Decimals)))
 		}
@@ -103,7 +113,7 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 	}
 
 	senderAccount := account.GetAccountByAddressBytes(tx.TxParam.Sender.GetBytes())
-	if bytes.Compare(senderAccount.Address[:], tx.TxParam.Sender.GetBytes()) != 0 {
+	if !bytes.Equal(senderAccount.Address[:], tx.TxParam.Sender.GetBytes()) {
 		return nil, common.Address{}, 0, 0, 0, fmt.Errorf("no account found in dex transfer")
 	}
 
@@ -228,8 +238,6 @@ func EvaluateSCForBlock(bl Block) (bool, map[[common.HashLength]byte]string, map
 			accDex := account.GetDexAccountByAddressBytes(t.ContractAddress.GetBytes())
 
 			accDex.TokenPrice = int64(price * math.Pow10(int(common.Decimals+ti.Decimals)))
-			accDex.TokenPool += -tokenAmount
-			accDex.CoinPool += -coinAmount
 
 			if operation == 2 || operation > 4 { // no sell or buy
 				balances := accDex.Balances
@@ -243,8 +251,19 @@ func EvaluateSCForBlock(bl Block) (bool, map[[common.HashLength]byte]string, map
 					TokenBalance: tokenAmountTmp,
 				}
 				accDex.Balances = balances
-			}
+			} else {
+				coinPercentTmp := float64(-coinAmount) / float64(accDex.CoinPool)
+				tokenPercentTmp := float64(-tokenAmount) / float64(accDex.TokenPool)
 
+				for addr, acc := range accDex.Balances {
+					balances := accDex.Balances[addr]
+					balances.TokenBalance += int64(common.RoundToken(tokenPercentTmp*float64(acc.TokenBalance), int(ti.Decimals)))
+					balances.CoinBalance += int64(common.RoundToken(coinPercentTmp*float64(acc.CoinBalance), int(common.Decimals)))
+					accDex.Balances[addr] = balances
+				}
+			}
+			accDex.TokenPool += -tokenAmount
+			accDex.CoinPool += -coinAmount
 			account.SetDexAccountByAddressBytes(t.ContractAddress.GetBytes(), accDex)
 
 			continue

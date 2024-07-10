@@ -17,7 +17,7 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 		return nil, fmt.Errorf("supply is too high")
 	}
 
-	if bytes.Compare(lastBlock.BlockHash.GetBytes(), newBlock.GetHeader().PreviousHash.GetBytes()) != 0 {
+	if !bytes.Equal(lastBlock.BlockHash.GetBytes(), newBlock.GetHeader().PreviousHash.GetBytes()) {
 		log.Println("lastBlock.BlockHash", lastBlock.BlockHash.GetHex(), newBlock.GetHeader().PreviousHash.GetHex())
 		return nil, fmt.Errorf("last block hash not match to one stored in new block")
 	}
@@ -29,7 +29,7 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 	if err != nil {
 		return nil, err
 	}
-	if bytes.Compare(hash.GetBytes(), newBlock.BlockHash.GetBytes()) != 0 {
+	if !bytes.Equal(hash.GetBytes(), newBlock.BlockHash.GetBytes()) {
 		return nil, fmt.Errorf("wrong hash of block")
 	}
 	rootMerkleTrie := newBlock.GetHeader().RootMerkleTree
@@ -39,11 +39,11 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 		hash := tx.GetBytes()
 		txsBytes = append(txsBytes, hash)
 	}
-	merkleTrie, err := transactionsPool.BuildMerkleTree(blockHeight, txsBytes)
+	merkleTrie, err := transactionsPool.BuildMerkleTree(blockHeight, txsBytes, transactionsPool.GlobalMerkleTree.DB)
 	if err != nil {
 		return nil, err
 	}
-	if bytes.Compare(merkleTrie.GetRootHash(), rootMerkleTrie.GetBytes()) != 0 {
+	if !bytes.Equal(merkleTrie.GetRootHash(), rootMerkleTrie.GetBytes()) {
 		return nil, fmt.Errorf("root merkleTrie hash check fails")
 	}
 	return merkleTrie, nil
@@ -102,12 +102,12 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, int64, error) {
 		n, err := account.IntDelegatedAccountFromAddress(recipientAddress)
 		if err == nil && n < 512 { // delegated account
 			stakingAcc := account.GetStakingAccountByAddressBytes(address.GetBytes(), n%256)
-			if bytes.Compare(stakingAcc.Address[:], address.GetBytes()) != 0 {
+			if !bytes.Equal(stakingAcc.Address[:], address.GetBytes()) {
 				log.Println("no account found in check block transfer")
 				copy(stakingAcc.Address[:], address.GetBytes())
 				copy(stakingAcc.DelegatedAccount[:], recipientAddress.GetBytes())
 			}
-			if IsInKeysOfMapStakingAccounts(stakingAccounts, stakingAcc.Address) {
+			if _, ok := stakingAccounts[stakingAcc.Address]; ok {
 				stakingAcc = stakingAccounts[stakingAcc.Address]
 			}
 			stakingAcc.StakedBalance += amount
@@ -122,13 +122,13 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, int64, error) {
 			}
 		}
 		acc := account.GetAccountByAddressBytes(address.GetBytes())
-		if bytes.Compare(acc.Address[:], address.GetBytes()) != 0 {
+		if !bytes.Equal(acc.Address[:], address.GetBytes()) {
 			// remove bad transaction from pool
 			transactionsPool.PoolsTx.RemoveTransactionByHash(poolTx.Hash.GetBytes())
 			transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionPoolHashesDBPrefix[:], poolTx.Hash.GetBytes())
 			return 0, 0, fmt.Errorf("no account found in check block transafer")
 		}
-		if IsInKeysOfMapAccounts(accounts, acc.Address) {
+		if _, ok := accounts[acc.Address]; ok {
 			acc = accounts[acc.Address]
 			acc.Balance -= total_amount
 			accounts[acc.Address] = acc
@@ -151,32 +151,6 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, int64, error) {
 	}
 
 	return reward, totalFee, nil
-}
-
-func ExtractKeysFromMapAccounts(m map[[common.AddressLength]byte]account.Account) [][common.AddressLength]byte {
-	keys := [][common.AddressLength]byte{}
-	for k, _ := range m {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-func ExtractKeysFromMapStakingAccounts(m map[[common.AddressLength]byte]account.StakingAccount) [][common.AddressLength]byte {
-	keys := [][common.AddressLength]byte{}
-	for k, _ := range m {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-func IsInKeysOfMapAccounts(m map[[common.AddressLength]byte]account.Account, searchKey [common.AddressLength]byte) bool {
-	keys := ExtractKeysFromMapAccounts(m)
-	return common.ContainsKeyInMap(keys, searchKey)
-}
-
-func IsInKeysOfMapStakingAccounts(m map[[common.AddressLength]byte]account.StakingAccount, searchKey [common.AddressLength]byte) bool {
-	keys := ExtractKeysFromMapStakingAccounts(m)
-	return common.ContainsKeyInMap(keys, searchKey)
 }
 
 func checkTransactionInDBAndInMarkleTrie(hash []byte) error {
@@ -319,7 +293,7 @@ func CheckBlockAndTransferFunds(newBlock *Block, lastBlock Block, merkleTrie *tr
 		return fmt.Errorf("wrong delegated account")
 	}
 	opAccBlockAddr := newBlock.GetHeader().OperatorAccount
-	if _, sumStaked, opAcc := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode || bytes.Compare(opAcc.Address[:], opAccBlockAddr.GetBytes()) != 0 {
+	if _, sumStaked, opAcc := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode || !bytes.Equal(opAcc.Address[:], opAccBlockAddr.GetBytes()) {
 		return fmt.Errorf("not enough staked coins to be a node or not valid operetional account")
 	}
 
@@ -344,6 +318,11 @@ func CheckBlockAndTransferFunds(newBlock *Block, lastBlock Block, merkleTrie *tr
 	if err != nil {
 		return err
 	}
+	head := newBlock.GetHeader()
+	if head.Verify() == false {
+		return fmt.Errorf("header fails to verify")
+	}
+
 	err = merkleTrie.StoreTree(newBlock.GetHeader().Height)
 	if err != nil {
 		return err

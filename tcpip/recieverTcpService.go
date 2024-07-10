@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -15,12 +16,12 @@ import (
 )
 
 var (
-	peersConnected   = map[string]string{}
-	oldPeers         = map[string]string{}
-	CheckCount       = 0
+	peersConnected   = map[[6]byte][2]byte{}
+	oldPeers         = map[[6]byte][2]byte{}
+	PeersCount       = 0
 	receiveMutex     = &sync.Mutex{}
 	waitChan         = make(chan []byte)
-	tcpConnections   = make(map[[2]byte]map[string]*net.TCPConn)
+	tcpConnections   = make(map[[2]byte]map[[4]byte]*net.TCPConn)
 	PeersMutex       = &sync.RWMutex{}
 	Quit             chan os.Signal
 	TransactionTopic = [2]byte{'T', 'T'}
@@ -29,6 +30,7 @@ var (
 	SyncTopic        = [2]byte{'B', 'B'}
 	RPCTopic         = [2]byte{'R', 'P'}
 )
+
 var Ports = map[[2]byte]int{
 	TransactionTopic: 9091,
 	NonceTopic:       8091,
@@ -36,28 +38,29 @@ var Ports = map[[2]byte]int{
 	SyncTopic:        6091,
 	RPCTopic:         9009,
 }
-var MyIP string
+
+var MyIP [4]byte
 
 func init() {
 	Quit = make(chan os.Signal)
 	signal.Notify(Quit, syscall.SIGTERM, syscall.SIGINT, os.Interrupt)
 	MyIP = getInternalIp()
 	for k := range Ports {
-		tcpConnections[k] = map[string]*net.TCPConn{}
+		tcpConnections[k] = map[[4]byte]*net.TCPConn{}
 	}
 }
 
-func getInternalIp() string {
+func getInternalIp() [4]byte {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		log.Println("Can not obtain net interface")
-		return ""
+		return [4]byte{}
 	}
 	for _, i := range ifaces {
 		addrs, err := i.Addrs()
 		if err != nil {
 			log.Println("Can not get net addresses")
-			return ""
+			return [4]byte{}
 		}
 		for _, addr := range addrs {
 			var ip net.IP
@@ -71,14 +74,14 @@ func getInternalIp() string {
 				continue
 			}
 			if ip.IsPrivate() {
-				return ip.String()
+				return [4]byte(ip.To4())
 			}
 		}
 	}
-	return ""
+	return [4]byte{}
 }
-func Listen(ip string, port int) (*net.TCPListener, error) {
-	ipport := fmt.Sprint(ip, ":", port)
+func Listen(ip [4]byte, port int) (*net.TCPListener, error) {
+	ipport := fmt.Sprintf("%d.%d.%d.%d:%d", ip[0], ip[1], ip[2], ip[3], port)
 	protocol := "tcp"
 	addr, err := net.ResolveTCPAddr(protocol, ipport)
 	if err != nil {
@@ -115,7 +118,7 @@ func Send(conn *net.TCPConn, message []byte) {
 
 // Receive reads data from the connection and handles errors
 func Receive(topic [2]byte, conn *net.TCPConn) []byte {
-	const bufSize = 1048576
+	const bufSize = 9192 //1048576
 
 	if conn == nil {
 		return []byte("<-CLS->")
@@ -125,7 +128,8 @@ func Receive(topic [2]byte, conn *net.TCPConn) []byte {
 	n, err := conn.Read(buf)
 
 	if err != nil {
-		handleConnectionError(err, topic, conn)
+		//handleConnectionError(err, topic, conn)
+		conn.Close()
 		return []byte("<-CLS->")
 	}
 
@@ -150,44 +154,97 @@ func handleConnectionError(err error, topic [2]byte, conn *net.TCPConn) {
 func RegisterPeer(topic [2]byte, tcpConn *net.TCPConn) {
 	raddr := tcpConn.RemoteAddr().String()
 	ra := strings.Split(raddr, ":")
-	addrRemote := ra[0]
-	topicip := string(topic[:]) + addrRemote
-
+	ips := strings.Split(ra[0], ".")
+	var ip [4]byte
+	for i := 0; i < 4; i++ {
+		num, err := strconv.Atoi(ips[i])
+		if err != nil {
+			fmt.Println("Invalid IP address segment:", ips[i])
+			return
+		}
+		ip[i] = byte(num)
+	}
+	var topicipBytes [6]byte
+	var addrRemoteBytes [4]byte
+	copy(topicipBytes[:], append(topic[:], ip[:]...))
+	copy(addrRemoteBytes[:], ip[:])
 	PeersMutex.Lock()
 	defer PeersMutex.Unlock()
-
-	if _, ok := peersConnected[topicip]; !ok {
-		log.Println("New connection from address", addrRemote, "on topic", topic)
+	if _, ok := peersConnected[topicipBytes]; !ok {
+		log.Println("New connection from address", ra[0], "on topic", topic)
 		// Initialize the map for the topic if it doesn't exist
 		if _, ok := tcpConnections[topic]; !ok {
-			tcpConnections[topic] = make(map[string]*net.TCPConn)
+			tcpConnections[topic] = make(map[[4]byte]*net.TCPConn)
 		}
-		tcpConnections[topic][addrRemote] = tcpConn
-		peersConnected[topicip] = string(topic[:])
+		tcpConnections[topic][addrRemoteBytes] = tcpConn
+		peersConnected[topicipBytes] = topic
 	}
 }
 
-func GetPeersConnected() map[string]string {
+func GetPeersConnected(topic [2]byte) map[[6]byte][2]byte {
 	PeersMutex.RLock()
 	defer PeersMutex.RUnlock()
 
-	copyOfPeers := make(map[string]string, len(peersConnected))
+	copyOfPeers := make(map[[6]byte][2]byte, len(peersConnected))
 	for key, value := range peersConnected {
-		copyOfPeers[key] = value
+		if value == topic {
+			copyOfPeers[key] = value
+		}
 	}
 
 	return copyOfPeers
 }
 
-func LookUpForNewPeersToConnect(chanPeer chan string) {
+func GetIPsConnected() [][]byte {
+	uniqueIPs := make(map[[4]byte]struct{})
+	ipb := [4]byte{}
+	for key, value := range peersConnected {
+		if value == [2]byte{'N', 'N'} {
+			copy(ipb[:], key[2:])
+			uniqueIPs[ipb] = struct{}{}
+		}
+	}
+	var ips [][]byte
+	for ip := range uniqueIPs {
+		ips = append(ips, ip[:])
+	}
+	return ips
+}
+
+//func GetIPsfrombytes(peers [][4]byte) []string {
+//	var ips []string
+//	for _, ipb := range peers {
+//		ip := fmt.Sprintf("%d.%d.%d.%d", ipb[0], ipb[1], ipb[2], ipb[3])
+//		ips = append(ips, ip)
+//	}
+//	return ips
+//}
+
+func AddNewPeer(peer [4]byte, topic [2]byte) {
+	PeersMutex.Lock()
+	defer PeersMutex.Unlock()
+
+	topicip := [6]byte{}
+	copy(topicip[:], append(topic[:], peer[:]...))
+	peersConnected[topicip] = topic
+}
+
+func GetPeersCount() int {
+	PeersMutex.RLock()
+	defer PeersMutex.RUnlock()
+	return PeersCount
+}
+
+func LookUpForNewPeersToConnect(chanPeer chan []byte) {
 	for {
-		PeersMutex.RLock()
+		PeersMutex.Lock()
 		for topicip, topic := range peersConnected {
 			_, ok := oldPeers[topicip]
 			if ok == false {
 				log.Println("Found new peer with ip", topicip)
 				oldPeers[topicip] = topic
-				chanPeer <- topicip
+				chanPeer <- topicip[:]
+				PeersCount = len(GetIPsConnected())
 			}
 		}
 		for topicip := range oldPeers {
@@ -197,7 +254,7 @@ func LookUpForNewPeersToConnect(chanPeer chan string) {
 				delete(oldPeers, topicip)
 			}
 		}
-		PeersMutex.RUnlock()
+		PeersMutex.Unlock()
 		time.Sleep(time.Second)
 	}
 }

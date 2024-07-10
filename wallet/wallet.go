@@ -164,7 +164,7 @@ func (w *Wallet) GetMnemonicWords() (string, error) {
 	mnemonic, _ := bip39.NewMnemonic(w.GetSecretKey().GetBytes())
 
 	secretKey, _ := bip39.MnemonicToByteArray(mnemonic)
-	if bytes.Compare(secretKey[:w.secretKey.GetLength()], w.secretKey.GetBytes()) != 0 {
+	if !bytes.Equal(secretKey[:w.secretKey.GetLength()], w.secretKey.GetBytes()) {
 		log.Println("Can not restore secret key from mnemonic")
 		return "", fmt.Errorf("Can not restore secret key from mnemonic")
 	}

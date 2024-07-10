@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/quad-foundation/quad-node/crypto/blake2b"
 	"log"
@@ -37,15 +38,22 @@ func GetDexAccountAddress() Address {
 	return a
 }
 
-func CheckDelegatedAccountAddress(daddr Address) bool {
-
-	n := GetInt16FromByte(daddr.GetBytes())
-	return n > 0 && n < 256
+func GetIDFromDelegatedAccountAddress(a Address) (int16, error) {
+	if a.GetLength() < 2 {
+		return 0, errors.New("address length is too short")
+	}
+	data := a.GetBytes()
+	id := binary.BigEndian.Uint16(data[:2])
+	return int16(id), nil
 }
 
 func NumericalDelegatedAccountAddress(daddr Address) int16 {
-	if CheckDelegatedAccountAddress(daddr) {
-		n := GetInt16FromByte(daddr.GetBytes())
+
+	n, err := GetIDFromDelegatedAccountAddress(daddr)
+	if err != nil {
+		return 0
+	}
+	if n > 0 && n < 256 {
 		return n
 	}
 	return 0
@@ -107,16 +115,6 @@ func CalcHashFromBytes(b []byte) (Hash, error) {
 	return h, nil
 }
 
-func ExtractKeys(m map[[2]byte][]byte) []string {
-	keys := make([]string, 0, len(m))
-	kb := make([]byte, 2)
-	for k := range m {
-		copy(kb, k[:])
-		keys = append(keys, string(kb))
-	}
-	return keys
-}
-
 func ContainsKey(keys []string, searchKey string) bool {
 	for _, key := range keys {
 		if key == searchKey {
@@ -124,42 +122,6 @@ func ContainsKey(keys []string, searchKey string) bool {
 		}
 	}
 	return false
-}
-
-func ContainsKeyOfList(keys [][2]byte, searchKey [2]byte) bool {
-	for _, key := range keys {
-		if key == searchKey {
-			return true
-		}
-	}
-	return false
-}
-
-func ContainsKeyInMap(keys [][AddressLength]byte, searchKey [AddressLength]byte) bool {
-	for _, key := range keys {
-		if key == searchKey {
-			return true
-		}
-	}
-	return false
-}
-
-func ExtractKeysOfList(m map[[2]byte][][]byte) [][2]byte {
-	keys := [][2]byte{}
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-func IsInKeys2Byte(m map[[2]byte][]byte, searchKey string) bool {
-	keys := ExtractKeys(m)
-	return ContainsKey(keys, searchKey)
-}
-
-func IsInKeysOfList(m map[[2]byte][][]byte, searchKey [2]byte) bool {
-	keys := ExtractKeysOfList(m)
-	return ContainsKeyOfList(keys, searchKey)
 }
 
 func BytesToLenAndBytes(b []byte) []byte {

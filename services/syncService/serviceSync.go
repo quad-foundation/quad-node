@@ -1,6 +1,7 @@
 package syncServices
 
 import (
+	"bytes"
 	"github.com/quad-foundation/quad-node/blocks"
 	"github.com/quad-foundation/quad-node/common"
 	"github.com/quad-foundation/quad-node/message"
@@ -12,7 +13,7 @@ import (
 
 func InitSyncService() {
 	services.SendMutexSync.Lock()
-	services.SendChanSync = make(chan []byte)
+	services.SendChanSync = make(chan []byte, 100)
 
 	services.SendMutexSync.Unlock()
 	startPublishingSyncMsg()
@@ -37,6 +38,10 @@ func generateSyncMsgHeight() []byte {
 		return []byte("")
 	}
 	n.TransactionsBytes[[2]byte{'L', 'B'}] = [][]byte{lastBlockHash}
+	tcpip.PeersMutex.RLock()
+	peers := tcpip.GetIPsConnected()
+	tcpip.PeersMutex.RUnlock()
+	n.TransactionsBytes[[2]byte{'P', 'P'}] = peers
 	nb := n.GetBytes()
 	return nb
 }
@@ -111,21 +116,18 @@ func generateSyncMsgSendHeaders(bHeight int64, height int64) []byte {
 	return nb
 }
 
-func SendHeaders(addr string, bHeight int64, height int64) {
+func SendHeaders(addr [4]byte, bHeight int64, height int64) {
 	n := generateSyncMsgSendHeaders(bHeight, height)
 	Send(addr, n)
 }
 
-func SendGetHeaders(addr string, height int64) {
+func SendGetHeaders(addr [4]byte, height int64) {
 	n := generateSyncMsgGetHeaders(height)
 	Send(addr, n)
 }
 
-func Send(addr string, nb []byte) {
-	bip := []byte(addr)
-	lip := common.GetByteInt16(int16(len(bip)))
-	lip = append(lip, bip...)
-	nb = append(lip, nb...)
+func Send(addr [4]byte, nb []byte) {
+	nb = append(addr[:], nb...)
 	services.SendMutexSync.Lock()
 	services.SendChanSync <- nb
 	services.SendMutexSync.Unlock()
@@ -134,7 +136,7 @@ func Send(addr string, nb []byte) {
 func sendSyncMsgInLoop() {
 	for range time.Tick(time.Second * 5) {
 		n := generateSyncMsgHeight()
-		Send("0.0.0.0", n)
+		Send([4]byte{0, 0, 0, 0}, n)
 	}
 }
 
@@ -143,33 +145,29 @@ func startPublishingSyncMsg() {
 	go tcpip.StartNewListener(services.SendChanSync, tcpip.SyncTopic)
 }
 
-func StartSubscribingSyncMsg(ip string) {
-	recvChan := make(chan []byte)
-
+func StartSubscribingSyncMsg(ip [4]byte) {
+	recvChan := make(chan []byte, 10) // Use a buffered channel
+	var ipr [4]byte
+	quit := false
 	go tcpip.StartNewConnection(ip, recvChan, tcpip.SyncTopic)
 	log.Println("Enter connection receiving loop (sync msg)", ip)
-Q:
-
-	for {
+	for !quit {
 		select {
 		case s := <-recvChan:
-			if len(s) == 4 && string(s) == "EXIT" {
-				break Q
+			if len(s) == 4 && bytes.Equal(s, []byte("EXIT")) {
+				quit = true
+				break
 			}
-			if len(s) > 2 {
-				l := common.GetInt16FromByte(s[:2])
-				if len(s) > 2+int(l) {
-					ipr := string(s[2 : 2+l])
-
-					OnMessage(ipr, s[2+l:])
-				}
+			if len(s) > 4 {
+				copy(ipr[:], s[:4])
+				OnMessage(ipr, s[4:])
 			}
-
 		case <-tcpip.Quit:
-			break Q
+			quit = true
 		default:
+			// Optional: Add a small sleep to prevent busy-waiting
+			time.Sleep(time.Millisecond)
 		}
-
 	}
 	log.Println("Exit connection receiving loop (sync msg)", ip)
 }
