@@ -14,7 +14,7 @@ func CheckStakingTransaction(tx transactionsDefinition.Transaction, sumAmount in
 	amount := tx.TxData.Amount
 	address := tx.GetSenderAddress()
 	acc := account.GetAccountByAddressBytes(address.GetBytes())
-	if bytes.Compare(acc.Address[:], address.GetBytes()) != 0 {
+	if !bytes.Equal(acc.Address[:], address.GetBytes()) {
 		log.Println("no account found in check staking transaction")
 		return false
 	}
@@ -34,7 +34,7 @@ func CheckStakingTransaction(tx transactionsDefinition.Transaction, sumAmount in
 	}
 	if n > 0 && n < 256 {
 		accStaking := account.GetStakingAccountByAddressBytes(address.GetBytes(), n)
-		if bytes.Compare(accStaking.DelegatedAccount[:], addressRecipient.GetBytes()) != 0 {
+		if !bytes.Equal(accStaking.DelegatedAccount[:], addressRecipient.GetBytes()) {
 			if amount <= 0 {
 				log.Println("no staking account found in check staking transaction")
 				return false
@@ -64,7 +64,7 @@ func CheckStakingTransaction(tx transactionsDefinition.Transaction, sumAmount in
 	if n >= 256 && n < 512 {
 
 		accStaking := account.GetStakingAccountByAddressBytes(address.GetBytes(), n%256)
-		if bytes.Compare(accStaking.Address[:], address.GetBytes()) != 0 {
+		if !bytes.Equal(accStaking.Address[:], address.GetBytes()) {
 			log.Println("no staking account found in check staking transaction (rewards)")
 			return false
 		}
@@ -107,7 +107,7 @@ func ProcessTransaction(tx transactionsDefinition.Transaction, height int64) err
 		if n >= 256 && n < 512 {
 
 			accStaking := account.GetStakingAccountByAddressBytes(address.GetBytes(), n%256)
-			if bytes.Compare(accStaking.Address[:], address.GetBytes()) != 0 {
+			if !bytes.Equal(accStaking.Address[:], address.GetBytes()) {
 				return fmt.Errorf("no staking account found in check staking transaction (rewards)")
 			}
 			if amount > 0 {

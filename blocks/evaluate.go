@@ -113,7 +113,7 @@ func GenerateOptDataDEX(tx transactionsDefinition.Transaction, operation int) ([
 	}
 
 	senderAccount := account.GetAccountByAddressBytes(tx.TxParam.Sender.GetBytes())
-	if bytes.Compare(senderAccount.Address[:], tx.TxParam.Sender.GetBytes()) != 0 {
+	if !bytes.Equal(senderAccount.Address[:], tx.TxParam.Sender.GetBytes()) {
 		return nil, common.Address{}, 0, 0, 0, fmt.Errorf("no account found in dex transfer")
 	}
 

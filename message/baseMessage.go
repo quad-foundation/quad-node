@@ -50,7 +50,7 @@ func CheckMessage(a AnyMessage) bool {
 
 	isValidHead := false
 	for _, key := range validHead {
-		if bytes.Compare(a.GetHead(), []byte(key)) == 0 {
+		if bytes.Equal(a.GetHead(), []byte(key)) {
 			isValidHead = true
 			break
 		}

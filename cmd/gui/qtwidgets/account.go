@@ -20,7 +20,7 @@ func UpdateAccountStats() {
 	clientrpc.InRPC <- []byte("STAT")
 	var reply []byte
 	reply = <-clientrpc.OutRPC
-	if bytes.Compare(reply, []byte("Timeout")) == 0 {
+	if bytes.Equal(reply, []byte("Timeout")) {
 		return
 	}
 	st := &statistics.MainStats{}
@@ -49,7 +49,7 @@ func UpdateAccountStats() {
 	var acc account.Account
 
 	re = <-clientrpc.OutRPC
-	if bytes.Compare(reply, []byte("Timeout")) == 0 {
+	if bytes.Equal(reply, []byte("Timeout")) {
 		return
 	}
 	err = acc.Unmarshal(re)

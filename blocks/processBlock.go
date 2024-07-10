@@ -17,7 +17,7 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 		return nil, fmt.Errorf("supply is too high")
 	}
 
-	if bytes.Compare(lastBlock.BlockHash.GetBytes(), newBlock.GetHeader().PreviousHash.GetBytes()) != 0 {
+	if !bytes.Equal(lastBlock.BlockHash.GetBytes(), newBlock.GetHeader().PreviousHash.GetBytes()) {
 		log.Println("lastBlock.BlockHash", lastBlock.BlockHash.GetHex(), newBlock.GetHeader().PreviousHash.GetHex())
 		return nil, fmt.Errorf("last block hash not match to one stored in new block")
 	}
@@ -29,7 +29,7 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 	if err != nil {
 		return nil, err
 	}
-	if bytes.Compare(hash.GetBytes(), newBlock.BlockHash.GetBytes()) != 0 {
+	if !bytes.Equal(hash.GetBytes(), newBlock.BlockHash.GetBytes()) {
 		return nil, fmt.Errorf("wrong hash of block")
 	}
 	rootMerkleTrie := newBlock.GetHeader().RootMerkleTree
@@ -43,7 +43,7 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 	if err != nil {
 		return nil, err
 	}
-	if bytes.Compare(merkleTrie.GetRootHash(), rootMerkleTrie.GetBytes()) != 0 {
+	if !bytes.Equal(merkleTrie.GetRootHash(), rootMerkleTrie.GetBytes()) {
 		return nil, fmt.Errorf("root merkleTrie hash check fails")
 	}
 	return merkleTrie, nil
@@ -102,7 +102,7 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, int64, error) {
 		n, err := account.IntDelegatedAccountFromAddress(recipientAddress)
 		if err == nil && n < 512 { // delegated account
 			stakingAcc := account.GetStakingAccountByAddressBytes(address.GetBytes(), n%256)
-			if bytes.Compare(stakingAcc.Address[:], address.GetBytes()) != 0 {
+			if !bytes.Equal(stakingAcc.Address[:], address.GetBytes()) {
 				log.Println("no account found in check block transfer")
 				copy(stakingAcc.Address[:], address.GetBytes())
 				copy(stakingAcc.DelegatedAccount[:], recipientAddress.GetBytes())
@@ -122,7 +122,7 @@ func CheckBlockTransfers(block Block, lastBlock Block) (int64, int64, error) {
 			}
 		}
 		acc := account.GetAccountByAddressBytes(address.GetBytes())
-		if bytes.Compare(acc.Address[:], address.GetBytes()) != 0 {
+		if !bytes.Equal(acc.Address[:], address.GetBytes()) {
 			// remove bad transaction from pool
 			transactionsPool.PoolsTx.RemoveTransactionByHash(poolTx.Hash.GetBytes())
 			transactionsDefinition.RemoveTransactionFromDBbyHash(common.TransactionPoolHashesDBPrefix[:], poolTx.Hash.GetBytes())
@@ -293,7 +293,7 @@ func CheckBlockAndTransferFunds(newBlock *Block, lastBlock Block, merkleTrie *tr
 		return fmt.Errorf("wrong delegated account")
 	}
 	opAccBlockAddr := newBlock.GetHeader().OperatorAccount
-	if _, sumStaked, opAcc := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode || bytes.Compare(opAcc.Address[:], opAccBlockAddr.GetBytes()) != 0 {
+	if _, sumStaked, opAcc := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode || !bytes.Equal(opAcc.Address[:], opAccBlockAddr.GetBytes()) {
 		return fmt.Errorf("not enough staked coins to be a node or not valid operetional account")
 	}
 

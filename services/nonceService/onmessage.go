@@ -72,7 +72,7 @@ func OnMessage(addr [4]byte, m []byte) {
 			return
 		}
 		// checking if enough coins staked
-		if _, sumStaked, operationalAcc := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode || bytes.Compare(operationalAcc.Address[:], transaction.TxParam.Sender.GetBytes()) != 0 {
+		if _, sumStaked, operationalAcc := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode || !bytes.Equal(operationalAcc.Address[:], transaction.TxParam.Sender.GetBytes()) {
 			log.Println("not enough staked coins to be a node or not valid operational account")
 			return
 		}

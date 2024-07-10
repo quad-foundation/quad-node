@@ -82,7 +82,7 @@ func OnMessage(addr [4]byte, m []byte) {
 			if err != nil {
 				panic(err)
 			}
-			if bytes.Compare(lastOtherBlockHashBytes, lastBlockHashBytes) != 0 {
+			if !bytes.Equal(lastOtherBlockHashBytes, lastBlockHashBytes) {
 				SendGetHeaders(addr, lastOtherHeight)
 			}
 			common.IsSyncing.Store(false)
@@ -145,7 +145,7 @@ func OnMessage(addr [4]byte, m []byte) {
 				if err != nil {
 					panic("cannot load block hash")
 				}
-				if bytes.Compare(block.BlockHash.GetBytes(), hashOfMyBlockBytes) == 0 {
+				if bytes.Equal(block.BlockHash.GetBytes(), hashOfMyBlockBytes) {
 					lastGoodBlock = index
 					continue
 				}

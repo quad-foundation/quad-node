@@ -13,7 +13,7 @@ import (
 
 func InitSyncService() {
 	services.SendMutexSync.Lock()
-	services.SendChanSync = make(chan []byte)
+	services.SendChanSync = make(chan []byte, 100)
 
 	services.SendMutexSync.Unlock()
 	startPublishingSyncMsg()
@@ -154,7 +154,7 @@ func StartSubscribingSyncMsg(ip [4]byte) {
 	for !quit {
 		select {
 		case s := <-recvChan:
-			if len(s) == 4 && bytes.Compare(s, []byte("EXIT")) == 0 {
+			if len(s) == 4 && bytes.Equal(s, []byte("EXIT")) {
 				quit = true
 				break
 			}

@@ -437,7 +437,7 @@ func GetAllPoolsInfo() string {
 			price = common.RoundCoin(coinPoolFloat / tokenPoolFloat)
 		}
 		txt += fmt.Sprintf("Pool price %s/QAD = %f", symb, price)
-		if bytes.Compare(a.GetBytes(), coinAddr.GetBytes()) == 0 {
+		if bytes.Equal(a.GetBytes(), coinAddr.GetBytes()) {
 			poolCoin = coinPoolFloat
 			poolToken = tokenPoolFloat
 		}
@@ -461,7 +461,7 @@ func GetAllTokensAccountInfo(a common.Address, symbolAddr common.Address) string
 
 		coinAddr := common.Address{}
 		coinAddr.Init(common.Hex2Bytes(addr[:]))
-		if bytes.Compare(coinAddr.GetBytes(), symbolAddr.GetBytes()) == 0 {
+		if bytes.Equal(coinAddr.GetBytes(), symbolAddr.GetBytes()) {
 			symbol = strings.Trim(info.Symbols, string(byte(0)))
 		}
 		balCoin := GetBalance(a, coinAddr)

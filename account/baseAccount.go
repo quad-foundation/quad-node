@@ -23,7 +23,7 @@ func GetAccountByAddressBytes(address []byte) Account {
 
 func SetAccountByAddressBytes(address []byte) Account {
 	dexAccount := GetAccountByAddressBytes(address)
-	if bytes.Compare(dexAccount.Address[:], address) != 0 {
+	if !bytes.Equal(dexAccount.Address[:], address) {
 		log.Println("no account found, will be created")
 		addrb := [common.AddressLength]byte{}
 		copy(addrb[:], address[:common.AddressLength])

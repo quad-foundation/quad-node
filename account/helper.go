@@ -23,7 +23,7 @@ func Int64toFloat64ByDecimals(value int64, decimals uint8) float64 {
 //			return false
 //		}
 //		da := common.GetDelegatedAccountAddress(n)
-//		return bytes.Compare(da.GetBytes(), ab[:]) == 0
+//		return bytes.Equal(da.GetBytes(), ab[:])
 //	}
 
 //
@@ -33,7 +33,7 @@ func Int64toFloat64ByDecimals(value int64, decimals uint8) float64 {
 //		return false
 //	}
 //	da := common.GetDelegatedAccountByteForDEX(n, a.GetByte()[2:])
-//	return bytes.Compare(da.GetByte(), a.GetByte()) == 0
+//	return bytes.Equal(da.GetByte(), a.GetByte())
 //}
 
 var StakingRWMutex sync.RWMutex
@@ -66,7 +66,7 @@ func IntDelegatedAccountFromAddress(a common.Address) (int, error) {
 		}
 	}
 	da := common.GetDelegatedAccountAddress(int16(n))
-	if bytes.Compare(da.GetBytes(), a.GetBytes()) == 0 {
+	if bytes.Equal(da.GetBytes(), a.GetBytes()) {
 		return int(n), nil
 	}
 	return -1, fmt.Errorf("wrongly formated delegated account")

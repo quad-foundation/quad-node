@@ -15,9 +15,9 @@ import (
 
 func InitNonceService() {
 	services.SendMutexNonce.Lock()
-	services.SendChanNonce = make(chan []byte)
+	services.SendChanNonce = make(chan []byte, 100)
 
-	services.SendChanSelfNonce = make(chan []byte)
+	services.SendChanSelfNonce = make(chan []byte, 100)
 	services.SendMutexNonce.Unlock()
 	startPublishingNonceMsg()
 	time.Sleep(time.Second)
@@ -135,7 +135,7 @@ func StartSubscribingNonceMsg(ip [4]byte) {
 	for !quit {
 		select {
 		case s := <-recvChan:
-			if len(s) == 4 && bytes.Compare(s, []byte("EXIT")) == 0 {
+			if len(s) == 4 && bytes.Equal(s, []byte("EXIT")) {
 				quit = true
 				break
 			}
@@ -164,7 +164,7 @@ func StartSubscribingNonceMsgSelf() {
 	for !quit {
 		select {
 		case s := <-recvChanSelf:
-			if len(s) == 4 && bytes.Compare(s, []byte("EXIT")) == 0 {
+			if len(s) == 4 && bytes.Equal(s, []byte("EXIT")) {
 				recvChanExit <- s
 				quit = true
 				break

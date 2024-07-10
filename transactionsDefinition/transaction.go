@@ -225,7 +225,7 @@ func (tx *Transaction) Verify() bool {
 	if err != nil {
 		return false
 	}
-	if bytes.Compare(b, tx.GetHash().GetBytes()) != 0 {
+	if !bytes.Equal(b, tx.GetHash().GetBytes()) {
 		log.Println("check transaction hash fails")
 		return false
 	}

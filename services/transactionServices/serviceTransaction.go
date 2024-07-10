@@ -14,7 +14,7 @@ import (
 
 func InitTransactionService() {
 	services.SendMutexTx.Lock()
-	services.SendChanTx = make(chan []byte)
+	services.SendChanTx = make(chan []byte, 100)
 
 	services.SendMutexTx.Unlock()
 	startPublishingTransactionMsg()
@@ -109,7 +109,7 @@ func Spread(ignoreAddr [4]byte, nb []byte) {
 	var peers = tcpip.GetPeersConnected(tcpip.TransactionTopic)
 	for topicip, _ := range peers {
 		copy(ip[:], topicip[2:])
-		if bytes.Compare(ip[:], ignoreAddr[:]) != 0 && bytes.Compare(ip[:], tcpip.MyIP[:]) != 0 {
+		if !bytes.Equal(ip[:], ignoreAddr[:]) && !bytes.Equal(ip[:], tcpip.MyIP[:]) {
 			Send(ip, nb)
 		}
 	}
@@ -128,7 +128,7 @@ func StartSubscribingTransactionMsg(ip [4]byte) {
 	for !quit {
 		select {
 		case s := <-recvChan:
-			if len(s) == 4 && bytes.Compare(s, []byte("EXIT")) == 0 {
+			if len(s) == 4 && bytes.Equal(s, []byte("EXIT")) {
 				quit = true
 				break
 			}

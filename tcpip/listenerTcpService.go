@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -22,7 +23,7 @@ func StartNewListener(sendChan <-chan []byte, topic [2]byte) {
 			tcpConn.Close()
 		}
 	}()
-	go LoopSend(sendChan, topic)
+	go LoopSend(sendChan, topic, 5)
 	for {
 		select {
 		case <-Quit:
@@ -36,55 +37,109 @@ func StartNewListener(sendChan <-chan []byte, topic [2]byte) {
 		}
 	}
 }
-func LoopSend(sendChan <-chan []byte, topic [2]byte) {
+
+func worker(sendChan <-chan []byte, topic [2]byte, wg *sync.WaitGroup) {
+	defer wg.Done()
 	var ipr [4]byte
+	for s := range sendChan {
+		if len(s) > 4 {
+			copy(ipr[:], s[:4])
+		} else {
+			log.Println("wrong message")
+			continue
+		}
+		PeersMutex.RLock()
+		if bytes.Equal(ipr[:], []byte{0, 0, 0, 0}) {
+			tmpConn := tcpConnections[topic]
+			for k, tcpConn0 := range tmpConn {
+				if !bytes.Equal(k[:], MyIP[:]) {
+					Send(tcpConn0, s[4:])
+				}
+			}
+		} else {
+			tcpConns := tcpConnections[topic]
+			tcpConn, ok := tcpConns[ipr]
+			if ok {
+				Send(tcpConn, s[4:])
+			} else {
+				// Handle no connection case
+			}
+		}
+		PeersMutex.RUnlock()
+	}
+}
+func LoopSend(sendChan <-chan []byte, topic [2]byte, numWorkers int) {
+	var wg sync.WaitGroup
+	// Start worker goroutines
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go worker(sendChan, topic, &wg)
+	}
 	for {
 		select {
-		case s := <-sendChan:
-			if len(s) > 4 {
-				copy(ipr[:], s[:4])
-			} else {
-				log.Println("wrong message")
-				continue
-			}
-			if bytes.Compare(ipr[:], []byte{0, 0, 0, 0}) == 0 {
-				PeersMutex.RLock()
-				tmpConn := tcpConnections[topic]
-				for k, tcpConn0 := range tmpConn {
-					if bytes.Compare(k[:], MyIP[:]) != 0 {
-						//log.Println("send to ipr", k)
-						Send(tcpConn0, s[4:])
-					}
-				}
-				PeersMutex.RUnlock()
-			} else {
-				PeersMutex.RLock()
-				tcpConns := tcpConnections[topic]
-				tcpConn, ok := tcpConns[ipr]
-				if ok {
-					//log.Println("send to ip", ipr)
-					Send(tcpConn, s[4:])
-				} else {
-					//fmt.Println("no connection to given ip", ipr, topic)
-					//BanIP(ipr, topic)
-				}
-				PeersMutex.RUnlock()
-			}
 		case b := <-waitChan:
 			if bytes.Equal(b, topic[:]) {
 				time.Sleep(time.Millisecond * 10)
 			}
 		case <-Quit:
+			//close(sendChan)
+			wg.Wait()
 			return
 		default:
 		}
 	}
 }
+
+//func LoopSend(sendChan <-chan []byte, topic [2]byte) {
+//	var ipr [4]byte
+//	for {
+//		select {
+//		case s := <-sendChan:
+//			if len(s) > 4 {
+//				copy(ipr[:], s[:4])
+//			} else {
+//				log.Println("wrong message")
+//				continue
+//			}
+//			PeersMutex.RLock()
+//			if bytes.Equal(ipr[:], []byte{0, 0, 0, 0}) {
+//
+//				tmpConn := tcpConnections[topic]
+//				for k, tcpConn0 := range tmpConn {
+//					if !bytes.Equal(k[:], MyIP[:]) {
+//						//log.Println("send to ipr", k)
+//						Send(tcpConn0, s[4:])
+//					}
+//				}
+//			} else {
+//				tcpConns := tcpConnections[topic]
+//				tcpConn, ok := tcpConns[ipr]
+//				if ok {
+//					//log.Println("send to ip", ipr)
+//					Send(tcpConn, s[4:])
+//				} else {
+//					//fmt.Println("no connection to given ip", ipr, topic)
+//					//BanIP(ipr, topic)
+//				}
+//
+//			}
+//			PeersMutex.RUnlock()
+//		case b := <-waitChan:
+//			if bytes.Equal(b, topic[:]) {
+//				time.Sleep(time.Millisecond * 10)
+//			}
+//		case <-Quit:
+//			return
+//		default:
+//		}
+//	}
+//}
+
 func StartNewConnection(ip [4]byte, receiveChan chan []byte, topic [2]byte) {
 	var tcpConn *net.TCPConn
 
 	ipport := fmt.Sprintf("%d.%d.%d.%d:%d", ip[0], ip[1], ip[2], ip[3], Ports[topic])
-	if bytes.Compare(ip[:], []byte{127, 0, 0, 1}) == 0 {
+	if bytes.Equal(ip[:], []byte{127, 0, 0, 1}) {
 		ipport = fmt.Sprint(":", Ports[topic])
 	}
 	tcpAddr, err := net.ResolveTCPAddr("tcp", ipport)
@@ -130,7 +185,7 @@ func StartNewConnection(ip [4]byte, receiveChan chan []byte, topic [2]byte) {
 			if r == nil {
 				continue
 			}
-			if bytes.Compare(r, []byte("<-CLS->")) == 0 {
+			if bytes.Equal(r, []byte("<-CLS->")) {
 				if reconectionTries > 50 {
 					CloseAndRemoveConnection(tcpConn)
 					fmt.Println("Closing connection (receive)", ip)
@@ -145,19 +200,19 @@ func StartNewConnection(ip [4]byte, receiveChan chan []byte, topic [2]byte) {
 				continue
 			}
 
-			if len(r) == 7 && bytes.Compare(r, []byte("QUITFOR")) == 0 {
+			if len(r) == 7 && bytes.Equal(r, []byte("QUITFOR")) {
 				receiveChan <- []byte("EXIT")
 				CloseAndRemoveConnection(tcpConn)
 				fmt.Println("Closing connection (receive)", ip)
 				return
 			}
-			if len(r) == 4 && bytes.Compare(r, []byte("WAIT")) == 0 {
+			if len(r) == 4 && bytes.Equal(r, []byte("WAIT")) {
 				waitChan <- topic[:]
 				continue
 			}
 			r = append(lastBytes, r...)
 			rs := bytes.Split(r, []byte("<-END->"))
-			if bytes.Compare(r[len(r)-7:], []byte("<-END->")) != 0 {
+			if !bytes.Equal(r[len(r)-7:], []byte("<-END->")) {
 				lastBytes = rs[len(rs)-1]
 				lastBytesNum = len(rs) - 1
 			} else {
