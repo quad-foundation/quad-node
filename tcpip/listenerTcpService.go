@@ -135,21 +135,18 @@ func LoopSend(sendChan <-chan []byte, topic [2]byte) {
 }
 
 func StartNewConnection(ip [4]byte, receiveChan chan []byte, topic [2]byte) {
-	var tcpConn *net.TCPConn
-
 	ipport := fmt.Sprintf("%d.%d.%d.%d:%d", ip[0], ip[1], ip[2], ip[3], Ports[topic])
 	if bytes.Equal(ip[:], []byte{127, 0, 0, 1}) {
-		ipport = fmt.Sprint(":", Ports[topic])
+		ipport = fmt.Sprintf(":%d", Ports[topic])
 	}
 	tcpAddr, err := net.ResolveTCPAddr("tcp", ipport)
 	if err != nil {
 		log.Println("cannot create tcp address", err)
 		return
 	}
-
-	tcpConn, err = net.DialTCP("tcp", nil, tcpAddr)
+	tcpConn, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
-		fmt.Println("connection to ip was unsuccessful", ip, topic, err)
+		log.Println("connection to ip was unsuccessful", ip, topic, err)
 		return
 	}
 	defer func() {
@@ -159,19 +156,15 @@ func StartNewConnection(ip [4]byte, receiveChan chan []byte, topic [2]byte) {
 			tcpConn.Close()
 			log.Println("recover (receive Msg)", r)
 		}
-		return
 	}()
-	raddr := tcpConn.RemoteAddr().String()
-	fmt.Println("New connection from address", raddr, topic)
+	fmt.Println("New connection from address", tcpConn.RemoteAddr().String(), topic)
 	lastBytes := []byte{}
-	lastBytesNum := 0
-	reconectionTries := 0
+	reconnectionTries := 0
 	resetNumber := 0
-
 	for {
 		resetNumber++
 		if resetNumber%100 == 0 {
-			reconectionTries = 0
+			reconnectionTries = 0
 		}
 		select {
 		case <-Quit:
@@ -185,27 +178,25 @@ func StartNewConnection(ip [4]byte, receiveChan chan []byte, topic [2]byte) {
 				continue
 			}
 			if bytes.Equal(r, []byte("<-CLS->")) {
-				if reconectionTries > 50 {
+				if reconnectionTries > 50 {
 					CloseAndRemoveConnection(tcpConn)
 					fmt.Println("Closing connection (receive)", ip)
 					return
-				} else {
-					reconectionTries++
 				}
+				reconnectionTries++
 				tcpConn, err = net.DialTCP("tcp", nil, tcpAddr)
 				if err != nil {
-					fmt.Println("connection to ip was unsuccessful", ip, topic, err)
+					log.Println("connection to ip was unsuccessful", ip, topic, err)
 				}
 				continue
 			}
-
-			if len(r) == 7 && bytes.Equal(r, []byte("QUITFOR")) {
+			if bytes.Equal(r, []byte("QUITFOR")) {
 				receiveChan <- []byte("EXIT")
 				CloseAndRemoveConnection(tcpConn)
 				fmt.Println("Closing connection (receive)", ip)
 				return
 			}
-			if len(r) == 4 && bytes.Equal(r, []byte("WAIT")) {
+			if bytes.Equal(r, []byte("WAIT")) {
 				waitChan <- topic[:]
 				continue
 			}
@@ -213,13 +204,10 @@ func StartNewConnection(ip [4]byte, receiveChan chan []byte, topic [2]byte) {
 			rs := bytes.Split(r, []byte("<-END->"))
 			if !bytes.Equal(r[len(r)-7:], []byte("<-END->")) {
 				lastBytes = rs[len(rs)-1]
-				lastBytesNum = len(rs) - 1
 			} else {
 				lastBytes = []byte{}
-				lastBytesNum = len(rs)
 			}
-			//log.Println("receive from ip", ip, topic)
-			for _, e := range rs[:lastBytesNum] {
+			for _, e := range rs[:len(rs)-1] {
 				if len(e) > 0 {
 					receiveChan <- append(ip[:], e...)
 				}
@@ -227,6 +215,7 @@ func StartNewConnection(ip [4]byte, receiveChan chan []byte, topic [2]byte) {
 		}
 	}
 }
+
 func CloseAndRemoveConnection(tcpConn *net.TCPConn) {
 	if tcpConn == nil {
 		return
