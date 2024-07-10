@@ -43,7 +43,7 @@ func Stake(accb []byte, amount int64, height int64, delegatedAccount int, operat
 		Reward:      0,
 		LastUpdated: time.Now().Unix(),
 	}
-	if ContainsKeyInt64(ExtractKeysOfList(acc.StakingDetails), height) == false {
+	if _, ok := acc.StakingDetails[height]; !ok {
 		acc.StakingDetails = map[int64][]StakingDetail{}
 		acc.StakingDetails[height] = []StakingDetail{}
 	}
@@ -78,7 +78,7 @@ func Unstake(accb []byte, amount int64, height int64, delegatedAccount int) erro
 		Amount:      amount,
 		LastUpdated: time.Now().Unix(),
 	}
-	if ContainsKeyInt64(ExtractKeysOfList(acc.StakingDetails), height) == false {
+	if _, ok := acc.StakingDetails[height]; !ok {
 		acc.StakingDetails = map[int64][]StakingDetail{}
 		acc.StakingDetails[height] = []StakingDetail{}
 	}
@@ -108,7 +108,7 @@ func Reward(accb []byte, reward int64, height int64, delegatedAccount int) error
 		Reward:      reward,
 		LastUpdated: time.Now().Unix(),
 	}
-	if ContainsKeyInt64(ExtractKeysOfList(acc.StakingDetails), height) == false {
+	if _, ok := acc.StakingDetails[height]; !ok {
 		acc.StakingDetails = map[int64][]StakingDetail{}
 		acc.StakingDetails[height] = []StakingDetail{}
 	}
@@ -140,7 +140,7 @@ func WithdrawReward(accb []byte, amount int64, height int64, delegatedAccount in
 		Reward:      amount,
 		LastUpdated: time.Now().Unix(),
 	}
-	if ContainsKeyInt64(ExtractKeysOfList(acc.StakingDetails), height) == false {
+	if _, ok := acc.StakingDetails[height]; !ok {
 		acc.StakingDetails = map[int64][]StakingDetail{}
 		acc.StakingDetails[height] = []StakingDetail{}
 	}
