@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"sync"
 	"time"
 )
 
@@ -23,7 +22,7 @@ func StartNewListener(sendChan <-chan []byte, topic [2]byte) {
 			tcpConn.Close()
 		}
 	}()
-	go LoopSend(sendChan, topic, 5)
+	go LoopSend(sendChan, topic)
 	for {
 		select {
 		case <-Quit:
@@ -38,102 +37,102 @@ func StartNewListener(sendChan <-chan []byte, topic [2]byte) {
 	}
 }
 
-func worker(sendChan <-chan []byte, topic [2]byte, wg *sync.WaitGroup) {
-	defer wg.Done()
-	var ipr [4]byte
-	for s := range sendChan {
-		if len(s) > 4 {
-			copy(ipr[:], s[:4])
-		} else {
-			log.Println("wrong message")
-			continue
-		}
-		PeersMutex.RLock()
-		if bytes.Equal(ipr[:], []byte{0, 0, 0, 0}) {
-			tmpConn := tcpConnections[topic]
-			for k, tcpConn0 := range tmpConn {
-				if !bytes.Equal(k[:], MyIP[:]) {
-					Send(tcpConn0, s[4:])
-				}
-			}
-		} else {
-			tcpConns := tcpConnections[topic]
-			tcpConn, ok := tcpConns[ipr]
-			if ok {
-				Send(tcpConn, s[4:])
-			} else {
-				// Handle no connection case
-			}
-		}
-		PeersMutex.RUnlock()
-	}
-}
-func LoopSend(sendChan <-chan []byte, topic [2]byte, numWorkers int) {
-	var wg sync.WaitGroup
-	// Start worker goroutines
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go worker(sendChan, topic, &wg)
-	}
-	for {
-		select {
-		case b := <-waitChan:
-			if bytes.Equal(b, topic[:]) {
-				time.Sleep(time.Millisecond * 10)
-			}
-		case <-Quit:
-			//close(sendChan)
-			wg.Wait()
-			return
-		default:
-		}
-	}
-}
-
-//func LoopSend(sendChan <-chan []byte, topic [2]byte) {
+//func worker(sendChan <-chan []byte, topic [2]byte, wg *sync.WaitGroup) {
+//	defer wg.Done()
 //	var ipr [4]byte
+//	for s := range sendChan {
+//		if len(s) > 4 {
+//			copy(ipr[:], s[:4])
+//		} else {
+//			log.Println("wrong message")
+//			continue
+//		}
+//		PeersMutex.RLock()
+//		if bytes.Equal(ipr[:], []byte{0, 0, 0, 0}) {
+//			tmpConn := tcpConnections[topic]
+//			for k, tcpConn0 := range tmpConn {
+//				if !bytes.Equal(k[:], MyIP[:]) {
+//					Send(tcpConn0, s[4:])
+//				}
+//			}
+//		} else {
+//			tcpConns := tcpConnections[topic]
+//			tcpConn, ok := tcpConns[ipr]
+//			if ok {
+//				Send(tcpConn, s[4:])
+//			} else {
+//				// Handle no connection case
+//			}
+//		}
+//		PeersMutex.RUnlock()
+//	}
+//}
+//func LoopSend(sendChan <-chan []byte, topic [2]byte, numWorkers int) {
+//	var wg sync.WaitGroup
+//	// Start worker goroutines
+//	for i := 0; i < numWorkers; i++ {
+//		wg.Add(1)
+//		go worker(sendChan, topic, &wg)
+//	}
 //	for {
 //		select {
-//		case s := <-sendChan:
-//			if len(s) > 4 {
-//				copy(ipr[:], s[:4])
-//			} else {
-//				log.Println("wrong message")
-//				continue
-//			}
-//			PeersMutex.RLock()
-//			if bytes.Equal(ipr[:], []byte{0, 0, 0, 0}) {
-//
-//				tmpConn := tcpConnections[topic]
-//				for k, tcpConn0 := range tmpConn {
-//					if !bytes.Equal(k[:], MyIP[:]) {
-//						//log.Println("send to ipr", k)
-//						Send(tcpConn0, s[4:])
-//					}
-//				}
-//			} else {
-//				tcpConns := tcpConnections[topic]
-//				tcpConn, ok := tcpConns[ipr]
-//				if ok {
-//					//log.Println("send to ip", ipr)
-//					Send(tcpConn, s[4:])
-//				} else {
-//					//fmt.Println("no connection to given ip", ipr, topic)
-//					//BanIP(ipr, topic)
-//				}
-//
-//			}
-//			PeersMutex.RUnlock()
 //		case b := <-waitChan:
 //			if bytes.Equal(b, topic[:]) {
 //				time.Sleep(time.Millisecond * 10)
 //			}
 //		case <-Quit:
+//			//close(sendChan)
+//			wg.Wait()
 //			return
 //		default:
 //		}
 //	}
 //}
+
+func LoopSend(sendChan <-chan []byte, topic [2]byte) {
+	var ipr [4]byte
+	for {
+		select {
+		case s := <-sendChan:
+			if len(s) > 4 {
+				copy(ipr[:], s[:4])
+			} else {
+				log.Println("wrong message")
+				continue
+			}
+			PeersMutex.RLock()
+			if bytes.Equal(ipr[:], []byte{0, 0, 0, 0}) {
+
+				tmpConn := tcpConnections[topic]
+				for k, tcpConn0 := range tmpConn {
+					if !bytes.Equal(k[:], MyIP[:]) {
+						//log.Println("send to ipr", k)
+						Send(tcpConn0, s[4:])
+					}
+				}
+			} else {
+				tcpConns := tcpConnections[topic]
+				tcpConn, ok := tcpConns[ipr]
+				if ok {
+					//log.Println("send to ip", ipr)
+					Send(tcpConn, s[4:])
+				} else {
+					//fmt.Println("no connection to given ip", ipr, topic)
+					//BanIP(ipr, topic)
+				}
+
+			}
+			PeersMutex.RUnlock()
+		case b := <-waitChan:
+			if bytes.Equal(b, topic[:]) {
+				time.Sleep(time.Millisecond * 10)
+			}
+		case <-Quit:
+			return
+		default:
+		}
+	}
+}
 
 func StartNewConnection(ip [4]byte, receiveChan chan []byte, topic [2]byte) {
 	var tcpConn *net.TCPConn

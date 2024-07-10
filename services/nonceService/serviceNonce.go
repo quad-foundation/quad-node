@@ -86,7 +86,7 @@ Q:
 		sendNonceMsg(tcpip.MyIP, topic)
 		select {
 		case s := <-chanRecv:
-			if len(s) == 4 && string(s) == "EXIT" {
+			if len(s) == 4 && bytes.Equal(s, []byte("EXIT")) {
 				break Q
 			}
 		default:
