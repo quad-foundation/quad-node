@@ -110,9 +110,9 @@ func Send(conn *net.TCPConn, message []byte) {
 	_, err := conn.Write(message)
 	if err != nil {
 		log.Printf("Can't send response: %v", err)
-		//if errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ECONNABORTED) {
-		//	CloseAndRemoveConnection(conn)
-		//}
+		if errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ECONNABORTED) {
+			CloseAndRemoveConnection(conn)
+		}
 	}
 }
 
@@ -168,16 +168,20 @@ func RegisterPeer(topic [2]byte, tcpConn *net.TCPConn) {
 	var addrRemoteBytes [4]byte
 	copy(topicipBytes[:], append(topic[:], ip[:]...))
 	copy(addrRemoteBytes[:], ip[:])
-	PeersMutex.Lock()
-	defer PeersMutex.Unlock()
+	PeersMutex.RLock()
 	if _, ok := peersConnected[topicipBytes]; !ok {
 		log.Println("New connection from address", ra[0], "on topic", topic)
+		PeersMutex.RUnlock()
+		PeersMutex.Lock()
 		// Initialize the map for the topic if it doesn't exist
 		if _, ok := tcpConnections[topic]; !ok {
 			tcpConnections[topic] = make(map[[4]byte]*net.TCPConn)
 		}
 		tcpConnections[topic][addrRemoteBytes] = tcpConn
 		peersConnected[topicipBytes] = topic
+		PeersMutex.Unlock()
+	} else {
+		PeersMutex.RUnlock()
 	}
 }
 
@@ -255,6 +259,6 @@ func LookUpForNewPeersToConnect(chanPeer chan []byte) {
 			}
 		}
 		PeersMutex.Unlock()
-		time.Sleep(time.Second)
+		time.Sleep(time.Second * 10)
 	}
 }
