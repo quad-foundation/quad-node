@@ -145,9 +145,8 @@ func main() {
 			ip[i] = byte(num)
 		}
 		go transactionServices.StartSubscribingTransactionMsg(ip)
-		if firstDel.GetHex() == common.GetDelegatedAccount().Hex() {
-			go nonceService.StartSubscribingNonceMsg(ip)
-		}
+		go nonceService.StartSubscribingNonceMsg(ip)
+
 		go syncServices.StartSubscribingSyncMsg(ip)
 	}
 	time.Sleep(time.Second)
