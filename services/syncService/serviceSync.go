@@ -146,6 +146,7 @@ func startPublishingSyncMsg() {
 }
 
 func StartSubscribingSyncMsg(ip [4]byte) {
+
 	recvChan := make(chan []byte, 10) // Use a buffered channel
 	var ipr [4]byte
 	quit := false

@@ -1,6 +1,7 @@
 package tcpip
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -204,6 +205,9 @@ func GetIPsConnected() [][]byte {
 	for key, value := range peersConnected {
 		if value == [2]byte{'N', 'N'} {
 			copy(ipb[:], key[2:])
+			if bytes.Equal(ipb[:], MyIP[:]) {
+				continue
+			}
 			uniqueIPs[ipb] = struct{}{}
 		}
 	}
@@ -212,24 +216,6 @@ func GetIPsConnected() [][]byte {
 		ips = append(ips, ip[:])
 	}
 	return ips
-}
-
-//func GetIPsfrombytes(peers [][4]byte) []string {
-//	var ips []string
-//	for _, ipb := range peers {
-//		ip := fmt.Sprintf("%d.%d.%d.%d", ipb[0], ipb[1], ipb[2], ipb[3])
-//		ips = append(ips, ip)
-//	}
-//	return ips
-//}
-
-func AddNewPeer(peer [4]byte, topic [2]byte) {
-	PeersMutex.Lock()
-	defer PeersMutex.Unlock()
-
-	topicip := [6]byte{}
-	copy(topicip[:], append(topic[:], peer[:]...))
-	peersConnected[topicip] = topic
 }
 
 func GetPeersCount() int {
