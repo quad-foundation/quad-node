@@ -87,11 +87,11 @@ func UpdateAccountStats() {
 	txt += fmt.Sprintln("\n\nYour Address:", MainWallet.Address.GetHex())
 	txt += fmt.Sprintf("Your holdings: %18.8f QAD\n", conf+stake+rewards+uncTx+uncStake+uncRewards)
 	txt += fmt.Sprintf("Confirmed balance: %18.8f QAD\n", conf)
-	txt += fmt.Sprintf("Transactions unconfirmed balance: %18.8f QAD\n", uncTx)
+	//txt += fmt.Sprintf("Transactions unconfirmed balance: %18.8f QAD\n", uncTx)
 	txt += fmt.Sprintf("Staked amount: %18.8f QAD\n", stake)
-	txt += fmt.Sprintf("Unconfirmed staked amount: %18.8f QAD\n", uncStake)
+	//txt += fmt.Sprintf("Unconfirmed staked amount: %18.8f QAD\n", uncStake)
 	txt += fmt.Sprintf("Rewards amount: %18.8f QAD\n", rewards)
-	txt += fmt.Sprintf("Unconfirmed rewards amount: %18.8f QAD\n", uncRewards)
+	//txt += fmt.Sprintf("Unconfirmed rewards amount: %18.8f QAD\n", uncRewards)
 	txt += fmt.Sprintf("\nStaking details:\n")
 	for i, acc := range stakeAccs {
 		if acc.StakedBalance == 0 && acc.StakingRewards == 0 {
@@ -137,6 +137,22 @@ func ShowAccountPage() *widgets.QTabWidget {
 	// and make it the central widget of the window
 	widget := widgets.NewQTabWidget(nil)
 	widget.SetLayout(widgets.NewQVBoxLayout())
+
+	miningCheckBox := widgets.NewQCheckBox(nil)
+	miningCheckBox.SetText("Start mining")
+	widget.Layout().AddWidget(miningCheckBox)
+	miningCheckBox.ConnectClicked(func(bool) {
+		miningCheckBox.SetEnabled(false)
+		var info *string
+		v := "No reply"
+		info = &v
+		defer func(nfo *string) {
+			widgets.QMessageBox_Information(nil, "Info", *nfo, widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+		}(info)
+		reply := startMining()
+		info = &reply
+		return
+	})
 
 	// create a line edit
 	// with a custom placeholder text
@@ -197,4 +213,17 @@ func ShowAccountPage() *widgets.QTabWidget {
 	//})
 	//widget.Layout().AddWidget(buttonMining)
 	return widget
+}
+
+func startMining() string {
+	clientrpc.InRPC <- []byte("MINE")
+	var reply []byte
+	reply = <-clientrpc.OutRPC
+	if string(reply) == "Timeout" {
+		return "Timeout"
+	}
+	if len(reply) > 0 {
+		return string(reply)
+	}
+	return "No reply"
 }

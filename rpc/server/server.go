@@ -8,6 +8,7 @@ import (
 	"github.com/quad-foundation/quad-node/blocks"
 	"github.com/quad-foundation/quad-node/common"
 	"github.com/quad-foundation/quad-node/core/stateDB"
+	nonceServices "github.com/quad-foundation/quad-node/services/nonceService"
 	"github.com/quad-foundation/quad-node/services/transactionServices"
 	"github.com/quad-foundation/quad-node/statistics"
 	"github.com/quad-foundation/quad-node/tcpip"
@@ -59,6 +60,8 @@ func (l *Listener) Send(line []byte, reply *[]byte) error {
 		handleVIEW(byt, reply)
 	case "ACCT":
 		handleACCT(byt, reply)
+	case "MINE":
+		handleMINE(byt, reply)
 	//case "ACCS":
 	//	handleACCS(byt, reply)
 	case "DETS":
@@ -86,6 +89,15 @@ func handleWALL(line []byte, reply *[]byte) {
 		return
 	}
 	*reply = r
+}
+
+func handleMINE(line []byte, reply *[]byte) {
+
+	firstDel := common.GetDelegatedAccountAddress(1)
+	if firstDel.GetHex() != common.GetDelegatedAccount().Hex() {
+		nonceServices.InitNonceService()
+	}
+	*reply = []byte("Mining initiated")
 }
 
 func handleGTBL(byt []byte, reply *[]byte) {

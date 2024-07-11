@@ -114,13 +114,11 @@ func main() {
 
 	genesis.InitGenesis()
 
-	//firstDel := common.GetDelegatedAccountAddress(1)
-	//if firstDel.GetHex() == common.DelegatedAccount.GetHex() {
-	//	common.IsSyncing.Put(false)
-	//}
-
+	firstDel := common.GetDelegatedAccountAddress(1)
+	if firstDel.GetHex() == common.GetDelegatedAccount().Hex() {
+		nonceService.InitNonceService()
+	}
 	transactionServices.InitTransactionService()
-	nonceService.InitNonceService()
 	syncServices.InitSyncService()
 
 	go serverrpc.ListenRPC()
