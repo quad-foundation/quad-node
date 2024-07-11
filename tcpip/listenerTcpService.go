@@ -220,18 +220,17 @@ func CloseAndRemoveConnection(tcpConn *net.TCPConn) {
 	if tcpConn == nil {
 		return
 	}
-	if PeersMutex.TryLock() {
-		defer PeersMutex.Unlock()
-		topicipBytes := [6]byte{}
-		for topic, c := range tcpConnections {
-			for k, v := range c {
-				if tcpConn.RemoteAddr().String() == v.RemoteAddr().String() {
-					fmt.Println("Closing connection (send)", topic, k)
-					tcpConnections[topic][k].Close()
-					copy(topicipBytes[:], append(topic[:], k[:]...))
-					delete(tcpConnections[topic], k)
-					delete(peersConnected, topicipBytes)
-				}
+	PeersMutex.Lock()
+	defer PeersMutex.Unlock()
+	topicipBytes := [6]byte{}
+	for topic, c := range tcpConnections {
+		for k, v := range c {
+			if tcpConn.RemoteAddr().String() == v.RemoteAddr().String() {
+				fmt.Println("Closing connection (send)", topic, k)
+				tcpConnections[topic][k].Close()
+				copy(topicipBytes[:], append(topic[:], k[:]...))
+				delete(tcpConnections[topic], k)
+				delete(peersConnected, topicipBytes)
 			}
 		}
 	}
