@@ -15,9 +15,9 @@ import (
 
 func InitNonceService() {
 	services.SendMutexNonce.Lock()
-	services.SendChanNonce = make(chan []byte, 100)
+	services.SendChanNonce = make(chan []byte, 10)
 
-	services.SendChanSelfNonce = make(chan []byte, 100)
+	services.SendChanSelfNonce = make(chan []byte, 10)
 	services.SendMutexNonce.Unlock()
 	startPublishingNonceMsg()
 	time.Sleep(time.Second)
