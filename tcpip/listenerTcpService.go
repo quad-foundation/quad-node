@@ -2,9 +2,11 @@ package tcpip
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log"
 	"net"
+	"syscall"
 	"time"
 )
 
@@ -107,7 +109,12 @@ func LoopSend(sendChan <-chan []byte, topic [2]byte) {
 				for k, tcpConn0 := range tmpConn {
 					if !bytes.Equal(k[:], MyIP[:]) {
 						//log.Println("send to ipr", k)
-						Send(tcpConn0, s[4:])
+						err := Send(tcpConn0, s[4:])
+						if errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ECONNABORTED) {
+							PeersMutex.RUnlock()
+							CloseAndRemoveConnection(tcpConn0)
+							PeersMutex.RLock()
+						}
 					}
 				}
 			} else {
@@ -115,7 +122,12 @@ func LoopSend(sendChan <-chan []byte, topic [2]byte) {
 				tcpConn, ok := tcpConns[ipr]
 				if ok {
 					//log.Println("send to ip", ipr)
-					Send(tcpConn, s[4:])
+					err := Send(tcpConn, s[4:])
+					if errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ECONNABORTED) {
+						PeersMutex.RUnlock()
+						CloseAndRemoveConnection(tcpConn)
+						PeersMutex.RLock()
+					}
 				} else {
 					//fmt.Println("no connection to given ip", ipr, topic)
 					//BanIP(ipr, topic)

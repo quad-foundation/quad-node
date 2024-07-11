@@ -105,15 +105,14 @@ func Accept(topic [2]byte, conn *net.TCPListener) (*net.TCPConn, error) {
 	return tcpConn, nil
 }
 
-func Send(conn *net.TCPConn, message []byte) {
+func Send(conn *net.TCPConn, message []byte) error {
 	message = append(message, []byte("<-END->")...)
 	_, err := conn.Write(message)
 	if err != nil {
 		log.Printf("Can't send response: %v", err)
-		if errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ECONNABORTED) {
-			CloseAndRemoveConnection(conn)
-		}
+		return err
 	}
+	return nil
 }
 
 // Receive reads data from the connection and handles errors
