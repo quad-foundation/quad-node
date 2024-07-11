@@ -58,6 +58,9 @@ func OnMessage(addr [4]byte, m []byte) {
 				copy(ip4[:], ip)
 				copy(topicip[2:], ip)
 				copy(topicip[:2], tcpip.NonceTopic[:])
+				if bytes.Equal(ip4[:], addr[:]) {
+					continue
+				}
 				if _, ok := peersConnectedNN[topicip]; !ok && !tcpip.IsIPBanned(ip4, h, tcpip.NonceTopic) {
 					go nonceServices.StartSubscribingNonceMsg(ip4)
 				}
