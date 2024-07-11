@@ -9,6 +9,8 @@ import (
 	"github.com/quad-foundation/quad-node/statistics"
 	"github.com/quad-foundation/quad-node/wallet"
 	"github.com/therecipe/qt/widgets"
+	"strconv"
+	"strings"
 
 	"log"
 )
@@ -138,6 +140,10 @@ func ShowAccountPage() *widgets.QTabWidget {
 	widget := widgets.NewQTabWidget(nil)
 	widget.SetLayout(widgets.NewQVBoxLayout())
 
+	ipLineEdit := widgets.NewQLineEdit(nil)
+	ipLineEdit.SetText("192.168.8.104")
+	widget.Layout().AddWidget(ipLineEdit)
+
 	miningCheckBox := widgets.NewQCheckBox(nil)
 	miningCheckBox.SetText("Start mining")
 	widget.Layout().AddWidget(miningCheckBox)
@@ -149,8 +155,21 @@ func ShowAccountPage() *widgets.QTabWidget {
 		defer func(nfo *string) {
 			widgets.QMessageBox_Information(nil, "Info", *nfo, widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 		}(info)
-		reply := startMining()
-		info = &reply
+		ips := strings.Split(ipLineEdit.Text(), ".")
+		if len(ips) != 4 {
+			v = "Invalid IP address format"
+			return
+		}
+		var ip [4]byte
+		for i := 0; i < 4; i++ {
+			num, err := strconv.Atoi(ips[i])
+			if err != nil {
+				v = fmt.Sprintf("Invalid IP address segment:", ips[i])
+				return
+			}
+			ip[i] = byte(num)
+		}
+		v = startMining(ip)
 		return
 	})
 
@@ -160,63 +179,11 @@ func ShowAccountPage() *widgets.QTabWidget {
 	StatsLabel = widgets.NewQLabel2("Your holdings:", nil, widget.WindowType())
 	widget.Layout().AddWidget(StatsLabel)
 
-	// connect the clicked signal
-	// and add it to the central widgets layout
-	//buttonMining := widgets.NewQPushButton2("Show balances", nil)
-	//buttonMining.ConnectClicked(func(bool) {
-	//	clientrpc.InRPC <- []byte("STAT")
-	//	var reply []byte
-	//	reply = <-clientrpc.OutRPC
-	//	st := statistics.MainStats{}
-	//	err := json.Unmarshal(reply, &st)
-	//	if err != nil {
-	//		log.Println("Can not unmarshal statistics")
-	//		return
-	//	}
-	//inb := []byte("ACCS")
-	//clientrpc.InRPC <- inb
-	//var re []byte
-	//var accs [][]byte
-	//
-	//re = <-clientrpc.OutRPC
-	//err = json.Unmarshal(re, &accs)
-	//if err != nil {
-	//	log.Println("cannot unmarshal account")
-	//	return
-	//}
-	//txt := ""
-	//for _, a := range accs {
-	//	inb := append([]byte("ACCT"), a...)
-	//	clientrpc.InRPC <- inb
-	//	var re []byte
-	//	var acc account.Account
-	//
-	//	re = <-clientrpc.OutRPC
-	//	err = json.Unmarshal(re, &acc)
-	//	if err != nil {
-	//		log.Println("cannot unmarshal account")
-	//		return
-	//	}
-	//	conf := acc.GetBalanceConfirmedFloat(st.Heights)
-	//	uncTx := acc.GetUnconfirmedTransactionFloat(st.Heights)
-	//	stake := acc.GetStakeConfirmedFloat(st.Heights)
-	//	uncStake := acc.GetUnconfirmedStakeFloat(st.Heights)
-	//
-	//	txt += fmt.Sprintln("Address:", hex.EncodeToString(a))
-	//	txt += fmt.Sprintln("Holdings:", conf+uncTx, "GXY")
-	//	txt += fmt.Sprintln("Confirmed balance:", conf, "GXY")
-	//	txt += fmt.Sprintln("Transactions unconfirmed balance:", uncTx, "GXY")
-	//	txt += fmt.Sprintf("Staked amount: %18.8f GXY\n", stake)
-	//	txt += fmt.Sprintf("Unconfirmed staked amount: %18.8f GXY\n", uncStake)
-	//}
-	//widgets.QMessageBox_Information(nil, "Balances", txt, widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-	//})
-	//widget.Layout().AddWidget(buttonMining)
 	return widget
 }
 
-func startMining() string {
-	clientrpc.InRPC <- []byte("MINE")
+func startMining(ip [4]byte) string {
+	clientrpc.InRPC <- append([]byte("MINE"), ip[:]...)
 	var reply []byte
 	reply = <-clientrpc.OutRPC
 	if string(reply) == "Timeout" {

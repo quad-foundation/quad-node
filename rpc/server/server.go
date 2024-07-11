@@ -1,6 +1,7 @@
 package serverrpc
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -92,12 +93,23 @@ func handleWALL(line []byte, reply *[]byte) {
 }
 
 func handleMINE(line []byte, reply *[]byte) {
-
+	ip := [4]byte{0, 0, 0, 0}
+	if len(line) == 4 {
+		copy(ip[:], line)
+	}
 	firstDel := common.GetDelegatedAccountAddress(1)
 	if firstDel.GetHex() != common.GetDelegatedAccount().Hex() {
 		nonceServices.InitNonceService()
+		go nonceServices.StartSubscribingNonceMsgSelf()
+		go nonceServices.StartSubscribingNonceMsg(tcpip.MyIP)
+		if bytes.Equal(ip[:], []byte{0, 0, 0, 0}) == false {
+			go nonceServices.StartSubscribingNonceMsg(ip)
+		}
+		*reply = []byte("Mining initiated")
+	} else {
+		*reply = []byte("First delegated account just automatically mines")
 	}
-	*reply = []byte("Mining initiated")
+
 }
 
 func handleGTBL(byt []byte, reply *[]byte) {
