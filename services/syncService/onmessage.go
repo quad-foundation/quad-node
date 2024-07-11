@@ -7,6 +7,7 @@ import (
 	"github.com/quad-foundation/quad-node/common"
 	"github.com/quad-foundation/quad-node/message"
 	"github.com/quad-foundation/quad-node/services"
+	nonceServices "github.com/quad-foundation/quad-node/services/nonceService"
 	"github.com/quad-foundation/quad-node/services/transactionServices"
 	"github.com/quad-foundation/quad-node/statistics"
 	"github.com/quad-foundation/quad-node/tcpip"
@@ -58,15 +59,15 @@ func OnMessage(addr [4]byte, m []byte) {
 				copy(topicip[2:], ip)
 				copy(topicip[:2], tcpip.NonceTopic[:])
 				if _, ok := peersConnectedNN[topicip]; !ok && !tcpip.IsIPBanned(ip4, h, tcpip.NonceTopic) {
-					tcpip.AddNewPeer(ip4, tcpip.NonceTopic)
+					go nonceServices.StartSubscribingNonceMsg(ip4)
 				}
 				copy(topicip[:2], tcpip.SyncTopic[:])
 				if _, ok := peersConnectedBB[topicip]; !ok && !tcpip.IsIPBanned(ip4, h, tcpip.SyncTopic) {
-					tcpip.AddNewPeer(ip4, tcpip.SyncTopic)
+					go StartSubscribingSyncMsg(ip4)
 				}
 				copy(topicip[:2], tcpip.TransactionTopic[:])
 				if _, ok := peersConnectedTT[topicip]; !ok && !tcpip.IsIPBanned(ip4, h, tcpip.TransactionTopic) {
-					tcpip.AddNewPeer(ip4, tcpip.TransactionTopic)
+					go transactionServices.StartSubscribingTransactionMsg(ip4)
 				}
 				if tcpip.GetPeersCount() > common.MaxPeersConnected {
 					break
