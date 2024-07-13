@@ -134,7 +134,7 @@ func Send(addr [4]byte, nb []byte) {
 }
 
 func sendSyncMsgInLoop() {
-	for range time.Tick(time.Second * 5) {
+	for range time.Tick(time.Second) {
 		n := generateSyncMsgHeight()
 		Send([4]byte{0, 0, 0, 0}, n)
 	}
@@ -146,6 +146,7 @@ func startPublishingSyncMsg() {
 }
 
 func StartSubscribingSyncMsg(ip [4]byte) {
+
 	recvChan := make(chan []byte, 10) // Use a buffered channel
 	var ipr [4]byte
 	quit := false

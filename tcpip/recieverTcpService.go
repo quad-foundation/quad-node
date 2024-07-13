@@ -1,6 +1,7 @@
 package tcpip
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -105,20 +106,19 @@ func Accept(topic [2]byte, conn *net.TCPListener) (*net.TCPConn, error) {
 	return tcpConn, nil
 }
 
-func Send(conn *net.TCPConn, message []byte) {
+func Send(conn *net.TCPConn, message []byte) error {
 	message = append(message, []byte("<-END->")...)
 	_, err := conn.Write(message)
 	if err != nil {
 		log.Printf("Can't send response: %v", err)
-		if errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ECONNABORTED) {
-			CloseAndRemoveConnection(conn)
-		}
+		return err
 	}
+	return nil
 }
 
 // Receive reads data from the connection and handles errors
 func Receive(topic [2]byte, conn *net.TCPConn) []byte {
-	const bufSize = 9192 //1048576
+	const bufSize = 1024 //1048576
 
 	if conn == nil {
 		return []byte("<-CLS->")
@@ -168,16 +168,20 @@ func RegisterPeer(topic [2]byte, tcpConn *net.TCPConn) {
 	var addrRemoteBytes [4]byte
 	copy(topicipBytes[:], append(topic[:], ip[:]...))
 	copy(addrRemoteBytes[:], ip[:])
-	PeersMutex.Lock()
-	defer PeersMutex.Unlock()
+	PeersMutex.RLock()
 	if _, ok := peersConnected[topicipBytes]; !ok {
 		log.Println("New connection from address", ra[0], "on topic", topic)
+		PeersMutex.RUnlock()
+		PeersMutex.Lock()
 		// Initialize the map for the topic if it doesn't exist
 		if _, ok := tcpConnections[topic]; !ok {
 			tcpConnections[topic] = make(map[[4]byte]*net.TCPConn)
 		}
 		tcpConnections[topic][addrRemoteBytes] = tcpConn
 		peersConnected[topicipBytes] = topic
+		PeersMutex.Unlock()
+	} else {
+		PeersMutex.RUnlock()
 	}
 }
 
@@ -201,6 +205,9 @@ func GetIPsConnected() [][]byte {
 	for key, value := range peersConnected {
 		if value == [2]byte{'N', 'N'} {
 			copy(ipb[:], key[2:])
+			if bytes.Equal(ipb[:], MyIP[:]) {
+				continue
+			}
 			uniqueIPs[ipb] = struct{}{}
 		}
 	}
@@ -209,24 +216,6 @@ func GetIPsConnected() [][]byte {
 		ips = append(ips, ip[:])
 	}
 	return ips
-}
-
-//func GetIPsfrombytes(peers [][4]byte) []string {
-//	var ips []string
-//	for _, ipb := range peers {
-//		ip := fmt.Sprintf("%d.%d.%d.%d", ipb[0], ipb[1], ipb[2], ipb[3])
-//		ips = append(ips, ip)
-//	}
-//	return ips
-//}
-
-func AddNewPeer(peer [4]byte, topic [2]byte) {
-	PeersMutex.Lock()
-	defer PeersMutex.Unlock()
-
-	topicip := [6]byte{}
-	copy(topicip[:], append(topic[:], peer[:]...))
-	peersConnected[topicip] = topic
 }
 
 func GetPeersCount() int {
@@ -255,6 +244,6 @@ func LookUpForNewPeersToConnect(chanPeer chan []byte) {
 			}
 		}
 		PeersMutex.Unlock()
-		time.Sleep(time.Second)
+		time.Sleep(time.Second * 10)
 	}
 }

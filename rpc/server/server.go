@@ -1,6 +1,7 @@
 package serverrpc
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"github.com/quad-foundation/quad-node/blocks"
 	"github.com/quad-foundation/quad-node/common"
 	"github.com/quad-foundation/quad-node/core/stateDB"
+	nonceServices "github.com/quad-foundation/quad-node/services/nonceService"
 	"github.com/quad-foundation/quad-node/services/transactionServices"
 	"github.com/quad-foundation/quad-node/statistics"
 	"github.com/quad-foundation/quad-node/tcpip"
@@ -59,6 +61,8 @@ func (l *Listener) Send(line []byte, reply *[]byte) error {
 		handleVIEW(byt, reply)
 	case "ACCT":
 		handleACCT(byt, reply)
+	case "MINE":
+		handleMINE(byt, reply)
 	//case "ACCS":
 	//	handleACCS(byt, reply)
 	case "DETS":
@@ -86,6 +90,26 @@ func handleWALL(line []byte, reply *[]byte) {
 		return
 	}
 	*reply = r
+}
+
+func handleMINE(line []byte, reply *[]byte) {
+	ip := [4]byte{0, 0, 0, 0}
+	if len(line) == 4 {
+		copy(ip[:], line)
+	}
+	firstDel := common.GetDelegatedAccountAddress(1)
+	if firstDel.GetHex() != common.GetDelegatedAccount().Hex() {
+		nonceServices.InitNonceService()
+		go nonceServices.StartSubscribingNonceMsgSelf()
+		go nonceServices.StartSubscribingNonceMsg(tcpip.MyIP)
+		if bytes.Equal(ip[:], []byte{0, 0, 0, 0}) == false {
+			go nonceServices.StartSubscribingNonceMsg(ip)
+		}
+		*reply = []byte("Mining initiated")
+	} else {
+		*reply = []byte("First delegated account just automatically mines")
+	}
+
 }
 
 func handleGTBL(byt []byte, reply *[]byte) {

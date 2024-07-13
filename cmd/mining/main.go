@@ -114,19 +114,18 @@ func main() {
 
 	genesis.InitGenesis()
 
-	//firstDel := common.GetDelegatedAccountAddress(1)
-	//if firstDel.GetHex() == common.DelegatedAccount.GetHex() {
-	//	common.IsSyncing.Put(false)
-	//}
-
 	transactionServices.InitTransactionService()
-	nonceService.InitNonceService()
 	syncServices.InitSyncService()
 
 	go serverrpc.ListenRPC()
 
-	go nonceService.StartSubscribingNonceMsgSelf()
-	go nonceService.StartSubscribingNonceMsg(tcpip.MyIP)
+	firstDel := common.GetDelegatedAccountAddress(1)
+	if firstDel.GetHex() == common.GetDelegatedAccount().Hex() {
+		nonceService.InitNonceService()
+		go nonceService.StartSubscribingNonceMsgSelf()
+		go nonceService.StartSubscribingNonceMsg(tcpip.MyIP)
+	}
+
 	go transactionServices.StartSubscribingTransactionMsg(tcpip.MyIP)
 	go syncServices.StartSubscribingSyncMsg(tcpip.MyIP)
 	time.Sleep(time.Second)
@@ -147,6 +146,7 @@ func main() {
 		}
 		go transactionServices.StartSubscribingTransactionMsg(ip)
 		go nonceService.StartSubscribingNonceMsg(ip)
+
 		go syncServices.StartSubscribingSyncMsg(ip)
 	}
 	time.Sleep(time.Second)

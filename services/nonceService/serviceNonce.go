@@ -15,9 +15,9 @@ import (
 
 func InitNonceService() {
 	services.SendMutexNonce.Lock()
-	services.SendChanNonce = make(chan []byte, 100)
+	services.SendChanNonce = make(chan []byte, 10)
 
-	services.SendChanSelfNonce = make(chan []byte, 100)
+	services.SendChanSelfNonce = make(chan []byte, 10)
 	services.SendMutexNonce.Unlock()
 	startPublishingNonceMsg()
 	time.Sleep(time.Second)
@@ -86,7 +86,7 @@ Q:
 		sendNonceMsg(tcpip.MyIP, topic)
 		select {
 		case s := <-chanRecv:
-			if len(s) == 4 && string(s) == "EXIT" {
+			if len(s) == 4 && bytes.Equal(s, []byte("EXIT")) {
 				break Q
 			}
 		default:
