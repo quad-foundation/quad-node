@@ -16,6 +16,10 @@ import (
 )
 
 func OnMessage(addr [4]byte, m []byte) {
+	if bytes.Equal(addr[:], tcpip.MyIP[:]) {
+		return
+	}
+
 	h := common.GetHeight()
 	if tcpip.IsIPBanned(addr, h, tcpip.SyncTopic) {
 		return
