@@ -134,7 +134,7 @@ func Send(addr [4]byte, nb []byte) {
 }
 
 func sendSyncMsgInLoop() {
-	for range time.Tick(time.Second * 5) {
+	for range time.Tick(time.Second) {
 		n := generateSyncMsgHeight()
 		Send([4]byte{0, 0, 0, 0}, n)
 	}
