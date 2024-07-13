@@ -213,7 +213,7 @@ func OnMessage(addr [4]byte, m []byte) {
 				if len(hashesMissing) > 0 {
 					transactionServices.SendGT(addr, hashesMissing)
 				}
-				services.RevertVMToBlockHeight(oldBlock.GetHeader().Height)
+				services.ResetAccountsAndBlocksSync(oldBlock.GetHeader().Height)
 				return
 			}
 			// storing blocks
