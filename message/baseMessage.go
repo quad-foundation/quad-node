@@ -2,25 +2,22 @@ package message
 
 import (
 	"bytes"
-	"github.com/quad/quad-node/common"
-	"github.com/quad/quad-node/transactionsDefinition"
+	"github.com/quad-foundation/quad-node/common"
 	"log"
 )
 
-// tx - transaction, gt - get transaction, st - sync transaction, "nn" - nonce, "bl" - block, "rb" - reject block
-var validHead = []string{"nn", "bl", "rb", "tx", "gt", "st"}
+// tx - transaction, gt - get transaction, st - sync transaction, "nn" - nonce, "bl" - block, "rb" - reject block, "hi" - GetHeight, "gh" - GetHeaders, "sh" - SendHeaders
+var validHead = []string{"nn", "bl", "rb", "tx", "gt", "st", "hi", "gh", "sh"}
 
 type BaseMessage struct {
 	Head    []byte `json:"head"`
 	ChainID int16  `json:"chainID"`
-	Chain   uint8  `json:"chain"`
 }
 
 type AnyMessage interface {
 	GetHead() []byte
 	GetChainID() int16
-	GetTransactions() (map[[2]byte][]transactionsDefinition.Transaction, error)
-	GetChain() uint8
+	GetTransactionsBytes() map[[2]byte][][]byte
 	GetBytes() []byte
 	GetFromBytes([]byte) (AnyMessage, error)
 }
@@ -28,13 +25,12 @@ type AnyMessage interface {
 func (m BaseMessage) GetBytes() []byte {
 	b := m.Head[:]
 	b = append(b, common.GetByteInt16(m.ChainID)...)
-	b = append(b, m.Chain)
 	return b
 }
 
 func (m *BaseMessage) GetFromBytes(b []byte) {
-	if len(b) != 5 {
-		log.Println("bytes length should be 5")
+	if len(b) != 4 {
+		log.Println("bytes length should be 4")
 		return
 	}
 	m.Head = b[:2]
@@ -47,25 +43,17 @@ func (m *BaseMessage) GetFromBytes(b []byte) {
 		log.Println("Wrong Chain ID")
 		return
 	}
-	m.Chain = b[4]
 }
 
 func CheckMessage(a AnyMessage) bool {
 	isValidChainID := a.GetChainID() == common.GetChainID()
 
-	isValidChain := false
-	for _, chain := range common.ValidChains {
-		if a.GetChain() == chain {
-			isValidChain = true
-			break
-		}
-	}
 	isValidHead := false
 	for _, key := range validHead {
-		if bytes.Compare(a.GetHead(), []byte(key)) == 0 {
+		if bytes.Equal(a.GetHead(), []byte(key)) {
 			isValidHead = true
 			break
 		}
 	}
-	return isValidHead && isValidChain && isValidChainID
+	return isValidHead && isValidChainID
 }

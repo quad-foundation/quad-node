@@ -1,11 +1,11 @@
 package blocks
 
 import (
+	"bytes"
 	"fmt"
-	"github.com/quad/quad-node/common"
-	memDatabase "github.com/quad/quad-node/database"
-	"github.com/quad/quad-node/wallet"
-	"log"
+	"github.com/quad-foundation/quad-node/common"
+	memDatabase "github.com/quad-foundation/quad-node/database"
+	"github.com/quad-foundation/quad-node/wallet"
 )
 
 type BaseHeader struct {
@@ -24,23 +24,20 @@ type BaseBlock struct {
 	BlockHeaderHash  common.Hash `json:"block_header_hash"`
 	BlockTimeStamp   int64       `json:"block_time_stamp"`
 	RewardPercentage int16       `json:"reward_percentage"`
+	Supply           int64       `json:"supply"`
 }
 
-//
-//type AnyBlock interface {
-//	GetBaseBlock() BaseBlock
-//	GetBlockHeaderHash() common.Hash
-//	GetBlockTimeStamp() int64
-//	GetRewardPercentage() int16
-//	GetChain() uint8
-//	GetTransactionsHash() common.Hash
-//	GetBlockHash() common.Hash
-//	CalcBlockHash() (common.Hash, error)
-//	CheckProofOfSynergy() bool
-//	GetBytes() []byte
-//	GetFromBytes([]byte) (AnyBlock, error)
-//	GetTransactionsHashes(*transactionType.PatriciaMerkleTree) ([]common.Hash, error)
-//}
+// GetString returns a string representation of BaseHeader.
+func (b *BaseHeader) GetString() string {
+	return fmt.Sprintf("PreviousHash: %s\nDifficulty: %d\nHeight: %d\nDelegatedAccount: %s\nOperatorAccount: %s\nRootMerkleTree: %s\nSignature: %s\nSignatureMessage: %x",
+		b.PreviousHash.GetHex(), b.Difficulty, b.Height, b.DelegatedAccount.GetHex(), b.OperatorAccount.GetHex(), b.RootMerkleTree.GetHex(), b.Signature.GetHex(), b.SignatureMessage)
+}
+
+// GetString returns a string representation of BaseBlock.
+func (b *BaseBlock) GetString() string {
+	return fmt.Sprintf("Header: {%s}\nBlockHeaderHash: %s\nBlockTimeStamp: %d\nRewardPercentage: %d\nSupply: %d",
+		b.BaseHeader.GetString(), b.BlockHeaderHash.GetHex(), b.BlockTimeStamp, b.RewardPercentage, b.Supply)
+}
 
 func (b *BaseHeader) GetBytesWithoutSignature() []byte {
 	rb := b.PreviousHash.GetBytes()
@@ -49,7 +46,7 @@ func (b *BaseHeader) GetBytesWithoutSignature() []byte {
 	rb = append(rb, b.DelegatedAccount.GetBytes()...)
 	rb = append(rb, b.OperatorAccount.GetBytes()...)
 	rb = append(rb, b.RootMerkleTree.GetBytes()...)
-	rb = append(rb, b.SignatureMessage...)
+	//rb = append(rb, b.SignatureMessage...)
 	return rb
 }
 
@@ -62,12 +59,15 @@ func (b *BaseHeader) GetBytes() []byte {
 	rb = append(rb, b.RootMerkleTree.GetBytes()...)
 	rb = append(rb, common.BytesToLenAndBytes(b.SignatureMessage)...)
 	rb = append(rb, common.BytesToLenAndBytes(b.Signature.GetBytes())...)
-	log.Println("block ", b.Height, " len bytes ", len(rb))
+	//log.Println("block ", b.Height, " len bytes ", len(rb))
 	return rb
 }
 
-func (bh *BaseHeader) VerifyTransaction() bool {
+func (bh *BaseHeader) Verify() bool {
 	signatureBlockHeaderMessage := bh.GetBytesWithoutSignature()
+	if !bytes.Equal(signatureBlockHeaderMessage, bh.SignatureMessage) {
+		return false
+	}
 	calcHash, err := common.CalcHashToByte(signatureBlockHeaderMessage)
 	if err != nil {
 		return false
@@ -98,7 +98,7 @@ func (bh *BaseHeader) GetFromBytes(b []byte) ([]byte, error) {
 	if len(b) < 116+common.SignatureLength {
 		return nil, fmt.Errorf("not enough bytes to decode BaseHeader")
 	}
-	log.Println("block decompile len bytes ", len(b))
+	//log.Println("block decompile len bytes ", len(b))
 
 	bh.PreviousHash = common.GetHashFromBytes(b[:32])
 	bh.Difficulty = common.GetInt32FromByte(b[32:36])
@@ -136,6 +136,7 @@ func (bb *BaseBlock) GetBytes() []byte {
 	b = append(b, bb.BlockHeaderHash.GetBytes()...)
 	b = append(b, common.GetByteInt64(bb.BlockTimeStamp)...)
 	b = append(b, common.GetByteInt16(bb.RewardPercentage)...)
+	b = append(b, common.GetByteInt64(bb.Supply)...)
 	return b
 }
 
@@ -150,7 +151,8 @@ func (bb *BaseBlock) GetFromBytes(b []byte) ([]byte, error) {
 	bb.BlockHeaderHash = common.GetHashFromBytes(b[:32])
 	bb.BlockTimeStamp = common.GetInt64FromByte(b[32:40])
 	bb.RewardPercentage = common.GetInt16FromByte(b[40:42])
-	return b[42:], nil
+	bb.Supply = common.GetInt64FromByte(b[42:50])
+	return b[50:], nil
 }
 
 func (b *BaseHeader) CalcHash() (common.Hash, error) {

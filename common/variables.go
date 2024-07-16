@@ -6,10 +6,10 @@ import (
 )
 
 var height int64
+var heightMax int64
 var heightMutex sync.RWMutex
-var BalanceMutex sync.RWMutex
-var BlockMutex sync.Mutex
-var SyncingMutex sync.Mutex
+var heightMaxMutex sync.RWMutex
+var BlockMutex sync.RWMutex
 var IsSyncing = atomic.Bool{}
 
 func GetHeight() int64 {
@@ -24,10 +24,14 @@ func SetHeight(h int64) {
 	height = h
 }
 
-func CheckHeight(chain uint8, heightToCheck int64) bool {
-	return GetChainForHeight(heightToCheck) == chain
+func GetHeightMax() int64 {
+	heightMaxMutex.RLock()
+	defer heightMaxMutex.RUnlock()
+	return heightMax
 }
 
-func GetChainForHeight(heightToCheck int64) uint8 {
-	return uint8(heightToCheck % 5)
+func SetHeightMax(hmax int64) {
+	heightMaxMutex.Lock()
+	defer heightMaxMutex.Unlock()
+	heightMax = hmax
 }

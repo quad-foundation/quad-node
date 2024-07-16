@@ -1,25 +1,27 @@
 package message
 
 import (
-	"bytes"
-	"github.com/quad/quad-node/common"
-	"github.com/quad/quad-node/transactionsDefinition"
+	"fmt"
+	"github.com/quad-foundation/quad-node/common"
+	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"log"
 )
 
-var validTopics = [][2]byte{{'N', 0}, {'S', 0}, {'T', 0}, {'B', 0}}
+var validTopics = [][2]byte{{'N', 'N'}, {'S', 'S'}, {'T', 'T'}, {'B', 'B'}}
 
 type TransactionsMessage struct {
 	BaseMessage       BaseMessage          `json:"base_message"`
 	TransactionsBytes map[[2]byte][][]byte `json:"transactions_bytes"`
 }
 
-func (a TransactionsMessage) GetTransactions() (map[[2]byte][]transactionsDefinition.Transaction, error) {
+func (a TransactionsMessage) GetTransactionsBytes() map[[2]byte][][]byte {
+	return a.TransactionsBytes
+}
+
+func (a TransactionsMessage) GetTransactionsFromBytes() (map[[2]byte][]transactionsDefinition.Transaction, error) {
 	txn := map[[2]byte][]transactionsDefinition.Transaction{}
 	for _, topic := range validTopics {
-		chain := a.GetChain()
-		topic[1] = chain
-		if common.IsInKeysOfList(a.TransactionsBytes, topic) {
+		if _, ok := a.TransactionsBytes[topic]; ok {
 			for _, tb := range a.TransactionsBytes[topic] {
 				tx := transactionsDefinition.Transaction{}
 				at, rest, err := tx.GetFromBytes(tb)
@@ -34,10 +36,6 @@ func (a TransactionsMessage) GetTransactions() (map[[2]byte][]transactionsDefini
 	return txn, nil
 }
 
-func (b TransactionsMessage) GetChain() uint8 {
-	return b.BaseMessage.Chain
-}
-
 func (b TransactionsMessage) GetHead() []byte {
 	return b.BaseMessage.Head
 }
@@ -49,44 +47,71 @@ func (b TransactionsMessage) GetChainID() int16 {
 func (a TransactionsMessage) GetBytes() []byte {
 
 	b := a.BaseMessage.GetBytes()
-	for _, topic := range validTopics {
-		topic[1] = a.GetChain()
-		if common.IsInKeysOfList(a.TransactionsBytes, topic) {
-			for _, sb := range a.TransactionsBytes[topic] {
-				b = append(b, topic[:]...)
-				b = append(b, common.BytesToLenAndBytes(sb)...)
-			}
+	b = append(b, common.GetByteInt32(int32(len(a.TransactionsBytes)))...)
+	for key, sb := range a.TransactionsBytes {
+		b = append(b, key[:]...)
+		b = append(b, common.GetByteInt32(int32(len(sb)))...)
+		for _, v := range sb {
+			b = append(b, common.BytesToLenAndBytes(v)...)
 		}
 	}
 	return b
 }
 
 func (a TransactionsMessage) GetFromBytes(b []byte) (AnyMessage, error) {
+	if len(b) < 4 {
+		return nil, fmt.Errorf("insufficient bytes for base message")
+	}
 
 	var err error
-	var sb []byte
-	a.BaseMessage.GetFromBytes(b[:5])
-	a.TransactionsBytes = map[[2]byte][][]byte{}
-	if len(b) > 7 {
-		b = b[5:]
-		for _, topic := range validTopics {
-			if len(b) == 0 {
-				break
-			}
-			topic[1] = a.GetChain()
-			if bytes.Equal(b[:2], topic[:]) {
-				a.TransactionsBytes[topic] = [][]byte{}
-				for len(b) > 0 {
-					b = b[2:]
-					sb, b, err = common.BytesWithLenToBytes(b)
-					if err != nil {
-						log.Println("unmarshal AnyNonceMessage from bytes fails")
-						return nil, err
-					}
-					a.TransactionsBytes[topic] = append(a.TransactionsBytes[topic], sb)
-				}
-			}
-		}
+	a.BaseMessage.GetFromBytes(b[:4])
+	if err != nil {
+		return nil, err
 	}
+
+	b = b[4:]
+
+	if len(b) < 4 {
+		return nil, fmt.Errorf("insufficient bytes for transactions length")
+	}
+
+	n := common.GetInt32FromByte(b[:4])
+	b = b[4:]
+
+	a.TransactionsBytes = make(map[[2]byte][][]byte)
+
+	for i := int32(0); i < n; i++ {
+		if len(b) < 2 {
+			return nil, fmt.Errorf("insufficient bytes for key")
+		}
+		var key [2]byte
+		copy(key[:], b[:2])
+		b = b[2:]
+
+		if len(b) < 4 {
+			return nil, fmt.Errorf("insufficient bytes for transactions size")
+		}
+
+		size := common.GetInt32FromByte(b[:4])
+		b = b[4:]
+
+		var sb []byte
+		var transactions [][]byte
+		for j := int32(0); j < size; j++ {
+			if len(b) < 4 {
+				return nil, fmt.Errorf("insufficient bytes for transaction length")
+			}
+
+			sb, b, err = common.BytesWithLenToBytes(b)
+			if err != nil {
+				log.Println("unmarshal AnyNonceMessage from bytes fails")
+				return nil, err
+			}
+			transactions = append(transactions, sb)
+		}
+
+		a.TransactionsBytes[key] = transactions
+	}
+
 	return AnyMessage(a), nil
 }

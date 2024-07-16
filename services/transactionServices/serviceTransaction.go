@@ -1,32 +1,31 @@
 package transactionServices
 
 import (
-	"github.com/quad/quad-node/common"
-	"github.com/quad/quad-node/message"
-	"github.com/quad/quad-node/services"
-	"github.com/quad/quad-node/tcpip"
-	"github.com/quad/quad-node/transactionsDefinition"
-	"github.com/quad/quad-node/transactionsPool"
+	"bytes"
+	"github.com/quad-foundation/quad-node/common"
+	"github.com/quad-foundation/quad-node/message"
+	"github.com/quad-foundation/quad-node/services"
+	"github.com/quad-foundation/quad-node/tcpip"
+	"github.com/quad-foundation/quad-node/transactionsDefinition"
+	"github.com/quad-foundation/quad-node/transactionsPool"
 	"log"
 	"time"
 )
 
 func InitTransactionService() {
 	services.SendMutexTx.Lock()
-	services.SendChanTx = make(chan []byte)
+	services.SendChanTx = make(chan []byte, 100)
 
 	services.SendMutexTx.Unlock()
 	startPublishingTransactionMsg()
 	go broadcastTransactionsMsgInLoop(services.SendChanTx)
 }
 
-func GenerateTransactionMsg(txs []transactionsDefinition.Transaction, chain uint8, topic [2]byte) (message.TransactionsMessage, error) {
+func GenerateTransactionMsg(txs []transactionsDefinition.Transaction, mesgHead []byte, topic [2]byte) (message.TransactionsMessage, error) {
 
-	topic[1] = chain
 	bm := message.BaseMessage{
-		Head:    []byte("tx"),
+		Head:    mesgHead,
 		ChainID: common.GetChainID(),
-		Chain:   chain,
 	}
 	bb := [][]byte{}
 	for _, tx := range txs {
@@ -41,16 +40,29 @@ func GenerateTransactionMsg(txs []transactionsDefinition.Transaction, chain uint
 	return n, nil
 }
 
+func GenerateTransactionMsgGT(txsHashes [][]byte, mesgHead []byte, topic [2]byte) (message.TransactionsMessage, error) {
+
+	bm := message.BaseMessage{
+		Head:    mesgHead,
+		ChainID: common.GetChainID(),
+	}
+
+	n := message.TransactionsMessage{
+		BaseMessage:       bm,
+		TransactionsBytes: map[[2]byte][][]byte{topic: txsHashes},
+	}
+	return n, nil
+}
+
 func broadcastTransactionsMsgInLoop(chanRecv chan []byte) {
 
 Q:
 	for range time.Tick(time.Second) {
-		//chain := common.GetChainForHeight(common.GetHeight() + 1)
-		for chain := uint8(0); chain < 5; chain++ {
-			topic := [2]byte{'T', chain}
 
-			SendTransactionMsg(tcpip.MyIP, chain, topic)
-		}
+		topic := [2]byte{'T', 'T'}
+
+		SendTransactionMsg(tcpip.MyIP, topic)
+
 		select {
 		case s := <-chanRecv:
 			if len(s) == 4 && string(s) == "EXIT" {
@@ -61,13 +73,13 @@ Q:
 	}
 }
 
-func SendTransactionMsg(ip string, chain uint8, topic [2]byte) {
+func SendTransactionMsg(ip [4]byte, topic [2]byte) {
 	isync := common.IsSyncing.Load()
 	if isync == true {
 		return
 	}
-	txs := transactionsPool.PoolsTx[chain].PeekTransactions(int(common.MaxTransactionsPerBlock))
-	n, err := GenerateTransactionMsg(txs, chain, topic)
+	txs := transactionsPool.PoolsTx.PeekTransactions(int(common.MaxTransactionsPerBlock))
+	n, err := GenerateTransactionMsg(txs, []byte("tx"), topic)
 	if err != nil {
 		log.Println(err)
 		return
@@ -75,51 +87,61 @@ func SendTransactionMsg(ip string, chain uint8, topic [2]byte) {
 	Send(ip, n.GetBytes())
 }
 
-func Send(addr string, nb []byte) {
-	bip := []byte(addr)
-	lip := common.GetByteInt16(int16(len(bip)))
-	lip = append(lip, bip...)
-	nb = append(lip, nb...)
+func SendGT(ip [4]byte, txsHashes [][]byte) {
+	topic := tcpip.TransactionTopic
+	transactionMsg, err := GenerateTransactionMsgGT(txsHashes, []byte("st"), topic)
+	if err != nil {
+		log.Println("cannot generate transaction msg", err)
+	}
+	Send(ip, transactionMsg.GetBytes())
+}
+
+func Send(addr [4]byte, nb []byte) {
+
+	nb = append(addr[:], nb...)
 	services.SendMutexTx.Lock()
 	services.SendChanTx <- nb
 	services.SendMutexTx.Unlock()
 }
 
-func startPublishingTransactionMsg() {
-	services.SendMutexTx.Lock()
-	for i := 0; i < 5; i++ {
-		go tcpip.StartNewListener(services.SendChanTx, tcpip.TransactionTopic[i])
+func Spread(ignoreAddr [4]byte, nb []byte) {
+	var ip [4]byte
+	var peers = tcpip.GetPeersConnected(tcpip.TransactionTopic)
+	for topicip, _ := range peers {
+		copy(ip[:], topicip[2:])
+		if !bytes.Equal(ip[:], ignoreAddr[:]) && !bytes.Equal(ip[:], tcpip.MyIP[:]) {
+			Send(ip, nb)
+		}
 	}
-	services.SendMutexTx.Unlock()
 }
 
-func StartSubscribingTransactionMsg(ip string, chain uint8) {
-	recvChan := make(chan []byte)
+func startPublishingTransactionMsg() {
+	go tcpip.StartNewListener(services.SendChanTx, tcpip.TransactionTopic)
+}
 
-	go tcpip.StartNewConnection(ip, recvChan, tcpip.TransactionTopic[chain])
+func StartSubscribingTransactionMsg(ip [4]byte) {
+	recvChan := make(chan []byte, 10) // Use a buffered channel
+	quit := false
+	var ipr [4]byte
+	go tcpip.StartNewConnection(ip, recvChan, tcpip.TransactionTopic)
 	log.Println("Enter connection receiving loop (nonce msg)", ip)
-Q:
-
-	for {
+	for !quit {
 		select {
 		case s := <-recvChan:
-			if len(s) == 4 && string(s) == "EXIT" {
-				break Q
+			if len(s) == 4 && bytes.Equal(s, []byte("EXIT")) {
+				quit = true
+				break
 			}
-			if len(s) > 2 {
-				l := common.GetInt16FromByte(s[:2])
-				if len(s) > 2+int(l) {
-					ipr := string(s[2 : 2+l])
-
-					OnMessage(ipr, s[2+l:])
-				}
+			if len(s) > 4 {
+				copy(ipr[:], s[:4])
+				OnMessage(ipr, s[4:])
 			}
-
 		case <-tcpip.Quit:
-			break Q
+			quit = true
 		default:
+			// Optional: Add a small sleep to prevent busy-waiting
+			time.Sleep(time.Millisecond)
 		}
-
 	}
 	log.Println("Exit connection receiving loop (nonce msg)", ip)
 }

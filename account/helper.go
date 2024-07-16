@@ -1,8 +1,12 @@
 package account
 
 import (
-	"github.com/quad/quad-node/common"
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"github.com/quad-foundation/quad-node/common"
 	"math"
+	"sync"
 )
 
 func Int64toFloat64(value int64) float64 {
@@ -13,30 +17,21 @@ func Int64toFloat64ByDecimals(value int64, decimals uint8) float64 {
 	return float64(value) * math.Pow10(-int(decimals))
 }
 
-//
-//func IsDelegatedAccount(ab [common.AddressLength]byte) bool {
-//	n := common.GetInt16FromByte(ab[:])
-//	if n >= 256 || n == 0 {
-//		return false
-//	}
-//	da := common.GetDelegatedAccountAddress(n)
-//	return bytes.Compare(da.GetBytes(), ab[:]) == 0
-//}
-//
-//func IsDelegatedAccountFromAddress(a common.Address) bool {
-//	n := common.GetInt16FromByte(a.GetByte())
-//	if !(n > 0 && n < 256) {
-//		return false
-//	}
-//	da := common.GetDelegatedAccountAddress(n)
-//	return bytes.Compare(da.GetByte(), a.GetByte()) == 0
-//}
-//
-//func IsDEXAccountFromAddress(a common.Address) bool {
-//	n := common.GetInt16FromByte(a.GetByte())
-//	if n != 256 {
-//		return false
-//	}
-//	da := common.GetDelegatedAccountByteForDEX(n, a.GetByte()[2:])
-//	return bytes.Compare(da.GetByte(), a.GetByte()) == 0
-//}
+var StakingRWMutex sync.RWMutex
+
+func IntDelegatedAccountFromAddress(a common.Address) (int, error) {
+	n := binary.BigEndian.Uint16(a.GetBytes())
+	if n < 1 {
+		return -1, fmt.Errorf("this is not correct delegated account")
+	}
+	for _, b := range a.GetBytes()[2:] {
+		if b != 0 {
+			return -1, fmt.Errorf("this is not correct delegated account")
+		}
+	}
+	da := common.GetDelegatedAccountAddress(int16(n))
+	if bytes.Equal(da.GetBytes(), a.GetBytes()) {
+		return int(n), nil
+	}
+	return -1, fmt.Errorf("wrongly formated delegated account")
+}

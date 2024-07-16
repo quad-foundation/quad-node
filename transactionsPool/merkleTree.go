@@ -2,14 +2,16 @@ package transactionsPool
 
 import (
 	"bytes"
-	"github.com/quad/quad-node/common"
-	memDatabase "github.com/quad/quad-node/database"
+	"fmt"
+	"github.com/quad-foundation/quad-node/common"
+	memDatabase "github.com/quad-foundation/quad-node/database"
 	"log"
 )
 
 type MerkleTree struct {
-	Root []MerkleNode
-	DB   *memDatabase.AnyBlockchainDB
+	Root     []MerkleNode
+	TxHashes [][]byte
+	DB       *memDatabase.AnyBlockchainDB
 }
 type MerkleNode struct {
 	Left  *MerkleNode
@@ -103,44 +105,21 @@ func (t *MerkleTree) GetRootHash() []byte {
 	return common.EmptyHash().GetBytes()
 }
 
-func BuildMerkleTree(height int64, blockTransactionsHashes [][]byte) (*MerkleTree, error) {
+func BuildMerkleTree(height int64, blockTransactionsHashes [][]byte, db *memDatabase.AnyBlockchainDB) (*MerkleTree, error) {
 
-	merkleNodes, err := NewMerkleTree(blockTransactionsHashes)
-	prefix := common.MerkleNodeDBPrefix[:]
-	key := append(prefix, common.GetByteInt64(height)...)
-
+	merkleNodes, _ := NewMerkleTree(blockTransactionsHashes)
 	tree := new(MerkleTree)
 	tree.Root = merkleNodes
-	db := memDatabase.NewInMemoryDB()
-	tree.DB = &db
-	treeb, err := common.Marshal(merkleNodes, common.MerkleNodeDBPrefix)
-	if err != nil {
-		return nil, err
-	}
-	err = (*tree.DB).Put(key, treeb)
-	if err != nil {
-		return nil, err
-	}
-	prefix = common.RootHashMerkleTreeDBPrefix[:]
-	key = append(prefix, common.GetByteInt64(height)...)
-	err = (*tree.DB).Put(key, tree.GetRootHash())
-	if err != nil {
-		return nil, err
-	}
-	ret := []byte{}
-	for _, hash := range blockTransactionsHashes {
-		ret = append(ret, hash...)
-	}
-	prefix = common.TransactionsHashesByHeightDBPrefix[:]
-	key = append(prefix, common.GetByteInt64(height)...)
-	err = (*tree.DB).Put(key, ret)
+	tree.TxHashes = blockTransactionsHashes
+	tree.DB = db
+	err := tree.StoreTree(height)
 	if err != nil {
 		return nil, err
 	}
 	return tree, nil
 }
 
-func (tree *MerkleTree) StoreTree(height int64, blockTransactionsHashes [][]byte) error {
+func (tree *MerkleTree) StoreTree(height int64) error {
 
 	merkleNodes := tree.Root
 	prefix := common.MerkleNodeDBPrefix[:]
@@ -161,7 +140,7 @@ func (tree *MerkleTree) StoreTree(height int64, blockTransactionsHashes [][]byte
 		return err
 	}
 	ret := []byte{}
-	for _, hash := range blockTransactionsHashes {
+	for _, hash := range tree.TxHashes {
 		ret = append(ret, hash...)
 	}
 	prefix = common.TransactionsHashesByHeightDBPrefix[:]
@@ -173,10 +152,10 @@ func (tree *MerkleTree) StoreTree(height int64, blockTransactionsHashes [][]byte
 	return nil
 }
 
-func (tree *MerkleTree) LoadTransactionsHashes(height int64) ([][]byte, error) {
+func LoadTransactionsHashes(height int64) ([][]byte, error) {
 	prefix := common.TransactionsHashesByHeightDBPrefix[:]
 	key := append(prefix, common.GetByteInt64(height)...)
-	hashes, err := (*tree.DB).Get(key)
+	hashes, err := (*GlobalMerkleTree.DB).Get(key)
 	if err != nil {
 		return nil, err
 	}
@@ -188,27 +167,10 @@ func (tree *MerkleTree) LoadTransactionsHashes(height int64) ([][]byte, error) {
 	return ret, nil
 }
 
-func (tree *MerkleTree) LoadMerkleNode(rootNodehash []byte, chain uint8) (MerkleNode, error) {
-
-	prefix := common.MerkleNodeDBPrefix[:]
-	key := append(prefix, rootNodehash...)
-	mnb, err := (*tree.DB).Get(key)
-	if err != nil {
-		return MerkleNode{}, err
-	}
-	mn := MerkleNode{}
-	common.MerkleNodeDBPrefix[1] = chain
-	err = common.Unmarshal(mnb, common.MerkleNodeDBPrefix, &mn)
-	if err != nil {
-		return MerkleNode{}, err
-	}
-	return mn, nil
-}
-
-func (tree *MerkleTree) LoadHashMerkleTreeByHeight(height int64) ([]byte, error) {
+func LoadHashMerkleTreeByHeight(height int64) ([]byte, error) {
 	prefix := common.RootHashMerkleTreeDBPrefix[:]
 	key := append(prefix, common.GetByteInt64(height)...)
-	hash, err := (*tree.DB).Get(key)
+	hash, err := (*GlobalMerkleTree.DB).Get(key)
 	if err != nil {
 		return nil, err
 	}
@@ -216,46 +178,93 @@ func (tree *MerkleTree) LoadHashMerkleTreeByHeight(height int64) ([]byte, error)
 }
 
 func (t *MerkleTree) Destroy() {
-	t.Root = nil
-	t.DB = nil
+	if t != nil {
+		t.Root = nil
+		t.TxHashes = nil
+		t.DB = nil
+	}
 }
 
-//func (tree *MerkleTree) LoadWholeMerkleTreeByHeight(height int64) ([][]byte, error) {
-//	hash, err := tree.LoadHashMerkleTreeByHeight(height)
-//	if err != nil {
-//		return nil, err
-//	}
-//	prefix := common.MerkleTreeDBPrefix[:]
-//	key := append(prefix, common.GetByteInt64(height)...)
-//	mt, err := (*tree.db).Get(key)
-//	if err != nil {
-//		return nil, err
-//	}
-//	ret := [][]byte{}
-//	for i := 0; i < len(tree.D)/32; i++ {
-//		hash = tree[i*32 : (i+1)*32]
-//		ret = append(ret, hash)
-//	}
-//	return ret, nil
-//}
+func LoadTreeWithoutHashes(height int64) (*MerkleTree, error) {
 
-//func FindTransactionInBlocks(targetHash []byte, height int64) (int64, error) {
-//	chain := common.GetChainForHeight(height)
-//	tree, err := LoadWholeMerkleTreeByHeight(height)
-//	if err != nil {
-//		return -1, err
-//	}
-//	if len(tree) == 0 {
-//		return -1, fmt.Errorf("no merkle tree root hash")
-//	}
-//	node, err := LoadMerkleNode(tree[0], chain)
-//
-//	if err != nil {
-//		return -1, err
-//	}
-//	exists, h := node.containsHash(height, targetHash)
-//	if exists {
-//		return h, nil
-//	}
-//	return -1, fmt.Errorf("hash of transaction not found")
-//}
+	tree := new(MerkleTree)
+	prefix := common.MerkleNodeDBPrefix[:]
+	key := append(prefix, common.GetByteInt64(height)...)
+	treeb, err := (*GlobalMerkleTree.DB).Get(key)
+	if err != nil {
+		return &MerkleTree{}, err
+	}
+	var merkleNodes []MerkleNode
+	err = common.Unmarshal(treeb, common.MerkleNodeDBPrefix, &merkleNodes)
+	if err != nil {
+		return &MerkleTree{}, err
+	}
+	tree.Root = merkleNodes
+
+	prefix = common.RootHashMerkleTreeDBPrefix[:]
+	key = append(prefix, common.GetByteInt64(height)...)
+	rootHash, err := (*GlobalMerkleTree.DB).Get(key)
+	if err != nil {
+		return &MerkleTree{}, err
+	}
+	tree.Root[0].Data = rootHash
+
+	return tree, nil
+}
+
+func FindTransactionInBlocks(targetHash []byte, height int64) (int64, error) {
+
+	tree, err := LoadTreeWithoutHashes(height)
+	if err != nil {
+		return -1, err
+	}
+	if len(tree.Root) == 0 {
+		return -1, fmt.Errorf("no merkle tree root hash")
+	}
+
+	exists, h := tree.Root[0].containsHash(height, targetHash)
+	if exists {
+		return h, nil
+	}
+	return -1, fmt.Errorf("hash of transaction not found")
+}
+
+func LastHeightStoredInMerleTrie() (int64, error) {
+	i := int64(0)
+	for {
+		ib := common.GetByteInt64(i)
+		prefix := append(common.RootHashMerkleTreeDBPrefix[:], ib...)
+		isKey, err := (*GlobalMerkleTree.DB).IsKey(prefix)
+		if err != nil {
+			return i - 1, err
+		}
+		if isKey == false {
+			break
+		}
+		i++
+	}
+	return i - 1, nil
+}
+
+func RemoveMerkleTrieFromDB(height int64) error {
+	hb := common.GetByteInt64(height)
+	prefix := append(common.RootHashMerkleTreeDBPrefix[:], hb...)
+	err := (*GlobalMerkleTree.DB).Delete(prefix)
+	if err != nil {
+		log.Println("cannot remove root merkle trie hash", err)
+		return err
+	}
+	prefix = append(common.MerkleNodeDBPrefix[:], hb...)
+	err = (*GlobalMerkleTree.DB).Delete(prefix)
+	if err != nil {
+		log.Println("cannot remove merkle trie node", err)
+		return err
+	}
+	prefix = append(common.TransactionsHashesByHeightDBPrefix[:], hb...)
+	err = (*GlobalMerkleTree.DB).Delete(prefix)
+	if err != nil {
+		log.Println("cannot remove merkle trie transaction hashes", err)
+		return err
+	}
+	return nil
+}

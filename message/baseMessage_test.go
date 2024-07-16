@@ -2,7 +2,7 @@ package message
 
 import (
 	"bytes"
-	"github.com/quad/quad-node/common"
+	"github.com/quad-foundation/quad-node/common"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -11,7 +11,6 @@ func TestBaseMessage_GetBytes(t *testing.T) {
 	m := BaseMessage{
 		Head:    []byte("nn"),
 		ChainID: common.GetChainID(),
-		Chain:   0,
 	}
 
 	result := m.GetBytes()
@@ -25,7 +24,6 @@ func TestBaseMessage_GetFromBytes(t *testing.T) {
 	m := BaseMessage{
 		Head:    []byte("nn"),
 		ChainID: common.GetChainID(),
-		Chain:   0,
 	}
 	data := m.GetBytes()
 	m.GetFromBytes(data)
@@ -35,9 +33,6 @@ func TestBaseMessage_GetFromBytes(t *testing.T) {
 	}
 	if m.ChainID != common.GetChainID() {
 		t.Errorf("Expected chainID %v, got %v", common.GetChainID(), m.ChainID)
-	}
-	if m.Chain != 0 {
-		t.Errorf("Expected chain %v, got %v", 0, m.Chain)
 	}
 	assert.Equal(t, data, data2)
 }

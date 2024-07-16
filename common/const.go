@@ -5,25 +5,23 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 )
 
-var NamesOfChains = []string{"transaction", "pubkey", "stake", "dex", "contract"}
-
 var (
-	ValidChains                       = []uint8{0, 1, 2, 3, 4}
 	Decimals                  uint8   = 8
 	MaxTotalSupply            int64   = 230000000000000000
-	RewardChangeInterval      int64   = 8640 * 3
-	InitialReward             int64   = 100000000 // 3993055556
+	InitSupply                int64   = 23000000000000000
+	RewardRatio                       = 1e-7
 	ValidationTag                     = "validationTag"
 	DifficultyMultiplier      int32   = 10
-	BlockTimeInterval         float32 = 5 // 5 sec.
-	DifficultyChange          float32 = 5
+	BlockTimeInterval         float32 = 10 // 10 sec.
+	DifficultyChange          float32 = 10
 	MaxGasUsage               int64   = 137000000 // circa 65k transactions in block
 	MaxGasPrice               int64   = 100000
 	MaxTransactionsPerBlock   int16   = 32000
 	MaxTransactionInPool              = 1000000
-	ConfirmationsNumber       int64   = 6
+	MaxPeersConnected         int     = 6
 	NumberOfHashesInBucket    int64   = 32
 	NumberOfBlocksInBucket    int64   = 20
 	MinStakingForNode         int64   = 100000000000000
@@ -45,17 +43,25 @@ var (
 	MerkleTreeDBPrefix                 = [2]byte{'M', 'M'}
 	MerkleNodeDBPrefix                 = [2]byte{'N', 'N'}
 	RootHashMerkleTreeDBPrefix         = [2]byte{'R', 'R'}
-	TransactionDBPrefix                = [2]byte{'T', '0'}
-	TransactionPoolHashesDBPrefix      = [2]byte{'D', '0'}
-	TransactionToSendHashesDBPrefix    = [2]byte{'E', '0'}
-	TransactionSyncingHashesDBPrefix   = [2]byte{'S', '0'}
+	TransactionDBPrefix                = [2]byte{'T', 'T'}
+	//StakingDBPrefix                    = [2]byte{'S', 'S'}
+	TransactionPoolHashesDBPrefix    = [2]byte{'D', '0'}
+	TransactionToSendHashesDBPrefix  = [2]byte{'E', '0'}
+	TransactionSyncingHashesDBPrefix = [2]byte{'S', '0'}
+	AccountsDBPrefix                 = [2]byte{'A', 'C'}
+	StakingAccountsDBPrefix          = [2]byte{'S', 'A'}
+	OutputLogsHashesDBPrefix         = [2]byte{'O', '0'}
+	OutputLogDBPrefix                = [2]byte{'Z', '0'}
+	OutputAddressesHashesDBPrefix    = [2]byte{'C', '0'}
+	TokenDetailsDBPrefix             = [2]byte{'T', 'D'}
+	DexAccountsDBPrefix              = [2]byte{'D', 'A'}
 )
 
 var chainID = int16(23)
 var delegatedAccount Address
-var rewardPercentage int16
-var genesisAccounts []Address
-var genesisAccountsStake []Address
+var rewardPercentage float64
+var ShiftToPastInReset int64
+var ShiftToPastMutex sync.RWMutex
 
 func GetChainID() int16 {
 	return chainID
@@ -68,12 +74,12 @@ func SetChainID(chainid int16) {
 func GetDelegatedAccount() Address {
 	return delegatedAccount
 }
-func GetRewardPercentage() int16 {
+func GetRewardPercentage() float64 {
 	return rewardPercentage
 }
 func init() {
 	//log.SetOutput(io.Discard)
-
+	ShiftToPastInReset = 1
 	homePath, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)
@@ -88,10 +94,13 @@ func init() {
 	}
 	delegatedAccount = GetDelegatedAccountAddress(int16(da))
 
-	//DefaultPercentageReward int16 = 1000 // 1%
+	//DefaultPercentageReward int16 = 1000 // 0.001
 	v, err := strconv.Atoi(os.Getenv("REWARD_PERCENTAGE"))
 	if err != nil {
 		log.Fatal("Error getting REWARD_PERCENTAGE")
 	}
-	rewardPercentage = int16(v)
+	rewardPercentage = float64(v) / 1000.0
+	if rewardPercentage > 0.5 {
+		log.Fatal("reward for operational account has to be less than 50%")
+	}
 }

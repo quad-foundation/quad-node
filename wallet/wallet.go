@@ -10,8 +10,8 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/wonabru/bip39"
 
-	"github.com/quad/quad-node/common"
-	"github.com/quad/quad-node/crypto/oqs"
+	"github.com/quad-foundation/quad-node/common"
+	"github.com/quad-foundation/quad-node/crypto/oqs"
 	"golang.org/x/crypto/sha3"
 	"io"
 	"log"
@@ -164,7 +164,7 @@ func (w *Wallet) GetMnemonicWords() (string, error) {
 	mnemonic, _ := bip39.NewMnemonic(w.GetSecretKey().GetBytes())
 
 	secretKey, _ := bip39.MnemonicToByteArray(mnemonic)
-	if bytes.Compare(secretKey[:w.secretKey.GetLength()], w.secretKey.GetBytes()) != 0 {
+	if !bytes.Equal(secretKey[:w.secretKey.GetLength()], w.secretKey.GetBytes()) {
 		log.Println("Can not restore secret key from mnemonic")
 		return "", fmt.Errorf("Can not restore secret key from mnemonic")
 	}
@@ -235,8 +235,8 @@ func Load(walletNumber uint8, password string) (*Wallet, error) {
 
 	w := EmptyWallet(walletNumber)
 	// Open the database with the provided options
-	w.mutexDb.RLock()
-	defer w.mutexDb.RUnlock()
+	w.mutexDb.Lock()
+	defer w.mutexDb.Unlock()
 	walletDB, err := leveldb.OpenFile(w.HomePath, nil)
 	if err != nil {
 		return nil, err

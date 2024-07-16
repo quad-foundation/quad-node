@@ -2,24 +2,26 @@ package statistics
 
 import (
 	"fmt"
-	"github.com/quad/quad-node/common"
-	memDatabase "github.com/quad/quad-node/database"
+	"github.com/quad-foundation/quad-node/blocks"
+	"github.com/quad-foundation/quad-node/common"
+	memDatabase "github.com/quad-foundation/quad-node/database"
+	"github.com/quad-foundation/quad-node/transactionsDefinition"
+	"github.com/quad-foundation/quad-node/transactionsPool"
 	"log"
 	"sync"
 )
 
 type MainStats struct {
-	Heights                 int64         `json:"heights"`
-	HeightMax               int64         `json:"heightMax"`
-	Chain                   uint8         `json:"chain"`
-	TimeInterval            int64         `json:"timeInterval"`
-	Transactions            map[uint8]int `json:"transactions"`
-	TransactionsPending     map[uint8]int `json:"transactions_pending"`
-	TransactionsSize        map[uint8]int `json:"transaction_size"`
-	TransactionsPendingSize map[uint8]int `json:"transactions_pending_size"`
-	Tps                     float32       `json:"tps"`
-	Syncing                 bool          `json:"syncing"`
-	Difficulty              int32         `json:"difficulty"`
+	Heights                 int64   `json:"heights"`
+	HeightMax               int64   `json:"heightMax"`
+	TimeInterval            int64   `json:"timeInterval"`
+	Transactions            int     `json:"transactions"`
+	TransactionsPending     int     `json:"transactions_pending"`
+	TransactionsSize        int     `json:"transaction_size"`
+	TransactionsPendingSize int     `json:"transactions_pending_size"`
+	Tps                     float32 `json:"tps"`
+	Syncing                 bool    `json:"syncing"`
+	Difficulty              int32   `json:"difficulty"`
 	db                      memDatabase.AnyBlockchainDB
 }
 
@@ -43,12 +45,11 @@ func InitGlobalMainStats() {
 		MainStats: &MainStats{
 			Heights:                 int64(0),
 			HeightMax:               int64(0),
-			Chain:                   uint8(0),
 			TimeInterval:            int64(0),
-			Transactions:            map[uint8]int{0: 0, 1: 0, 2: 0, 3: 0, 4: 0},
-			TransactionsSize:        map[uint8]int{0: 0, 1: 0, 2: 0, 3: 0, 4: 0},
-			TransactionsPending:     map[uint8]int{0: 0, 1: 0, 2: 0, 3: 0, 4: 0},
-			TransactionsPendingSize: map[uint8]int{0: 0, 1: 0, 2: 0, 3: 0, 4: 0},
+			Transactions:            0,
+			TransactionsSize:        0,
+			TransactionsPending:     0,
+			TransactionsPendingSize: 0,
 			Tps:                     float32(0),
 			Syncing:                 true,
 			Difficulty:              int32(0),
@@ -102,4 +103,32 @@ func LoadStats() (*GlobalMainStats, error) {
 		return globalMainStats, nil
 	}
 	return nil, fmt.Errorf("try Lock fails")
+}
+
+func UpdateStatistics(newBlock blocks.Block, lastBlock blocks.Block) {
+	if GmsMutex.Mutex.TryLock() {
+		defer GmsMutex.Mutex.Unlock()
+		stats, _ := LoadStats()
+		stats.MainStats.Heights = common.GetHeight()
+		stats.MainStats.HeightMax = common.GetHeightMax()
+		stats.MainStats.Difficulty = newBlock.BaseBlock.BaseHeader.Difficulty
+		stats.MainStats.Syncing = common.IsSyncing.Load()
+		stats.MainStats.TimeInterval = newBlock.BaseBlock.BlockTimeStamp - lastBlock.BaseBlock.BlockTimeStamp
+		empt := transactionsDefinition.EmptyTransaction()
+
+		hs, _ := newBlock.GetTransactionsHashes(newBlock.GetHeader().Height)
+		stats.MainStats.Transactions = len(hs)
+		stats.MainStats.TransactionsSize = len(hs) * len(empt.GetBytes())
+		ntxs := len(hs)
+		stats.MainStats.Tps = float32(ntxs) / float32(stats.MainStats.TimeInterval)
+
+		nt := transactionsPool.PoolsTx.NumberOfTransactions()
+		stats.MainStats.TransactionsPending = nt
+		stats.MainStats.TransactionsPendingSize = nt * len(empt.GetBytes())
+
+		err := stats.MainStats.SaveStats()
+		if err != nil {
+			log.Println(err)
+		}
+	}
 }

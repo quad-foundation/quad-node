@@ -3,8 +3,8 @@ package transactionsDefinition
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/quad/quad-node/account"
-	"github.com/quad/quad-node/common"
+	"github.com/quad-foundation/quad-node/account"
+	"github.com/quad-foundation/quad-node/common"
 )
 
 type TxData struct {
@@ -16,9 +16,11 @@ type TxData struct {
 
 func (td TxData) GetString() string {
 	t := "Recipient: " + td.Recipient.GetHex() + "\n"
-	t += "Amount PQC: " + fmt.Sprintln(account.Int64toFloat64(td.Amount)) + "\n"
+	t += "Amount QAD: " + fmt.Sprintln(account.Int64toFloat64(td.Amount)) + "\n"
 	t += "Opt Data: " + hex.EncodeToString(td.OptData) + "\n"
-	t += "Pubkey: " + td.Pubkey.GetHex()[:20] + "\n"
+	if td.Pubkey.ByteValue != nil {
+		t += "Pubkey: " + td.Pubkey.GetHex()[:20] + "\n"
+	}
 	t += "Address: " + td.Pubkey.Address.GetHex() + "\n"
 	return t
 }

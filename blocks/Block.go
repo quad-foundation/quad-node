@@ -2,16 +2,32 @@ package blocks
 
 import (
 	"fmt"
-	"github.com/quad/quad-node/common"
-	memDatabase "github.com/quad/quad-node/database"
-	"github.com/quad/quad-node/transactionsPool"
+	"github.com/quad-foundation/quad-node/common"
+	memDatabase "github.com/quad-foundation/quad-node/database"
+	"github.com/quad-foundation/quad-node/transactionsPool"
+	"strings"
 )
 
 type Block struct {
-	BaseBlock        BaseBlock   `json:"base_block"`
-	Chain            uint8       `json:"chain"`
-	TransactionsHash common.Hash `json:"transactions_hashes"`
-	BlockHash        common.Hash `json:"block_hash"`
+	BaseBlock          BaseBlock     `json:"base_block"`
+	TransactionsHashes []common.Hash `json:"transactions_hashes"`
+	BlockHash          common.Hash   `json:"block_hash"`
+	BlockFee           int64         `json:"block_fee"`
+}
+
+// GetString returns a string representation of Block.
+func (b Block) GetString() string {
+	// Convert transaction hashes to a slice of strings
+	var txHashesStrings []string
+	for _, hash := range b.TransactionsHashes {
+		txHashesStrings = append(txHashesStrings, hash.GetHex())
+	}
+	// Join the slice of transaction hash strings with a separator
+	transactionsHashesString := strings.Join(txHashesStrings, ", ")
+
+	// Use the GetString method of BaseBlock to get its string representation
+	return fmt.Sprintf("BaseBlock: {%s}\nTransactionsHashes: [%s]\nBlockHash: %s",
+		b.BaseBlock.GetString(), transactionsHashesString, b.BlockHash.GetHex())
 }
 
 func (tb Block) GetBaseBlock() BaseBlock {
@@ -23,23 +39,33 @@ func (tb Block) GetBlockHeaderHash() common.Hash {
 func (tb Block) GetBlockTimeStamp() int64 {
 	return tb.BaseBlock.BlockTimeStamp
 }
+func (tb Block) GetBlockSupply() int64 {
+	return tb.BaseBlock.Supply
+}
 func (tb Block) GetRewardPercentage() int16 {
 	return tb.BaseBlock.RewardPercentage
 }
-func (tb Block) GetChain() uint8 {
-	return tb.Chain
+func (tb Block) GetHeader() BaseHeader {
+	return tb.GetBaseBlock().BaseHeader
 }
-func (tb Block) GetTransactionsHash() common.Hash {
-	return tb.TransactionsHash
+func (tb Block) GetBlockTransactionsHashes() []common.Hash {
+	return tb.TransactionsHashes
 }
 func (tb Block) GetBlockHash() common.Hash {
 	return tb.BlockHash
 }
 func (tb Block) GetBytes() []byte {
 	b := tb.BaseBlock.GetBytes()
-	b = append(b, tb.Chain)
-	b = append(b, tb.TransactionsHash.GetBytes()...)
 	b = append(b, tb.BlockHash.GetBytes()...)
+	b = append(b, common.GetByteInt64(tb.BlockFee)...)
+	for _, tx := range tb.TransactionsHashes {
+		b = append(b, tx.GetBytes()...)
+	}
+	return b
+}
+
+func (tb Block) GetBytesForHash() []byte {
+	b := tb.BaseBlock.GetBytes()
 	return b
 }
 
@@ -48,17 +74,24 @@ func (tb Block) GetFromBytes(b []byte) (Block, error) {
 	if err != nil {
 		return Block{}, err
 	}
-	tb.Chain = b[0]
-	tb.TransactionsHash = common.GetHashFromBytes(b[1:33])
-	tb.BlockHash = common.GetHashFromBytes(b[33:65])
-	if len(b) > 65 {
+	tb.BlockHash = common.GetHashFromBytes(b[0:32])
+	b = b[32:]
+	tb.BlockFee = common.GetInt64FromByte(b[0:8])
+	b = b[8:]
+	if len(b)%32 != 0 {
 		return Block{}, fmt.Errorf("wrongly decompile block")
 	}
+	transactionHashesLength := len(b) / 32
+	for i := 0; i < transactionHashesLength; i++ {
+		bb := b[i*32 : (i+1)*32]
+		tb.TransactionsHashes = append(tb.TransactionsHashes, common.GetHashFromBytes(bb))
+	}
+
 	return tb, nil
 }
 
 func (tb Block) CalcBlockHash() (common.Hash, error) {
-	toByte, err := common.CalcHashToByte(tb.GetBytes())
+	toByte, err := common.CalcHashToByte(tb.GetBytesForHash())
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -70,8 +103,8 @@ func (tb Block) CheckProofOfSynergy() bool {
 	return CheckProofOfSynergy(tb.BaseBlock)
 }
 
-func (b Block) GetTransactionsHashes(tempMerkleTrie *transactionsPool.MerkleTree, height int64) ([]common.Hash, error) {
-	txsHashes, err := tempMerkleTrie.LoadTransactionsHashes(height)
+func (b Block) GetTransactionsHashes(height int64) ([]common.Hash, error) {
+	txsHashes, err := transactionsPool.LoadTransactionsHashes(height)
 	if err != nil {
 		return nil, err
 	}
@@ -96,6 +129,41 @@ func (bl Block) StoreBlock() error {
 
 	return nil
 }
+
+func RemoveBlockFromDB(height int64) error {
+	bh := common.GetByteInt64(height)
+	hb, err := memDatabase.MainDB.Get(append(common.BlockByHeightDBPrefix[:], bh...))
+	if err != nil {
+		return err
+	}
+	err = memDatabase.MainDB.Delete(append(common.BlocksDBPrefix[:], hb...))
+	if err != nil {
+		return err
+	}
+	err = memDatabase.MainDB.Delete(append(common.BlockByHeightDBPrefix[:], bh...))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func LastHeightStoredInBlocks() (int64, error) {
+	i := int64(0)
+	for {
+		ib := common.GetByteInt64(i)
+		prefix := append(common.BlockByHeightDBPrefix[:], ib...)
+		isKey, err := memDatabase.MainDB.IsKey(prefix)
+		if err != nil {
+			return i - 1, err
+		}
+		if isKey == false {
+			break
+		}
+		i++
+	}
+	return i - 1, nil
+}
+
 func LoadHashOfBlock(height int64) ([]byte, error) {
 	bh := common.GetByteInt64(height)
 	hashb, err := memDatabase.MainDB.Get(append(common.BlockByHeightDBPrefix[:], bh...))

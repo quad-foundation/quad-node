@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/quad/quad-node/common"
-	"github.com/quad/quad-node/crypto/oqs/rand"
-	clientrpc "github.com/quad/quad-node/rpc/client"
-	"github.com/quad/quad-node/services/transactionServices"
-	"github.com/quad/quad-node/transactionsDefinition"
-	"github.com/quad/quad-node/wallet"
+	"github.com/quad-foundation/quad-node/common"
+	"github.com/quad-foundation/quad-node/crypto/oqs/rand"
+	clientrpc "github.com/quad-foundation/quad-node/rpc/client"
+	"github.com/quad-foundation/quad-node/services/transactionServices"
+	"github.com/quad-foundation/quad-node/statistics"
+	"github.com/quad-foundation/quad-node/transactionsDefinition"
+	"github.com/quad-foundation/quad-node/wallet"
 	rand2 "math/rand"
 
 	"log"
@@ -27,12 +28,12 @@ func main() {
 	mainWallet := wallet.GetActiveWallet()
 
 	go sendTransactions(mainWallet)
-	chanPeer := make(chan string)
+	chanPeer := make(chan []byte)
 
 	<-chanPeer
 }
 
-func SampleTransaction(w *wallet.Wallet, chain uint8) transactionsDefinition.Transaction {
+func SampleTransaction(w *wallet.Wallet) transactionsDefinition.Transaction {
 
 	sender := w.Address
 	recv := common.Address{}
@@ -44,16 +45,15 @@ func SampleTransaction(w *wallet.Wallet, chain uint8) transactionsDefinition.Tra
 
 	txdata := transactionsDefinition.TxData{
 		Recipient: recv,
-		Amount:    int64(rand2.Intn(10000000)),
+		Amount:    int64(rand2.Intn(1000000000)),
 		OptData:   nil,
-		Pubkey:    w.PublicKey,
+		Pubkey:    common.PubKey{}, // w.PublicKey, //
 	}
 	txParam := transactionsDefinition.TxParam{
 		ChainID:     common.GetChainID(),
 		Sender:      sender,
 		SendingTime: common.GetCurrentTimeStampInSecond(),
 		Nonce:       int16(rand2.Intn(65000)),
-		Chain:       chain,
 	}
 	t := transactionsDefinition.Transaction{
 		TxData:    txdata,
@@ -65,11 +65,21 @@ func SampleTransaction(w *wallet.Wallet, chain uint8) transactionsDefinition.Tra
 		GasUsage:  0,
 	}
 
+	clientrpc.InRPC <- []byte("STAT")
+	var reply []byte
+	reply = <-clientrpc.OutRPC
+	st := statistics.MainStats{}
+	err = common.Unmarshal(reply, common.StatDBPrefix, &st)
+	if err != nil {
+		return transactionsDefinition.Transaction{}
+	}
+	t.Height = st.Heights
+
 	err = t.CalcHashAndSet()
 	if err != nil {
 		log.Println("calc hash error", err)
 	}
-	err = t.Sign()
+	err = t.Sign(w)
 	if err != nil {
 		log.Println("Signing error", err)
 	}
@@ -91,19 +101,18 @@ func sendTransactions(w *wallet.Wallet) {
 
 	for range time.Tick(time.Microsecond) {
 		var txs []transactionsDefinition.Transaction
-		chain := uint8(rand2.Intn(5))
 		for i := 0; i < batchSize; i++ {
-			tx := SampleTransaction(w, chain)
+			tx := SampleTransaction(w)
 			txs = append(txs, tx)
 		}
-		m, err := transactionServices.GenerateTransactionMsg(txs, chain, [2]byte{'T', chain})
+		m, err := transactionServices.GenerateTransactionMsg(txs, []byte("tx"), [2]byte{'T', 'T'})
 		if err != nil {
 			return
 		}
 		tmm := m.GetBytes()
 		count += int64(batchSize)
 		end := common.GetCurrentTimeStampInSecond()
-		if count%100 == 0 && (end-start) > 0 {
+		if count%1000 == 0 && (end-start) > 0 {
 			fmt.Println("tps=", count/(end-start))
 		}
 		clientrpc.InRPC <- append([]byte("TRAN"), tmm...)

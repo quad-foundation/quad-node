@@ -1,20 +1,18 @@
 package main
 
 import (
-	"encoding/json"
-	"github.com/quad/quad-node/cmd/gui/qtwidgets"
-	"github.com/quad/quad-node/common"
-	clientrpc "github.com/quad/quad-node/rpc/client"
-	"github.com/quad/quad-node/statistics"
-	"github.com/quad/quad-node/wallet"
+	"github.com/quad-foundation/quad-node/cmd/gui/qtwidgets"
+	"github.com/quad-foundation/quad-node/common"
+	clientrpc "github.com/quad-foundation/quad-node/rpc/client"
+	"github.com/quad-foundation/quad-node/statistics"
+	"github.com/quad-foundation/quad-node/tcpip"
+	"github.com/quad-foundation/quad-node/wallet"
 	"github.com/therecipe/qt/widgets"
-	"log"
+	"net"
 	"os"
 	"strconv"
 	"time"
 )
-
-var MainWalllet *wallet.Wallet
 
 func main() {
 	var ip string
@@ -30,51 +28,52 @@ func main() {
 
 	// needs to be called once before you can start using the QWidgets
 	app := widgets.NewQApplication(len(os.Args), os.Args)
-
+	ip_this := tcpip.GetInternalIp()
+	ip_str := net.IPv4(ip_this[0], ip_this[1], ip_this[2], ip_this[3])
 	// create a window
 	window := widgets.NewQTabWidget(nil)
 	window.SetMinimumSize2(800, 900)
-	window.SetWindowTitle("QUAD Wallet - " + ip +
+	window.SetWindowTitle("QUAD Wallet - " + ip_str.String() +
 		" Node Account: " +
 		strconv.Itoa(int(common.NumericalDelegatedAccountAddress(common.GetDelegatedAccount()))))
 
-	MainWalllet = wallet.EmptyWallet(0)
-	var reply []byte
-
-	for {
-		clientrpc.InRPC <- []byte("WALL")
-		reply = <-clientrpc.OutRPC
-		if string(reply) != "Timeout" {
-			break
-		}
-		time.Sleep(time.Second)
-	}
-	err := json.Unmarshal(reply, MainWalllet)
-	if err != nil {
-		log.Println("Can not unmarshal wallet")
-	}
-	walletWidget := qtwidgets.ShowWalletPage(MainWalllet)
+	qtwidgets.MainWallet = wallet.EmptyWallet(0)
+	//var reply []byte
+	//
+	//for {
+	//	clientrpc.InRPC <- []byte("WALL")
+	//	reply = <-clientrpc.OutRPC
+	//	if string(reply) != "Timeout" {
+	//		break
+	//	}
+	//	time.Sleep(time.Second)
+	//}
+	//err := json.Unmarshal(reply, MainWallet)
+	//if err != nil {
+	//	log.Println("Can not unmarshal wallet")
+	//}
+	walletWidget := qtwidgets.ShowWalletPage()
 	accountWidget := qtwidgets.ShowAccountPage()
-	//sendWidget := qtwidgets.ShowSendPage(&MainWalllet)
-	//historyWidget := qtwidgets.ShowHistoryPage()
-	//detailsWidget := qtwidgets.ShowDetailsPage()
-	//stakingWidget := qtwidgets.ShowStakingPage(&MainWalllet)
-	//smartContractWidget := qtwidgets.ShowSmartContractPage()
-	//dexWidget := qtwidgets.ShowDexPage(&MainWalllet)
+	sendWidget := qtwidgets.ShowSendPage()
+	historyWidget := qtwidgets.ShowHistoryPage()
+	detailsWidget := qtwidgets.ShowDetailsPage()
+	stakingWidget := qtwidgets.ShowStakingPage()
+	smartContractWidget := qtwidgets.ShowSmartContractPage()
+	dexWidget := qtwidgets.ShowDexPage()
 	window.AddTab(walletWidget, "Wallet")
 	window.AddTab(accountWidget, "Account")
-	//window.AddTab(sendWidget, "Send/Register")
-	//window.AddTab(stakingWidget, "Staking/Unstaking")
-	//window.AddTab(historyWidget, "Transactions history")
-	//window.AddTab(detailsWidget, "Details")
-	//window.AddTab(smartContractWidget, "Smart Contract")
-	//window.AddTab(dexWidget, "DEX")
+	window.AddTab(sendWidget, "Send/Register")
+	window.AddTab(stakingWidget, "Staking/Rewards")
+	window.AddTab(historyWidget, "Transactions history")
+	window.AddTab(detailsWidget, "Details")
+	window.AddTab(smartContractWidget, "Smart Contract")
+	window.AddTab(dexWidget, "DEX")
 	// make the window visible
 	window.Show()
 
 	go func() {
 		for range time.Tick(time.Second * 3) {
-			qtwidgets.UpdateAccountStats(MainWalllet)
+			qtwidgets.UpdateAccountStats()
 		}
 	}()
 	//go func() {

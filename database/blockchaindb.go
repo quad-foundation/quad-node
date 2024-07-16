@@ -1,9 +1,8 @@
 package memDatabase
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/trie"
-	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/quad-foundation/quad-node/common"
+	"github.com/tecbot/gorocksdb"
 	"sync"
 )
 
@@ -17,15 +16,12 @@ type AnyBlockchainDB interface {
 	Get(k []byte) ([]byte, error)
 	IsKey(key []byte) (bool, error)
 	Delete(key []byte) error
-	Reader(root common.Hash) trie.Reader
-	GetLdb() *leveldb.DB
+	GetLdb() *gorocksdb.DB
 	GetNode(common.Hash) ([]byte, error)
 }
 
 func Init() {
 	db := &BlockchainDB{}
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
 	pdb, err := db.InitInMemory() // should be changed to permanent
 	if err != nil {
 		return
@@ -63,7 +59,7 @@ func (r *InMemoryDBReader) Get(key []byte) ([]byte, error) {
 
 func GetDBPermanentInstance() AnyBlockchainDB {
 	return &BlockchainDB{
-		ldb:   (*MainDB).GetLdb(),
+		db:    (*MainDB).GetLdb(),
 		mutex: sync.RWMutex{},
 	}
 }
@@ -71,14 +67,12 @@ func GetDBPermanentInstance() AnyBlockchainDB {
 func NewInMemoryDB() AnyBlockchainDB {
 	db := BlockchainDB{}
 	db.mutex = sync.RWMutex{}
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
 	memory, err := db.InitInMemory()
 	if err != nil {
 		return nil
 	}
 	return &BlockchainDB{
-		ldb:   memory.GetLdb(),
+		db:    memory.GetLdb(),
 		mutex: sync.RWMutex{},
 	}
 }

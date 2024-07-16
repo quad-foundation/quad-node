@@ -1,11 +1,12 @@
-# Node go QUAD - currently in building process
+# Node go QUAD
 
-Works for Ubuntu 20.04+ and go1.19+
+Works for Ubuntu 20.04+ and go1.22.5+
 
 Install OQS library:
 
     git clone https://github.com/open-quantum-safe/liboqs.git
     cd liboqs/
+    git checkout ea44f39
     
 Compile OQS with `-DBUILD_SHARED_LIBS=ON` and install
     
@@ -15,7 +16,9 @@ Compile OQS with `-DBUILD_SHARED_LIBS=ON` and install
     sudo ninja install
 
 Install prerequisites
-
+    
+    sudo apt update
+    sudo apt install librocksdb-dev
     sudo apt install libzmq3-dev
     sudo apt install pkg-config
     sudo apt install build-essential
@@ -44,26 +47,10 @@ In the case you are the first who run blockchain and generate genesis block you 
 
 Ports TCP needed to be opened:
 
-    TransactionTopic[0]: 9091,
-    TransactionTopic[1]: 9092,
-    TransactionTopic[2]: 9093,
-    TransactionTopic[3]: 9094,
-    TransactionTopic[4]: 9095,
-    NonceTopic[0]:       8091,
-    NonceTopic[1]:       8092,
-    NonceTopic[2]:       8093,
-    NonceTopic[3]:       8094,
-    NonceTopic[4]:       8095,
-    SelfNonceTopic[0]:   7091,
-    SelfNonceTopic[1]:   7092,
-    SelfNonceTopic[2]:   7093,
-    SelfNonceTopic[3]:   7094,
-    SelfNonceTopic[4]:   7095,
-    SyncTopic[0]:        6091,
-    SyncTopic[1]:        6092,
-    SyncTopic[2]:        6093,
-    SyncTopic[3]:        6094,
-    SyncTopic[4]:        6095,
+    TransactionTopic: 9091,
+    NonceTopic:       8091,
+    SelfNonceTopic:   7091,
+    SyncTopic:        6091,
 
     9009 - wallet - node communication
 

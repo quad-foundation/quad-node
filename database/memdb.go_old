@@ -3,18 +3,17 @@ package memDatabase
 import (
 	"errors"
 	"fmt"
-	commoneth "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/trie"
-	"github.com/quad/quad-node/common"
-	"github.com/quad/quad-node/wallet"
+	"github.com/quad-foundation/quad-node/common"
+	commoneth "github.com/quad-foundation/quad-node/common"
+	"github.com/quad-foundation/quad-node/wallet"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"log"
-	"runtime/debug"
 	"sync"
 )
 
+// uncomment to use levelDB
 type BlockchainDB struct {
 	ldb   *leveldb.DB
 	mutex sync.RWMutex
@@ -55,10 +54,6 @@ func (db *BlockchainDB) GetNode(hash commoneth.Hash) ([]byte, error) {
 	return db.Get(hash[:])
 }
 
-func (d *BlockchainDB) Reader(root commoneth.Hash) trie.Reader {
-	return &InMemoryDBReader{db: d}
-}
-
 func (d *BlockchainDB) Close() {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
@@ -73,11 +68,7 @@ func (db *BlockchainDB) Put(k []byte, v []byte) error {
 	defer db.mutex.Unlock()
 	// Put a key-value pair into the database
 	err := db.ldb.Put(k, v, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return nil
+	return err
 }
 
 func (db *BlockchainDB) LoadAllKeys(prefix []byte) ([][]byte, error) {
@@ -133,7 +124,7 @@ func (db *BlockchainDB) Get(k []byte) ([]byte, error) {
 		if err == leveldb.ErrNotFound {
 			return []byte{}, fmt.Errorf("key not found %s", k)
 		}
-		log.Fatalf("Error getting value for key: %v, key %s", err, k)
+		return []byte{}, fmt.Errorf("Error getting value for key: %v, key %s", err, k)
 	}
 	return value, nil
 }
@@ -146,14 +137,18 @@ func (db *BlockchainDB) IsKey(key []byte) (bool, error) {
 	defer db.mutex.RUnlock()
 	_, err := db.ldb.Get(key, nil)
 	if err != nil {
-		debug.PrintStack()
 		if errors.Is(err, leveldb.ErrNotFound) {
 			return false, nil
 		}
+		// Optionally print the stack trace if in debug mode
+		// if debugMode {
+		//     debug.PrintStack()
+		// }
 		return false, err
 	}
 	return true, nil
 }
+
 func (db *BlockchainDB) Delete(key []byte) error {
 	if len(key) == 0 {
 		return errors.New("key cannot be empty")
