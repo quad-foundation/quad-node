@@ -1,4 +1,4 @@
-# Node go QUAD - currently in building process
+# Node go QUAD
 
 Works for Ubuntu 20.04+ and go1.22.5+
 
