@@ -45,13 +45,13 @@ var MyIP [4]byte
 func init() {
 	Quit = make(chan os.Signal)
 	signal.Notify(Quit, syscall.SIGTERM, syscall.SIGINT, os.Interrupt)
-	MyIP = getInternalIp()
+	MyIP = GetInternalIp()
 	for k := range Ports {
 		tcpConnections[k] = map[[4]byte]*net.TCPConn{}
 	}
 }
 
-func getInternalIp() [4]byte {
+func GetInternalIp() [4]byte {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		log.Println("Can not obtain net interface")

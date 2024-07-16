@@ -1,6 +1,6 @@
-# Node go QUAD - currently in building process
+# Node go QUAD
 
-Works for Ubuntu 20.04+ and go1.19+
+Works for Ubuntu 20.04+ and go1.22.5+
 
 Install OQS library:
 

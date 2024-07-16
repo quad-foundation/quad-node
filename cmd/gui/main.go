@@ -5,8 +5,10 @@ import (
 	"github.com/quad-foundation/quad-node/common"
 	clientrpc "github.com/quad-foundation/quad-node/rpc/client"
 	"github.com/quad-foundation/quad-node/statistics"
+	"github.com/quad-foundation/quad-node/tcpip"
 	"github.com/quad-foundation/quad-node/wallet"
 	"github.com/therecipe/qt/widgets"
+	"net"
 	"os"
 	"strconv"
 	"time"
@@ -26,11 +28,12 @@ func main() {
 
 	// needs to be called once before you can start using the QWidgets
 	app := widgets.NewQApplication(len(os.Args), os.Args)
-
+	ip_this := tcpip.GetInternalIp()
+	ip_str := net.IPv4(ip_this[0], ip_this[1], ip_this[2], ip_this[3])
 	// create a window
 	window := widgets.NewQTabWidget(nil)
 	window.SetMinimumSize2(800, 900)
-	window.SetWindowTitle("QUAD Wallet - " + ip +
+	window.SetWindowTitle("QUAD Wallet - " + ip_str.String() +
 		" Node Account: " +
 		strconv.Itoa(int(common.NumericalDelegatedAccountAddress(common.GetDelegatedAccount()))))
 
