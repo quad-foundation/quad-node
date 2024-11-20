@@ -49,7 +49,7 @@ func generateNonceMsg(topic [2]byte) (message.TransactionsMessage, error) {
 	optData = append(optData, common.GetByteInt64(randOracle)...)
 
 	dataTx := transactionsDefinition.TxData{
-		Recipient: common.EmptyAddress(),
+		Recipient: common.GetDelegatedAccount(), // will be delegated account temporary
 		Amount:    0,
 		OptData:   optData[:],
 	}

@@ -88,15 +88,20 @@ func OnMessage(addr [4]byte, m []byte) {
 			log.Println("nonce signature is invalid")
 			return
 		}
+		txDelAcc := transaction.TxData.Recipient
+		txnid, err := account.IntDelegatedAccountFromAddress(txDelAcc)
+		if err != nil {
+			return
+		}
 		// get oracles from nonce transaction
 		optData := transaction.TxData.OptData[8+common.HashLength:]
-		_, stakedInDelAcc, _ := account.GetStakedInDelegatedAccount(n)
+		_, stakedInDelAcc, _ := account.GetStakedInDelegatedAccount(txnid)
 		stakedInDelAccInt := int64(stakedInDelAcc)
-		err = oracles.SavePriceOracle(common.GetInt64FromByte(optData[:8]), nonceHeight, delAcc, stakedInDelAccInt)
+		err = oracles.SavePriceOracle(common.GetInt64FromByte(optData[:8]), nonceHeight, txDelAcc, stakedInDelAccInt)
 		if err != nil {
 			log.Println("could not save price oracle", err)
 		}
-		err = oracles.SaveRandOracle(common.GetInt64FromByte(optData[8:16]), nonceHeight, delAcc, stakedInDelAccInt)
+		err = oracles.SaveRandOracle(common.GetInt64FromByte(optData[8:16]), nonceHeight, txDelAcc, stakedInDelAccInt)
 		if err != nil {
 			log.Println("could not save rand oracle", err)
 		}
