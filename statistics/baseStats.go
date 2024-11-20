@@ -22,6 +22,8 @@ type MainStats struct {
 	Tps                     float32 `json:"tps"`
 	Syncing                 bool    `json:"syncing"`
 	Difficulty              int32   `json:"difficulty"`
+	PriceOracle             float32 `json:"priceOracle"`
+	RandOracle              int64   `json:"randOracle"`
 	db                      memDatabase.AnyBlockchainDB
 }
 
@@ -53,6 +55,8 @@ func InitGlobalMainStats() {
 			Tps:                     float32(0),
 			Syncing:                 true,
 			Difficulty:              int32(0),
+			PriceOracle:             float32(1),
+			RandOracle:              int64(0),
 			db:                      db,
 		},
 		Mutex: sync.Mutex{},
@@ -112,6 +116,8 @@ func UpdateStatistics(newBlock blocks.Block, lastBlock blocks.Block) {
 		stats.MainStats.Heights = common.GetHeight()
 		stats.MainStats.HeightMax = common.GetHeightMax()
 		stats.MainStats.Difficulty = newBlock.BaseBlock.BaseHeader.Difficulty
+		stats.MainStats.PriceOracle = float32(newBlock.BaseBlock.PriceOracle) / 100000000.0
+		stats.MainStats.RandOracle = newBlock.BaseBlock.RandOracle
 		stats.MainStats.Syncing = common.IsSyncing.Load()
 		stats.MainStats.TimeInterval = newBlock.BaseBlock.BlockTimeStamp - lastBlock.BaseBlock.BlockTimeStamp
 		empt := transactionsDefinition.EmptyTransaction()

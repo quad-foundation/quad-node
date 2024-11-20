@@ -149,3 +149,18 @@ func LastHeightStoredInStakingAccounts() (int64, error) {
 	}
 	return i - 1, nil
 }
+
+func GetStakedInAllDelegatedAccounts() int64 {
+	StakingRWMutex.RLock()
+	defer StakingRWMutex.RUnlock()
+
+	totalStaked := int64(0)
+
+	for _, delegatedAccount := range StakingAccounts {
+		for _, sa := range delegatedAccount.AllStakingAccounts {
+			totalStaked += sa.StakedBalance
+		}
+	}
+
+	return totalStaked
+}

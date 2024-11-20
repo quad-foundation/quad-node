@@ -6,6 +6,7 @@ import (
 	"github.com/quad-foundation/quad-node/blocks"
 	"github.com/quad-foundation/quad-node/common"
 	"github.com/quad-foundation/quad-node/message"
+	"github.com/quad-foundation/quad-node/oracles"
 	"github.com/quad-foundation/quad-node/services"
 	"github.com/quad-foundation/quad-node/services/transactionServices"
 	"github.com/quad-foundation/quad-node/statistics"
@@ -76,7 +77,7 @@ func OnMessage(addr [4]byte, m []byte) {
 			log.Println("not enough staked coins to be a node or not valid operational account")
 			return
 		}
-
+		// checking if proper hight
 		if nonceHeight < 1 || nonceHeight != h+1 {
 			//log.Print("nonce height invalid")
 			return
@@ -87,6 +88,19 @@ func OnMessage(addr [4]byte, m []byte) {
 			log.Println("nonce signature is invalid")
 			return
 		}
+		// get oracles from nonce transaction
+		optData := transaction.TxData.OptData[8+common.HashLength:]
+		_, stakedInDelAcc, _ := account.GetStakedInDelegatedAccount(n)
+		stakedInDelAccInt := int64(stakedInDelAcc)
+		err = oracles.SavePriceOracle(common.GetInt64FromByte(optData[:8]), nonceHeight, delAcc, stakedInDelAccInt)
+		if err != nil {
+			log.Println("could not save price oracle", err)
+		}
+		err = oracles.SaveRandOracle(common.GetInt64FromByte(optData[8:16]), nonceHeight, delAcc, stakedInDelAccInt)
+		if err != nil {
+			log.Println("could not save rand oracle", err)
+		}
+
 		lastBlock, err := blocks.LoadBlock(h)
 		if err != nil {
 			panic(err)

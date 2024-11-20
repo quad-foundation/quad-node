@@ -7,10 +7,12 @@ import (
 	"github.com/quad-foundation/quad-node/blocks"
 	"github.com/quad-foundation/quad-node/common"
 	"github.com/quad-foundation/quad-node/message"
+	"github.com/quad-foundation/quad-node/oracles"
 	"github.com/quad-foundation/quad-node/tcpip"
 	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"github.com/quad-foundation/quad-node/transactionsPool"
 	"github.com/quad-foundation/quad-node/wallet"
+	"log"
 	"sync"
 )
 
@@ -78,12 +80,25 @@ func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 	if err != nil {
 		return blocks.Block{}, err
 	}
+	totalStaked := account.GetStakedInAllDelegatedAccounts()
+	priceOracle, priceOracleData, err := oracles.CalculatePriceOracle(heightTransaction, totalStaked)
+	if err != nil {
+		log.Println("could not establish price oracle", err)
+	}
+	randOracle, randOracleData, err := oracles.CalculateRandOracle(heightTransaction, totalStaked)
+	if err != nil {
+		log.Println("could not establish rand oracle", err)
+	}
 	bb := blocks.BaseBlock{
 		BaseHeader:       bh,
 		BlockHeaderHash:  bhHash,
 		BlockTimeStamp:   common.GetCurrentTimeStampInSecond(),
 		RewardPercentage: int16(common.GetRewardPercentage() * 1000),
 		Supply:           supply,
+		PriceOracle:      priceOracle,
+		RandOracle:       randOracle,
+		PriceOracleData:  priceOracleData,
+		RandOracleData:   randOracleData,
 	}
 
 	if err != nil {
