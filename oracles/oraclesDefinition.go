@@ -105,6 +105,54 @@ func GeneratePriceData(height int64) ([]byte, []int64, int64) {
 	return priceData, prices, staked
 }
 
+func ParsePriceData(priceData []byte) (map[uint8]PriceOracle, []int64, error) {
+	parsedData := make(map[uint8]PriceOracle)
+	dataLen := len(priceData)
+	prices := []int64{}
+
+	if dataLen%17 != 0 {
+		return nil, nil, fmt.Errorf("invalid priceData length: %d", dataLen)
+	}
+
+	for i := 0; i < dataLen; i += 17 {
+		id := priceData[i]
+		height := common.GetInt64FromByte(priceData[i+1 : i+9])
+		price := common.GetInt64FromByte(priceData[i+9 : i+17])
+		prices = append(prices, price)
+		parsedData[id] = PriceOracle{
+			Price:  price,
+			Height: height,
+			Staked: 0,
+		}
+	}
+
+	return parsedData, prices, nil
+}
+
+func ParseRandData(randData []byte) (map[uint8]RandOracle, []byte, error) {
+	parsedData := make(map[uint8]RandOracle)
+	dataLen := len(randData)
+	rands := make([]byte, 0)
+
+	if dataLen%17 != 0 {
+		return nil, nil, fmt.Errorf("invalid randData length: %d", dataLen)
+	}
+
+	for i := 0; i < dataLen; i += 17 {
+		id := randData[i]
+		height := common.GetInt64FromByte(randData[i+1 : i+9])
+		rand := common.GetInt64FromByte(randData[i+9 : i+17])
+		rands = append(rands, randData[i+9:i+17]...)
+		parsedData[id] = RandOracle{
+			Rand:   rand,
+			Height: height,
+			Staked: 0,
+		}
+	}
+
+	return parsedData, rands, nil
+}
+
 func GenerateRandData(height int64) ([]byte, []byte, int64) {
 	randData := make([]byte, 0)
 	rands := make([]byte, 0)
@@ -142,6 +190,56 @@ func CalculateRandOracle(height int64, totalStaked int64) (int64, []byte, error)
 	}
 	rand = common.GetInt64FromByte(bytes[24:])
 	return rand, randData, nil
+}
+
+func VerifyRandOracle(height int64, totalStaked int64, randBlock int64, randData []byte) bool {
+	_, rands, err := ParseRandData(randData)
+	if err != nil {
+		return false
+	}
+	_, _, staked := GenerateRandData(height)
+
+	if staked <= 2*totalStaked/3 {
+		return false
+	}
+
+	if len(rands) == 0 {
+		return false
+	}
+
+	// Calculate hash from all rand numbers propositions
+	bytes, err := common.CalcHashFromBytes(rands)
+	if err != nil {
+		return false
+	}
+	rand := common.GetInt64FromByte(bytes[24:])
+	return rand == randBlock
+}
+
+func VerifyPriceOracle(height int64, totalStaked int64, priceBlock int64, priceData []byte) bool {
+
+	_, prices, err := ParsePriceData(priceData)
+	if err != nil {
+		return false
+	}
+	_, _, staked := GeneratePriceData(height)
+	if staked <= 2*totalStaked/3 {
+		return false
+	}
+
+	// Remove max and min value
+	if len(prices) > 2 {
+		prices = removeMinMax(prices)
+	}
+
+	if len(prices) == 0 {
+		return false
+	}
+
+	// Calculate median price
+	price := Median(prices)
+
+	return price == priceBlock
 }
 
 func CalculatePriceOracle(height int64, totalStaked int64) (int64, []byte, error) {
