@@ -9,6 +9,7 @@ import (
 	"github.com/quad-foundation/quad-node/tcpip"
 	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"github.com/quad-foundation/quad-node/wallet"
+	"golang.org/x/exp/rand"
 	"log"
 	"time"
 )
@@ -41,8 +42,14 @@ func generateNonceMsg(topic [2]byte) (message.TransactionsMessage, error) {
 	optData := common.GetByteInt64(h)
 	optData = append(optData, lastBlockHash...)
 
+	//Price oracle currently is random: 0.9 - 1.1 QAD/USD
+	priceOracle := int64(rand.Intn(10000000) - 5000000 + 100000000)
+	randOracle := rand.Int63()
+	optData = append(optData, common.GetByteInt64(priceOracle)...)
+	optData = append(optData, common.GetByteInt64(randOracle)...)
+
 	dataTx := transactionsDefinition.TxData{
-		Recipient: common.EmptyAddress(),
+		Recipient: common.GetDelegatedAccount(), // will be delegated account temporary
 		Amount:    0,
 		OptData:   optData[:],
 	}
@@ -115,7 +122,7 @@ func Send(addr [4]byte, nb []byte) {
 }
 
 func sendNonceMsgInLoop() {
-	for range time.Tick(time.Second * 10) {
+	for range time.Tick(time.Second * 3) {
 		var topic = [2]byte{'N', 'N'}
 		sendNonceMsg([4]byte{0, 0, 0, 0}, topic)
 	}

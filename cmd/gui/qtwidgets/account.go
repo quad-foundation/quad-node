@@ -38,8 +38,9 @@ func UpdateAccountStats() {
 	txt += fmt.Sprintln("Heights max:", st.HeightMax)
 	txt += fmt.Sprintln("Time interval [sec.]:", st.TimeInterval)
 	txt += fmt.Sprintln("Difficulty:", st.Difficulty)
-
-	txt += fmt.Sprintln("Number of transactions : ", st.Transactions, "/", st.TransactionsPending)
+	txt += fmt.Sprintln("\nPrice Oracle:", st.PriceOracle, " QAD/USD")
+	txt += fmt.Sprintln("Rand Oracle:", st.RandOracle)
+	txt += fmt.Sprintln("\nNumber of transactions : ", st.Transactions, "/", st.TransactionsPending)
 	txt += fmt.Sprintln("Size of transactions [kB] : ", st.TransactionsSize/1024, "/", st.TransactionsPendingSize/1024)
 	txt += fmt.Sprintln("TPS:", st.Tps)
 	if st.Syncing {
@@ -141,7 +142,7 @@ func ShowAccountPage() *widgets.QTabWidget {
 	widget.SetLayout(widgets.NewQVBoxLayout())
 
 	ipLineEdit := widgets.NewQLineEdit(nil)
-	ipLineEdit.SetText("192.168.8.104")
+	ipLineEdit.SetText("192.168.0.139")
 	widget.Layout().AddWidget(ipLineEdit)
 
 	miningCheckBox := widgets.NewQCheckBox(nil)

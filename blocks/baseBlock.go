@@ -25,6 +25,10 @@ type BaseBlock struct {
 	BlockTimeStamp   int64       `json:"block_time_stamp"`
 	RewardPercentage int16       `json:"reward_percentage"`
 	Supply           int64       `json:"supply"`
+	PriceOracle      int64       `json:"price_oracle"`
+	RandOracle       int64       `json:"rand_oracle"`
+	PriceOracleData  []byte      `json:"price_oracle_data"`
+	RandOracleData   []byte      `json:"rand_oracle_data"`
 }
 
 // GetString returns a string representation of BaseHeader.
@@ -35,8 +39,8 @@ func (b *BaseHeader) GetString() string {
 
 // GetString returns a string representation of BaseBlock.
 func (b *BaseBlock) GetString() string {
-	return fmt.Sprintf("Header: {%s}\nBlockHeaderHash: %s\nBlockTimeStamp: %d\nRewardPercentage: %d\nSupply: %d",
-		b.BaseHeader.GetString(), b.BlockHeaderHash.GetHex(), b.BlockTimeStamp, b.RewardPercentage, b.Supply)
+	return fmt.Sprintf("Header: {%s}\nBlockHeaderHash: %s\nBlockTimeStamp: %d\nRewardPercentage: %d\nSupply: %d\nPriceOracle: %d\nRandOracle: %d\nPriceOracleData: %s\nRandOracleData: %s",
+		b.BaseHeader.GetString(), b.BlockHeaderHash.GetHex(), b.BlockTimeStamp, b.RewardPercentage, b.Supply, b.PriceOracle, b.RandOracle, string(b.PriceOracleData), string(b.RandOracleData))
 }
 
 func (b *BaseHeader) GetBytesWithoutSignature() []byte {
@@ -137,11 +141,15 @@ func (bb *BaseBlock) GetBytes() []byte {
 	b = append(b, common.GetByteInt64(bb.BlockTimeStamp)...)
 	b = append(b, common.GetByteInt16(bb.RewardPercentage)...)
 	b = append(b, common.GetByteInt64(bb.Supply)...)
+	b = append(b, common.GetByteInt64(bb.PriceOracle)...)
+	b = append(b, common.GetByteInt64(bb.RandOracle)...)
+	b = append(b, common.BytesToLenAndBytes(bb.PriceOracleData)...)
+	b = append(b, common.BytesToLenAndBytes(bb.RandOracleData)...)
 	return b
 }
 
 func (bb *BaseBlock) GetFromBytes(b []byte) ([]byte, error) {
-	if len(b) < 116+common.SignatureLength+44 {
+	if len(b) < 116+common.SignatureLength+44+16 {
 		return nil, fmt.Errorf("not enough bytes to decode BaseBlock")
 	}
 	b, err := bb.BaseHeader.GetFromBytes(b)
@@ -152,7 +160,17 @@ func (bb *BaseBlock) GetFromBytes(b []byte) ([]byte, error) {
 	bb.BlockTimeStamp = common.GetInt64FromByte(b[32:40])
 	bb.RewardPercentage = common.GetInt16FromByte(b[40:42])
 	bb.Supply = common.GetInt64FromByte(b[42:50])
-	return b[50:], nil
+	bb.PriceOracle = common.GetInt64FromByte(b[50:58])
+	bb.RandOracle = common.GetInt64FromByte(b[58:66])
+	bb.PriceOracleData, b, err = common.BytesWithLenToBytes(b[66:])
+	if err != nil {
+		return nil, err
+	}
+	bb.RandOracleData, b, err = common.BytesWithLenToBytes(b[:])
+	if err != nil {
+		return nil, err
+	}
+	return b[:], nil
 }
 
 func (b *BaseHeader) CalcHash() (common.Hash, error) {
