@@ -122,7 +122,7 @@ func Send(addr [4]byte, nb []byte) {
 }
 
 func sendNonceMsgInLoop() {
-	for range time.Tick(time.Second * 10) {
+	for range time.Tick(time.Second * 3) {
 		var topic = [2]byte{'N', 'N'}
 		sendNonceMsg([4]byte{0, 0, 0, 0}, topic)
 	}
