@@ -79,13 +79,13 @@ func OnMessage(addr [4]byte, m []byte) {
 		}
 
 		txDelAcc := transaction.TxData.Recipient
-		txnid, err := account.IntDelegatedAccountFromAddress(txDelAcc)
+		n, err := account.IntDelegatedAccountFromAddress(txDelAcc)
 		if err != nil {
 			return
 		}
 		// get oracles from nonce transaction
 		optData := transaction.TxData.OptData[8+common.HashLength:]
-		_, stakedInDelAcc, _ := account.GetStakedInDelegatedAccount(txnid)
+		_, stakedInDelAcc, _ := account.GetStakedInDelegatedAccount(n)
 		stakedInDelAccInt := int64(stakedInDelAcc)
 		err = oracles.SavePriceOracle(common.GetInt64FromByte(optData[:8]), nonceHeight, txDelAcc, stakedInDelAccInt)
 		if err != nil {
@@ -96,11 +96,6 @@ func OnMessage(addr [4]byte, m []byte) {
 			log.Println("could not save rand oracle", err)
 		}
 
-		delAcc := common.GetDelegatedAccount()
-		n, err := account.IntDelegatedAccountFromAddress(delAcc)
-		if err != nil {
-			return
-		}
 		// checking if enough coins staked
 		if _, sumStaked, operationalAcc := account.GetStakedInDelegatedAccount(n); int64(sumStaked) < common.MinStakingForNode || !bytes.Equal(operationalAcc.Address[:], transaction.TxParam.Sender.GetBytes()) {
 			log.Println("not enough staked coins to be a node or not valid operational account")
