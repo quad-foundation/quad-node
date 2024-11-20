@@ -3,6 +3,7 @@ package oracles
 import (
 	"errors"
 	"fmt"
+	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/common"
 	"sort"
 	"sync"
@@ -105,13 +106,14 @@ func GeneratePriceData(height int64) ([]byte, []int64, int64) {
 	return priceData, prices, staked
 }
 
-func ParsePriceData(priceData []byte) (map[uint8]PriceOracle, []int64, error) {
+func ParsePriceData(priceData []byte) (map[uint8]PriceOracle, []int64, int64, error) {
 	parsedData := make(map[uint8]PriceOracle)
 	dataLen := len(priceData)
 	prices := []int64{}
+	allStaked := int64(0)
 
 	if dataLen%17 != 0 {
-		return nil, nil, fmt.Errorf("invalid priceData length: %d", dataLen)
+		return nil, nil, 0, fmt.Errorf("invalid priceData length: %d", dataLen)
 	}
 
 	for i := 0; i < dataLen; i += 17 {
@@ -119,23 +121,26 @@ func ParsePriceData(priceData []byte) (map[uint8]PriceOracle, []int64, error) {
 		height := common.GetInt64FromByte(priceData[i+1 : i+9])
 		price := common.GetInt64FromByte(priceData[i+9 : i+17])
 		prices = append(prices, price)
+		_, staked, _ := account.GetStakedInDelegatedAccount(int(id))
+		allStaked += int64(staked)
 		parsedData[id] = PriceOracle{
 			Price:  price,
 			Height: height,
-			Staked: 0,
+			Staked: int64(staked),
 		}
 	}
 
-	return parsedData, prices, nil
+	return parsedData, prices, allStaked, nil
 }
 
-func ParseRandData(randData []byte) (map[uint8]RandOracle, []byte, error) {
+func ParseRandData(randData []byte) (map[uint8]RandOracle, []byte, int64, error) {
 	parsedData := make(map[uint8]RandOracle)
 	dataLen := len(randData)
 	rands := make([]byte, 0)
+	allStaked := int64(0)
 
 	if dataLen%17 != 0 {
-		return nil, nil, fmt.Errorf("invalid randData length: %d", dataLen)
+		return nil, nil, 0, fmt.Errorf("invalid randData length: %d", dataLen)
 	}
 
 	for i := 0; i < dataLen; i += 17 {
@@ -143,14 +148,16 @@ func ParseRandData(randData []byte) (map[uint8]RandOracle, []byte, error) {
 		height := common.GetInt64FromByte(randData[i+1 : i+9])
 		rand := common.GetInt64FromByte(randData[i+9 : i+17])
 		rands = append(rands, randData[i+9:i+17]...)
+		_, staked, _ := account.GetStakedInDelegatedAccount(int(id))
+		allStaked += int64(staked)
 		parsedData[id] = RandOracle{
 			Rand:   rand,
 			Height: height,
-			Staked: 0,
+			Staked: int64(staked),
 		}
 	}
 
-	return parsedData, rands, nil
+	return parsedData, rands, allStaked, nil
 }
 
 func GenerateRandData(height int64) ([]byte, []byte, int64) {
@@ -193,11 +200,10 @@ func CalculateRandOracle(height int64, totalStaked int64) (int64, []byte, error)
 }
 
 func VerifyRandOracle(height int64, totalStaked int64, randBlock int64, randData []byte) bool {
-	_, rands, err := ParseRandData(randData)
+	_, rands, staked, err := ParseRandData(randData)
 	if err != nil {
 		return false
 	}
-	_, _, staked := GenerateRandData(height)
 
 	if staked <= 2*totalStaked/3 {
 		return false
@@ -216,13 +222,13 @@ func VerifyRandOracle(height int64, totalStaked int64, randBlock int64, randData
 	return rand == randBlock
 }
 
+// one has to think what happens when verification is not on current block than GetStakedInDelegatedAccount should depend on height
 func VerifyPriceOracle(height int64, totalStaked int64, priceBlock int64, priceData []byte) bool {
-
-	_, prices, err := ParsePriceData(priceData)
+	_, prices, staked, err := ParsePriceData(priceData)
 	if err != nil {
 		return false
 	}
-	_, _, staked := GeneratePriceData(height)
+
 	if staked <= 2*totalStaked/3 {
 		return false
 	}
