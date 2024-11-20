@@ -141,7 +141,7 @@ func ShowAccountPage() *widgets.QTabWidget {
 	widget.SetLayout(widgets.NewQVBoxLayout())
 
 	ipLineEdit := widgets.NewQLineEdit(nil)
-	ipLineEdit.SetText("192.168.8.104")
+	ipLineEdit.SetText("192.168.0.139")
 	widget.Layout().AddWidget(ipLineEdit)
 
 	miningCheckBox := widgets.NewQCheckBox(nil)
