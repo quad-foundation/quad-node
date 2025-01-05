@@ -1,8 +1,9 @@
-package common
+package oqs
 
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 )
@@ -28,6 +29,16 @@ type ConfigEnc struct {
 	IsPaused         bool   `json:"isPaused"`
 }
 
+// ToString returns a JSON representation of the ConfigEnc struct.
+func (c ConfigEnc) ToString() string {
+	// Marshal the struct into JSON
+	jsonData, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("Error serializing ConfigEnc to JSON: %v", err)
+	}
+	return string(jsonData)
+}
+
 // NewConfig creates a Config with default values.
 func NewConfigEnc1() *ConfigEnc {
 	return &ConfigEnc{
@@ -50,6 +61,46 @@ func NewConfigEnc2() *ConfigEnc {
 		IsValid:          true,
 		IsPaused:         false,
 	}
+}
+
+func FromBytesToEncryptionConfig(bb []byte) (ConfigEnc, error) {
+	sigName, pubKeyLength, privateKeyLength, signatureLength, isValid, isPaused, err := GenerateParamsEncryptionSchemesFromBytes(bb)
+	if err != nil {
+		return ConfigEnc{}, err
+	}
+	encConfig := CreateEncryptionScheme(sigName, pubKeyLength, privateKeyLength, signatureLength, isValid, isPaused)
+	if !VerifyEncConfig(encConfig) {
+		return ConfigEnc{}, errors.New("encoding verification fails")
+	}
+	return encConfig, nil
+}
+
+func VerifyEncConfig(encConfig ConfigEnc) bool {
+	var signer Signature
+	defer signer.Clean()
+
+	// ignore potential errors everywhere
+	err := signer.Init(encConfig.SigName, nil)
+	if err != nil {
+		return false
+	}
+	pubKey, err := signer.GenerateKeyPair()
+	if err != nil {
+		return false
+	}
+	if len(pubKey) > encConfig.PubKeyLength {
+		return false
+	}
+	if signer.Details().LengthPublicKey != encConfig.PubKeyLength {
+		return false
+	}
+	if signer.Details().LengthSecretKey != encConfig.PubKeyLength {
+		return false
+	}
+	if signer.Details().MaxLengthSignature > encConfig.SignatureLength {
+		return false
+	}
+	return true
 }
 
 // CreateEncryptionScheme

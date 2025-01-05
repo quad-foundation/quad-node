@@ -1,7 +1,9 @@
 package common
 
 import (
+	"fmt"
 	"github.com/joho/godotenv"
+	"github.com/quad-foundation/quad-node/crypto/oqs"
 	"log"
 	"os"
 	"strconv"
@@ -80,8 +82,10 @@ func GetRewardPercentage() float64 {
 	return rewardPercentage
 }
 func init() {
-	enc1 := NewConfigEnc1()
-	enc2 := NewConfigEnc2()
+	enc1 := oqs.NewConfigEnc1()
+	fmt.Print(enc1.ToString())
+	enc2 := oqs.NewConfigEnc2()
+	fmt.Print(enc2.ToString())
 
 	PubKeyLength = enc1.PubKeyLength
 	PrivateKeyLength = enc1.PrivateKeyLength

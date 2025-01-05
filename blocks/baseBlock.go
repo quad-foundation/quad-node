@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/quad-foundation/quad-node/common"
+	"github.com/quad-foundation/quad-node/crypto/oqs"
 	memDatabase "github.com/quad-foundation/quad-node/database"
 	"github.com/quad-foundation/quad-node/wallet"
 )
@@ -33,10 +34,40 @@ type BaseBlock struct {
 	RandOracleData   []byte      `json:"rand_oracle_data"`
 }
 
+func FromBytesToEncryptionConfig(bb []byte, version int) (oqs.ConfigEnc, error) {
+	if len(bb) == 0 {
+
+		if common.IsValid && !common.IsPaused && version == 1 {
+			enc := oqs.CreateEncryptionScheme(common.SigName, common.PubKeyLength, common.PrivateKeyLength, common.SignatureLength, common.IsValid, common.IsPaused)
+			return enc, nil
+		} else if common.IsValid2 && !common.IsPaused2 && version == 2 {
+			//TODO maybe one should make it better
+			enc := oqs.CreateEncryptionScheme(common.SigName2, common.PubKeyLength2, common.PrivateKeyLength2, common.SignatureLength2, common.IsValid2, common.IsPaused2)
+			return enc, nil
+		} else {
+			return oqs.ConfigEnc{}, fmt.Errorf("no valid encyption scheme for version %d", version)
+		}
+	}
+	return oqs.FromBytesToEncryptionConfig(bb[:])
+}
+
 // GetString returns a string representation of BaseHeader.
 func (b *BaseHeader) GetString() string {
-	return fmt.Sprintf("PreviousHash: %s\nDifficulty: %d\nHeight: %d\nDelegatedAccount: %s\nOperatorAccount: %s\nRootMerkleTree: %s\nSignature: %s\nSignatureMessage: %x",
-		b.PreviousHash.GetHex(), b.Difficulty, b.Height, b.DelegatedAccount.GetHex(), b.OperatorAccount.GetHex(), b.RootMerkleTree.GetHex(), b.Signature.GetHex(), b.SignatureMessage)
+
+	enc1String := ""
+	enc1, err := FromBytesToEncryptionConfig(b.Encryption1[:], 1)
+	if err != nil {
+		enc1String = fmt.Sprint(err)
+	}
+	enc1String = enc1.ToString()
+	enc2String := ""
+	enc2, err := FromBytesToEncryptionConfig(b.Encryption2[:], 2)
+	if err != nil {
+		enc2String = fmt.Sprint(err)
+	}
+	enc2String = enc2.ToString()
+	return fmt.Sprintf("PreviousHash: %s\nDifficulty: %d\nHeight: %d\nDelegatedAccount: %s\nOperatorAccount: %s\nRootMerkleTree: %s\nEncryption1: %s\nEncryption2: %s\nSignature: %s\nSignatureMessage: %x",
+		b.PreviousHash.GetHex(), b.Difficulty, b.Height, b.DelegatedAccount.GetHex(), b.OperatorAccount.GetHex(), b.RootMerkleTree.GetHex(), enc1String, enc2String, b.Signature.GetHex(), b.SignatureMessage)
 }
 
 // GetString returns a string representation of BaseBlock.
