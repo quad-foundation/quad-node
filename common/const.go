@@ -75,10 +75,28 @@ func SetChainID(chainid int16) {
 func GetDelegatedAccount() Address {
 	return delegatedAccount
 }
+
 func GetRewardPercentage() float64 {
 	return rewardPercentage
 }
 func init() {
+	enc1 := NewConfigEnc1()
+	enc2 := NewConfigEnc2()
+
+	PubKeyLength = enc1.PubKeyLength
+	PrivateKeyLength = enc1.PrivateKeyLength
+	SignatureLength = enc1.SignatureLength
+	SigName = enc1.SigName
+	IsValid = enc1.IsValid
+	IsPaused = enc1.IsPaused
+
+	PubKeyLength2 = enc2.PubKeyLength
+	PrivateKeyLength2 = enc2.PrivateKeyLength
+	SignatureLength2 = enc2.SignatureLength
+	SigName2 = enc2.SigName
+	IsValid2 = enc2.IsValid
+	IsPaused2 = enc2.IsPaused
+
 	//log.SetOutput(io.Discard)
 	ShiftToPastInReset = 1
 	homePath, err := os.UserHomeDir()

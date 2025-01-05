@@ -18,6 +18,14 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 		return nil, fmt.Errorf("supply is too high")
 	}
 
+	if len(newBlock.BaseBlock.BaseHeader.Encryption1) != 0 {
+		// TODO needs to check what happen when encryption is changed
+	}
+
+	if len(newBlock.BaseBlock.BaseHeader.Encryption1) != 0 {
+		// TODO needs to check what happen when encryption is changed
+	}
+
 	if !bytes.Equal(lastBlock.BlockHash.GetBytes(), newBlock.GetHeader().PreviousHash.GetBytes()) {
 		log.Println("lastBlock.BlockHash", lastBlock.BlockHash.GetHex(), newBlock.GetHeader().PreviousHash.GetHex())
 		return nil, fmt.Errorf("last block hash not match to one stored in new block")

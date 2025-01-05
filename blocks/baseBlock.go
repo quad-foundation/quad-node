@@ -15,6 +15,8 @@ type BaseHeader struct {
 	DelegatedAccount common.Address   `json:"delegated_account"`
 	OperatorAccount  common.Address   `json:"operator_account"`
 	RootMerkleTree   common.Hash      `json:"root_merkle_tree"`
+	Encryption1      []byte           `json:"encryption_1"`
+	Encryption2      []byte           `json:"encryption_2"`
 	Signature        common.Signature `json:"signature"`
 	SignatureMessage []byte           `json:"signature_message"`
 }
@@ -50,7 +52,8 @@ func (b *BaseHeader) GetBytesWithoutSignature() []byte {
 	rb = append(rb, b.DelegatedAccount.GetBytes()...)
 	rb = append(rb, b.OperatorAccount.GetBytes()...)
 	rb = append(rb, b.RootMerkleTree.GetBytes()...)
-	//rb = append(rb, b.SignatureMessage...)
+	rb = append(rb, common.BytesToLenAndBytes(b.Encryption1)...)
+	rb = append(rb, common.BytesToLenAndBytes(b.Encryption2)...)
 	return rb
 }
 
@@ -61,6 +64,10 @@ func (b *BaseHeader) GetBytes() []byte {
 	rb = append(rb, b.DelegatedAccount.GetBytes()...)
 	rb = append(rb, b.OperatorAccount.GetBytes()...)
 	rb = append(rb, b.RootMerkleTree.GetBytes()...)
+
+	rb = append(rb, common.BytesToLenAndBytes(b.Encryption1)...)
+	rb = append(rb, common.BytesToLenAndBytes(b.Encryption2)...)
+
 	rb = append(rb, common.BytesToLenAndBytes(b.SignatureMessage)...)
 	rb = append(rb, common.BytesToLenAndBytes(b.Signature.GetBytes())...)
 	//log.Println("block ", b.Height, " len bytes ", len(rb))
@@ -118,7 +125,19 @@ func (bh *BaseHeader) GetFromBytes(b []byte) ([]byte, error) {
 	}
 	bh.OperatorAccount = opAddress
 	bh.RootMerkleTree = common.GetHashFromBytes(b[84:116])
+
 	msgb, b, err := common.BytesWithLenToBytes(b[116:])
+	if err != nil {
+		return nil, err
+	}
+	bh.Encryption1 = msgb
+	msgb, b, err = common.BytesWithLenToBytes(b[:])
+	if err != nil {
+		return nil, err
+	}
+	bh.Encryption2 = msgb
+
+	msgb, b, err = common.BytesWithLenToBytes(b[:])
 	if err != nil {
 		return nil, err
 	}
