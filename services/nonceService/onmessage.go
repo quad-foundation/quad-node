@@ -13,6 +13,7 @@ import (
 	"github.com/quad-foundation/quad-node/tcpip"
 	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"github.com/quad-foundation/quad-node/transactionsPool"
+	"github.com/quad-foundation/quad-node/voting"
 	"log"
 	"runtime/debug"
 )
@@ -94,6 +95,22 @@ func OnMessage(addr [4]byte, m []byte) {
 		err = oracles.SaveRandOracle(common.GetInt64FromByte(optData[8:16]), nonceHeight, txDelAcc, stakedInDelAccInt)
 		if err != nil {
 			log.Println("could not save rand oracle", err)
+		}
+		vb, b2, err := common.BytesWithLenToBytes(optData[16:])
+		if err != nil {
+			log.Println("could not save voting, parse bytes fails, 1", err)
+		}
+		err = voting.SaveVotesEncryption1(vb[:], nonceHeight, txDelAcc, stakedInDelAccInt)
+		if err != nil {
+			log.Println("could not save voting, 1", err)
+		}
+		vb, b2, err = common.BytesWithLenToBytes(b2[:])
+		if err != nil {
+			log.Println("could not save voting, parse bytes fails, 2", err)
+		}
+		err = voting.SaveVotesEncryption2(vb[:], nonceHeight, txDelAcc, stakedInDelAccInt)
+		if err != nil {
+			log.Println("could not save voting, 2", err)
 		}
 
 		// checking if enough coins staked

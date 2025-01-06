@@ -48,6 +48,7 @@ func generateNonceMsg(topic [2]byte) (message.TransactionsMessage, error) {
 	optData = append(optData, common.GetByteInt64(priceOracle)...)
 	optData = append(optData, common.GetByteInt64(randOracle)...)
 
+	// be2, _ := oqs.GenerateBytesFromParams(common.SigName2, common.PubKeyLength2, common.PrivateKeyLength2, common.SignatureLength2, true, true)
 	// Encryption1 and Encryption2 when changed than needs to add bytes
 	encryption1 := common.BytesToLenAndBytes([]byte{})
 	encryption2 := common.BytesToLenAndBytes([]byte{})

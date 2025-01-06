@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/common"
+	"github.com/quad-foundation/quad-node/crypto/oqs"
 	memDatabase "github.com/quad-foundation/quad-node/database"
 	"github.com/quad-foundation/quad-node/oracles"
 	"github.com/quad-foundation/quad-node/transactionsDefinition"
 	"github.com/quad-foundation/quad-node/transactionsPool"
+	"github.com/quad-foundation/quad-node/voting"
 	"log"
 )
 
@@ -16,14 +18,6 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 	blockHeight := newBlock.GetHeader().Height
 	if newBlock.GetBlockSupply() > common.MaxTotalSupply {
 		return nil, fmt.Errorf("supply is too high")
-	}
-
-	if len(newBlock.BaseBlock.BaseHeader.Encryption1) != 0 {
-		// TODO needs to check what happen when encryption is changed
-	}
-
-	if len(newBlock.BaseBlock.BaseHeader.Encryption1) != 0 {
-		// TODO needs to check what happen when encryption is changed
 	}
 
 	if !bytes.Equal(lastBlock.BlockHash.GetBytes(), newBlock.GetHeader().PreviousHash.GetBytes()) {
@@ -61,6 +55,80 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 	}
 	if !oracles.VerifyRandOracle(blockHeight, totalStaked, newBlock.BaseBlock.RandOracle, newBlock.BaseBlock.RandOracleData) {
 		return nil, fmt.Errorf("rand oracle check fails")
+	}
+
+	if len(newBlock.BaseBlock.BaseHeader.Encryption1[:]) != 0 {
+		enc1, err := FromBytesToEncryptionConfig(newBlock.BaseBlock.BaseHeader.Encryption1[:], 1)
+		if err != nil {
+			return nil, err
+		}
+		if !oqs.VerifyEncConfig(enc1) {
+			return nil, fmt.Errorf("encryption 1 verification fails")
+		}
+		if enc1.SigName == common.SigName && enc1.IsValid == common.IsValid && enc1.IsPaused == common.IsPaused {
+			return nil, fmt.Errorf("no need to change encryption, so leave encryption 1 empty")
+		}
+		if enc1.IsPaused == true && common.SigName != enc1.SigName {
+			return nil, fmt.Errorf("pausing is possible only for current encryption 1")
+		}
+		if enc1.IsPaused == true && common.IsPaused {
+			return nil, fmt.Errorf("pausing fails, encryption is just puased, 1")
+		}
+		if enc1.IsValid == false && common.SigName != enc1.SigName {
+			return nil, fmt.Errorf("invalidation is possible only for current encryption, 1")
+		}
+		if enc1.IsValid == false && !common.IsValid {
+			return nil, fmt.Errorf("invalidation fails, encryption is just invalid, 1")
+		}
+		if enc1.IsValid == false && common.IsPaused == false {
+			return nil, fmt.Errorf("invalidation fails, encryption first needs to be paused, 1")
+		}
+		if enc1.SigName != common.SigName && (enc1.IsValid == false || enc1.IsPaused == true) {
+			return nil, fmt.Errorf("new encryption has to be fully functional from beginning, so no paused and valid, 1")
+		}
+		if enc1.IsValid == false && !voting.VerifyEncryptionForInvalidation(blockHeight, totalStaked, 1) {
+			return nil, fmt.Errorf("voting invalidation check fails, 1")
+		}
+		if enc1.IsPaused == true && !voting.VerifyEncryptionForPausing(blockHeight, totalStaked, 1) {
+			return nil, fmt.Errorf("voting pausing check fails, 1")
+		}
+	}
+
+	if len(newBlock.BaseBlock.BaseHeader.Encryption2[:]) != 0 {
+		enc2, err := FromBytesToEncryptionConfig(newBlock.BaseBlock.BaseHeader.Encryption2[:], 2)
+		if err != nil {
+			return nil, err
+		}
+		if !oqs.VerifyEncConfig(enc2) {
+			return nil, fmt.Errorf("encryption 2 verification fails")
+		}
+		if enc2.SigName == common.SigName2 && enc2.IsValid == common.IsValid2 && enc2.IsPaused == common.IsPaused2 {
+			return nil, fmt.Errorf("no need to change encryption, so leave encryption 2 empty")
+		}
+		if enc2.IsPaused == true && common.SigName2 != enc2.SigName {
+			return nil, fmt.Errorf("pausing is possible only for current encryption 2")
+		}
+		if enc2.IsPaused == true && common.IsPaused2 {
+			return nil, fmt.Errorf("pausing fails, encryption is just puased, 2")
+		}
+		if enc2.IsValid == false && common.SigName2 != enc2.SigName {
+			return nil, fmt.Errorf("invalidation is possible only for current encryption, 2")
+		}
+		if enc2.IsValid == false && !common.IsValid2 {
+			return nil, fmt.Errorf("invalidation fails, encryption is just invalid, 2")
+		}
+		if enc2.IsValid == false && common.IsPaused2 == false {
+			return nil, fmt.Errorf("invalidation fails, encryption first needs to be paused, 2")
+		}
+		if enc2.SigName != common.SigName2 && (enc2.IsValid == false || enc2.IsPaused == true) {
+			return nil, fmt.Errorf("new encryption has to be fully functional from beginning, so no paused and valid, 2")
+		}
+		if enc2.IsValid == false && !voting.VerifyEncryptionForInvalidation(blockHeight, totalStaked, 2) {
+			return nil, fmt.Errorf("voting invalidation check fails, 2")
+		}
+		if enc2.IsPaused == true && !voting.VerifyEncryptionForPausing(blockHeight, totalStaked, 2) {
+			return nil, fmt.Errorf("voting pausing check fails, 2")
+		}
 	}
 	return merkleTrie, nil
 }

@@ -29,7 +29,8 @@ var (
 	MinStakingForNode         int64   = 100000000000000
 	MinStakingUser            int64   = 100000000000 // should be 100000000000
 	MinDistributedAmount      int64   = 100000000
-	OraclesHeightDistance     int64   = 6 // one minute on average
+	OraclesHeightDistance     int64   = 6  // one minute on average
+	VotingHeightDistance      int64   = 60 // ten minute on average
 	DefaultWalletHomePath             = "~/.quad/db/wallet/"
 	DefaultBlockchainHomePath         = "~/.quad/db/blockchain/"
 )
