@@ -54,10 +54,10 @@ func NewConfigEnc1() *ConfigEnc {
 // NewConfig creates a Config with default values.
 func NewConfigEnc2() *ConfigEnc {
 	return &ConfigEnc{
-		PubKeyLength:     264608,                   // Default value for public key length
-		PrivateKeyLength: 64,                       // Default value for private key length
-		SignatureLength:  164,                      // Default value for signature length
-		SigName:          "Rainbow-III-Compressed", // Default signature scheme name
+		PubKeyLength:     1793,
+		PrivateKeyLength: 2305,
+		SignatureLength:  1462,
+		SigName:          "Falcon-1024",
 		IsValid:          true,
 		IsPaused:         false,
 	}
@@ -94,7 +94,7 @@ func VerifyEncConfig(encConfig ConfigEnc) bool {
 	if signer.Details().LengthPublicKey != encConfig.PubKeyLength {
 		return false
 	}
-	if signer.Details().LengthSecretKey != encConfig.PubKeyLength {
+	if signer.Details().LengthSecretKey != encConfig.PrivateKeyLength {
 		return false
 	}
 	if signer.Details().MaxLengthSignature > encConfig.SignatureLength {

@@ -24,13 +24,22 @@ var (
 )
 
 var (
-	PubKeyLength2     = 264608
-	PrivateKeyLength2 = 64
-	SignatureLength2  = 164
-	SigName2          = "Rainbow-III-Compressed"
+	PubKeyLength2     = 1793
+	PrivateKeyLength2 = 2305
+	SignatureLength2  = 1462
+	SigName2          = "Falcon-1024"
 	IsValid2          = true
 	IsPaused2         = false
 )
+
+//var (
+//	PubKeyLength2     = 264608
+//	PrivateKeyLength2 = 64
+//	SignatureLength2  = 164
+//	SigName2          = "Rainbow-III-Compressed"
+//	IsValid2          = true
+//	IsPaused2         = false
+//)
 
 func GetSigName() string {
 	return SigName
