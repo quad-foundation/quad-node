@@ -95,6 +95,9 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 		if enc1.SigName == common.SigName2 {
 			return nil, fmt.Errorf("cannot exist 2 the same ecnryptions schemes, 1")
 		}
+		if enc1.SigName != common.SigName && common.IsValid == true {
+			return nil, fmt.Errorf("invalidate encryption to have it replaced, 1")
+		}
 	}
 
 	if len(newBlock.BaseBlock.BaseHeader.Encryption2[:]) != 0 {
@@ -134,6 +137,9 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 		}
 		if enc2.SigName == common.SigName {
 			return nil, fmt.Errorf("cannot exist 2 the same ecnryptions schemes, 2")
+		}
+		if enc2.SigName != common.SigName2 && common.IsValid2 == true {
+			return nil, fmt.Errorf("invalidate encryption to have it replaced, 2")
 		}
 	}
 	return merkleTrie, nil
