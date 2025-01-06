@@ -92,6 +92,9 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 		if enc1.IsPaused == true && !voting.VerifyEncryptionForPausing(blockHeight, totalStaked, 1) {
 			return nil, fmt.Errorf("voting pausing check fails, 1")
 		}
+		if enc1.SigName == common.SigName2 {
+			return nil, fmt.Errorf("cannot exist 2 the same ecnryptions schemes, 1")
+		}
 	}
 
 	if len(newBlock.BaseBlock.BaseHeader.Encryption2[:]) != 0 {
@@ -128,6 +131,9 @@ func CheckBaseBlock(newBlock Block, lastBlock Block) (*transactionsPool.MerkleTr
 		}
 		if enc2.IsPaused == true && !voting.VerifyEncryptionForPausing(blockHeight, totalStaked, 2) {
 			return nil, fmt.Errorf("voting pausing check fails, 2")
+		}
+		if enc2.SigName == common.SigName {
+			return nil, fmt.Errorf("cannot exist 2 the same ecnryptions schemes, 2")
 		}
 	}
 	return merkleTrie, nil

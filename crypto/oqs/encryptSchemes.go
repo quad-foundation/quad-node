@@ -70,7 +70,7 @@ func FromBytesToEncryptionConfig(bb []byte) (ConfigEnc, error) {
 	}
 	encConfig := CreateEncryptionScheme(sigName, pubKeyLength, privateKeyLength, signatureLength, isValid, isPaused)
 	if !VerifyEncConfig(encConfig) {
-		return ConfigEnc{}, errors.New("encoding verification fails")
+		return ConfigEnc{}, errors.New("encryption scheme is invalid")
 	}
 	return encConfig, nil
 }
