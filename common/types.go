@@ -91,6 +91,16 @@ func BytesToAddress(b []byte) (Address, error) {
 	return a, nil
 }
 
+func TwoPubKeyToAddress(p1, p2 PubKey) (Address, error) {
+	hashBlake2b, err := blake2b.New160(nil)
+	if err != nil {
+		return Address{}, err
+	}
+	hashBlake2b.Write(p1.GetBytes())
+	hashBlake2b.Write(p2.GetBytes())
+	return BytesToAddress(hashBlake2b.Sum(nil))
+}
+
 func PubKeyToAddress(p PubKey) (Address, error) {
 	hashBlake2b, err := blake2b.New160(nil)
 	if err != nil {
