@@ -42,6 +42,9 @@ var (
 	BlockHeaderDBPrefix                = [2]byte{'H', 'B'}
 	WalletDBPrefix                     = [2]byte{'W', '0'}
 	PubKeyDBPrefix                     = [2]byte{'P', 'K'}
+	PubKeyMerkleTrieDBPrefix           = [2]byte{'M', 'K'}
+	PubKeyRootHashMerkleTreeDBPrefix   = [2]byte{'R', 'K'}
+	PubKeyBytesMerkleTrieDBPrefix      = [2]byte{'B', 'K'}
 	BlockByHeightDBPrefix              = [2]byte{'B', 'H'}
 	TransactionsHashesByHeightDBPrefix = [2]byte{'R', 'H'}
 	MerkleTreeDBPrefix                 = [2]byte{'M', 'M'}

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/quad-foundation/quad-node/crypto/blake2b"
+	"github.com/quad-foundation/quad-node/pubkeys"
 	"log"
 )
 
@@ -91,14 +92,52 @@ func BytesToAddress(b []byte) (Address, error) {
 	return a, nil
 }
 
-func TwoPubKeyToAddress(p1, p2 PubKey) (Address, error) {
-	hashBlake2b, err := blake2b.New160(nil)
+func AddPubKeyToAddress(pk PubKey, address Address) error {
+	keys, err := pubkeys.LoadPubKeys(address)
+	if err != nil {
+		return err
+	}
+	keys = append(keys, pk)
+	tree, err := pubkeys.BuildMerkleTree(address, keys, pubkeys.GlobalMerkleTree.DB)
+	if err != nil {
+		return err
+	}
+	for _, p := range keys {
+		if !tree.IsPubKeyInTree(p) {
+			return fmt.Errorf("pubkey patricia trie fails to add pubkey")
+		}
+	}
+	err = tree.StoreTree(address)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func CreateAddressFromFirstPubKey(p PubKey) (Address, error) {
+	address, err := PubKeyToAddress(p)
 	if err != nil {
 		return Address{}, err
 	}
-	hashBlake2b.Write(p1.GetBytes())
-	hashBlake2b.Write(p2.GetBytes())
-	return BytesToAddress(hashBlake2b.Sum(nil))
+	keys, err := pubkeys.LoadPubKeys(address)
+	if err != nil {
+		return Address{}, err
+	}
+	if len(keys) > 0 {
+		return Address{}, fmt.Errorf("there are just generated address")
+	}
+	tree, err := pubkeys.BuildMerkleTree(address, []PubKey{p}, pubkeys.GlobalMerkleTree.DB)
+	if err != nil {
+		return Address{}, err
+	}
+	if !tree.IsPubKeyInTree(p) {
+		return Address{}, fmt.Errorf("pubkey patricia trie fails to initialize")
+	}
+	err = tree.StoreTree(address)
+	if err != nil {
+		return Address{}, err
+	}
+	return address, nil
 }
 
 func PubKeyToAddress(p PubKey) (Address, error) {
