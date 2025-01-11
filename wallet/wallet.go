@@ -329,16 +329,34 @@ func (w *Wallet) Sign(data []byte) (*common.Signature, error) {
 
 func Verify(msg []byte, sig []byte, pubkey []byte) bool {
 	var verifier oqs.Signature
-	err := verifier.Init(common.GetSigName(), nil)
-	if err != nil {
-		return false
+	var err error
+	if common.IsValid && common.IsPaused == false {
+		err = verifier.Init(common.GetSigName(), nil)
+		if err != nil {
+			return false
+		}
+		if verifier.Details().LengthPublicKey == len(pubkey) {
+			isVerified, err := verifier.Verify(msg, sig, pubkey)
+			if err != nil {
+				return false
+			}
+			return isVerified
+		}
 	}
-
-	isVerified, err := verifier.Verify(msg, sig, pubkey)
-	if err != nil {
-		return false
+	if common.IsValid2 && common.IsPaused2 == false {
+		err = verifier.Init(common.GetSigName2(), nil)
+		if err != nil {
+			return false
+		}
+		if verifier.Details().LengthPublicKey == len(pubkey) {
+			isVerified, err := verifier.Verify(msg, sig, pubkey)
+			if err != nil {
+				return false
+			}
+			return isVerified
+		}
 	}
-	return isVerified
+	return false
 }
 
 func (w *Wallet) GetSecretKey() common.PrivKey {

@@ -45,6 +45,10 @@ func GetSigName() string {
 	return SigName
 }
 
+func GetSigName2() string {
+	return SigName2
+}
+
 func (a PubKey) GetLength() int {
 	if PubKeyLength == PubKeyLength2 {
 		log.Fatal("pubkey length in bytes cannot be equal")
