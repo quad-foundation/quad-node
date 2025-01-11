@@ -19,17 +19,24 @@ import (
 )
 
 type Wallet struct {
-	password           string
-	passwordBytes      []byte
-	Iv                 []byte `json:"iv"`
-	secretKey          common.PrivKey
-	EncryptedSecretKey []byte         `json:"encrypted_secret_key"`
-	PublicKey          common.PubKey  `json:"public_key"`
-	Address            common.Address `json:"address"`
-	signer             oqs.Signature
-	mutexDb            sync.RWMutex
-	HomePath           string `json:"home_path"`
-	WalletNumber       uint8  `json:"wallet_number"`
+	password            string
+	passwordBytes       []byte
+	Iv                  []byte `json:"iv"`
+	secretKey           common.PrivKey
+	secretKey2          common.PrivKey
+	EncryptedSecretKey  []byte         `json:"encrypted_secret_key"`
+	EncryptedSecretKey2 []byte         `json:"encrypted_secret_key2"`
+	PublicKey           common.PubKey  `json:"public_key"`
+	PublicKey2          common.PubKey  `json:"public_key2"`
+	Address             common.Address `json:"address"`
+	Address2            common.Address `json:"address2"`
+	MainAddress         common.Address `json:"main_address"`
+	signer              oqs.Signature
+	signer2             oqs.Signature
+	mutexDb             sync.RWMutex
+	HomePath            string `json:"home_path"`
+	HomePath2           string `json:"home_path2"`
+	WalletNumber        uint8  `json:"wallet_number"`
 }
 
 var activeWallet *Wallet
@@ -61,6 +68,11 @@ func (w *Wallet) ShowInfo() string {
 	s += fmt.Sprintln("Beginning of public key:", w.PublicKey.GetHex()[:10])
 	s += fmt.Sprintln("Address:", w.Address.GetHex())
 	s += fmt.Sprintln("Length of private key:", w.GetSecretKey().GetLength())
+	s += fmt.Sprintln("Length of public key 2:", w.PublicKey2.GetLength())
+	s += fmt.Sprintln("Beginning of public key 2:", w.PublicKey2.GetHex()[:10])
+	s += fmt.Sprintln("Address 2:", w.Address2.GetHex())
+	s += fmt.Sprintln("Length of private key 2:", w.GetSecretKey2().GetLength())
+	s += fmt.Sprintln("MainAddress:", w.MainAddress.GetHex())
 	s += fmt.Sprintln("Wallet location", w.HomePath)
 	s += fmt.Sprintln("Wallet Number", w.WalletNumber)
 	fmt.Println(s)
@@ -79,11 +91,17 @@ func EmptyWallet(walletNumber uint8) *Wallet {
 		passwordBytes: nil,
 		Iv:            nil,
 		secretKey:     common.PrivKey{},
+		secretKey2:    common.PrivKey{},
 		PublicKey:     common.PubKey{},
+		PublicKey2:    common.PubKey{},
 		Address:       common.Address{},
+		Address2:      common.Address{},
+		MainAddress:   common.Address{},
 		signer:        oqs.Signature{},
+		signer2:       oqs.Signature{},
 		mutexDb:       sync.RWMutex{},
 		HomePath:      common.DefaultWalletHomePath + common.GetSigName() + "/" + string(walletNumber+'0'),
+		HomePath2:     common.DefaultWalletHomePath + common.GetSigName2() + "/" + string(walletNumber+'0'),
 		WalletNumber:  walletNumber,
 	}
 }
@@ -95,6 +113,7 @@ func GenerateNewWallet(walletNumber uint8, password string) (*Wallet, error) {
 	w.SetPassword(password)
 	(*w).Iv = generateNewIv()
 	var signer oqs.Signature
+	var signer2 oqs.Signature
 	//defer signer.Clean()
 
 	// ignore potential errors everywhere
@@ -120,7 +139,27 @@ func GenerateNewWallet(walletNumber uint8, password string) (*Wallet, error) {
 		return nil, err
 	}
 	(*w).signer = signer
-	fmt.Print(signer.Details())
+
+	err = signer2.Init(common.GetSigName2(), nil)
+	if err != nil {
+		return nil, err
+	}
+	pubKey2, err := signer2.GenerateKeyPair()
+	if err != nil {
+		return nil, err
+	}
+	err = w.PublicKey2.Init(pubKey2, mainAddress)
+	if err != nil {
+		return nil, err
+	}
+	(*w).Address2 = w.PublicKey2.GetAddress()
+	err = w.secretKey2.Init(signer2.ExportSecretKey(), w.Address2)
+	if err != nil {
+		return nil, err
+	}
+	(*w).signer2 = signer2
+
+	fmt.Print(signer2.Details())
 	return w, nil
 }
 
@@ -216,10 +255,16 @@ func (w *Wallet) Store() error {
 	w2 := w
 	(*w2).EncryptedSecretKey = make([]byte, len(se))
 	copy((*w2).EncryptedSecretKey, se)
+
+	se2, err := w.encrypt(w.secretKey2.GetBytes())
 	if err != nil {
 		log.Println(err)
 		return err
 	}
+
+	(*w2).EncryptedSecretKey2 = make([]byte, len(se2))
+	copy((*w2).EncryptedSecretKey2, se2)
+
 	wm, err := json.Marshal(&w2)
 	if err != nil {
 		log.Println(err)
@@ -275,6 +320,22 @@ func Load(walletNumber uint8, password string) (*Wallet, error) {
 	}
 	(*w).signer = signer
 
+	ds2, err := w.decrypt(w.EncryptedSecretKey2)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	err = w.secretKey2.Init(ds2[:w.secretKey.GetLength()], w.Address2)
+	if err != nil {
+		return nil, err
+	}
+	var signer2 oqs.Signature
+	err = signer2.Init(common.GetSigName2(), w.secretKey2.GetBytes())
+	if err != nil {
+		return nil, err
+	}
+	(*w).signer2 = signer2
+
 	return w, err
 }
 
@@ -293,6 +354,11 @@ func (w *Wallet) ChangePassword(password, newPassword string) error {
 		PublicKey:     w.PublicKey,
 		Address:       w.Address,
 		signer:        w.signer,
+		secretKey2:    w.secretKey2,
+		PublicKey2:    w.PublicKey2,
+		Address2:      w.Address2,
+		signer2:       w.signer2,
+		MainAddress:   w.MainAddress,
 		mutexDb:       sync.RWMutex{},
 		HomePath:      w.HomePath,
 		WalletNumber:  w.WalletNumber,
@@ -310,19 +376,33 @@ func (w *Wallet) ChangePassword(password, newPassword string) error {
 	return nil
 }
 
-func (w *Wallet) Sign(data []byte) (*common.Signature, error) {
+func (w *Wallet) Sign(data []byte, primary bool) (*common.Signature, error) {
 	if len(data) > 0 {
-		signature, err := w.signer.Sign(data)
-		if err != nil {
-			return nil, err
-		}
+		if primary {
+			signature, err := w.signer.Sign(data)
+			if err != nil {
+				return nil, err
+			}
 
-		sig := &common.Signature{}
-		err = sig.Init(signature, w.Address)
-		if err != nil {
-			return nil, err
+			sig := &common.Signature{}
+			err = sig.Init(signature, w.Address)
+			if err != nil {
+				return nil, err
+			}
+			return sig, nil
+		} else {
+			signature2, err := w.signer2.Sign(data)
+			if err != nil {
+				return nil, err
+			}
+
+			sig := &common.Signature{}
+			err = sig.Init(signature2, w.Address2)
+			if err != nil {
+				return nil, err
+			}
+			return sig, nil
 		}
-		return sig, nil
 	}
 	return nil, fmt.Errorf("input data are empty")
 }
@@ -368,6 +448,20 @@ func (w *Wallet) GetSecretKey() common.PrivKey {
 
 func (w *Wallet) Check() bool {
 	if len(w.GetSecretKey().GetBytes()) == w.GetSecretKey().GetLength() {
+		return true
+	}
+	return false
+}
+
+func (w *Wallet) GetSecretKey2() common.PrivKey {
+	if w == nil {
+		return common.PrivKey{}
+	}
+	return w.secretKey2
+}
+
+func (w *Wallet) Check2() bool {
+	if len(w.GetSecretKey2().GetBytes()) == w.GetSecretKey2().GetLength() {
 		return true
 	}
 	return false
