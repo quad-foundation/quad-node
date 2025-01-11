@@ -9,10 +9,10 @@ import (
 )
 
 type MerkleTree struct {
-	Root    []MerkleNode
-	TxPK    []common.PubKey
-	Address common.Address
-	DB      *memDatabase.AnyBlockchainDB
+	Root        []MerkleNode
+	Addresses   []common.Address
+	MainAddress common.Address
+	DB          *memDatabase.AnyBlockchainDB
 }
 type MerkleNode struct {
 	Left  *MerkleNode
@@ -23,7 +23,7 @@ type MerkleNode struct {
 var GlobalMerkleTree *MerkleTree
 
 func InitPermanentTrie() {
-	merkleNodes, err := NewMerkleTree([]common.PubKey{})
+	merkleNodes, err := NewMerkleTree([]common.Address{})
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
@@ -33,10 +33,14 @@ func InitPermanentTrie() {
 	GlobalMerkleTree.DB = &db
 }
 
-func NewMerkleTree(data []common.PubKey) ([]MerkleNode, error) {
+func init() {
+	InitPermanentTrie()
+}
+
+func NewMerkleTree(data []common.Address) ([]MerkleNode, error) {
 	var nodes []MerkleNode
-	for _, pk := range data {
-		node, err := NewMerkleNode(nil, nil, pk.GetBytes())
+	for _, a := range data {
+		node, err := NewMerkleNode(nil, nil, a.GetBytes())
 		if err != nil {
 			return nil, err
 		}
@@ -80,13 +84,13 @@ func NewMerkleNode(left, right *MerkleNode, data []byte) (*MerkleNode, error) {
 	return &node, nil
 }
 
-func (t *MerkleTree) IsPubKeyInTree(pk common.PubKey) bool {
-	left, _ := t.Root[0].containsPK(0, pk.GetBytes())
-	right, _ := t.Root[1].containsPK(0, pk.GetBytes())
+func (t *MerkleTree) IsAddressInTree(a common.Address) bool {
+	left, _ := t.Root[0].containsAddress(0, a.GetBytes())
+	right, _ := t.Root[1].containsAddress(0, a.GetBytes())
 	return left || right
 }
 
-func (n *MerkleNode) containsPK(index int64, hash []byte) (bool, int64) {
+func (n *MerkleNode) containsAddress(index int64, hash []byte) (bool, int64) {
 	index++
 	if n == nil {
 		return false, index - 1
@@ -95,8 +99,8 @@ func (n *MerkleNode) containsPK(index int64, hash []byte) (bool, int64) {
 		return true, index - 1
 	}
 
-	left, _ := n.Left.containsPK(index, hash)
-	right, indexRight := n.Right.containsPK(index, hash)
+	left, _ := n.Left.containsAddress(index, hash)
+	right, indexRight := n.Right.containsAddress(index, hash)
 	contrains := left || right
 	return contrains, indexRight
 }
@@ -108,14 +112,14 @@ func (t *MerkleTree) GetRootHash() []byte {
 	return common.EmptyHash().GetBytes()
 }
 
-func BuildMerkleTree(address common.Address, pubKeys []common.PubKey, db *memDatabase.AnyBlockchainDB) (*MerkleTree, error) {
+func BuildMerkleTree(mainAddress common.Address, addresses []common.Address, db *memDatabase.AnyBlockchainDB) (*MerkleTree, error) {
 
-	merkleNodes, _ := NewMerkleTree(pubKeys)
+	merkleNodes, _ := NewMerkleTree(addresses)
 	tree := new(MerkleTree)
 	tree.Root = merkleNodes
-	tree.TxPK = pubKeys
 	tree.DB = db
-	tree.Address = address
+	tree.Addresses = addresses
+	tree.MainAddress = mainAddress
 	return tree, nil
 }
 
@@ -140,8 +144,8 @@ func (tree *MerkleTree) StoreTree(address common.Address) error {
 		return err
 	}
 	ret := []byte{}
-	for _, pk := range tree.TxPK {
-		ret = append(ret, common.BytesToLenAndBytes(pk.GetBytes())...)
+	for _, a := range tree.Addresses {
+		ret = append(ret, a.GetBytes()...)
 	}
 	prefix = common.PubKeyBytesMerkleTrieDBPrefix[:]
 	key = append(prefix, address.GetBytes()...)
@@ -152,37 +156,28 @@ func (tree *MerkleTree) StoreTree(address common.Address) error {
 	return nil
 }
 
-func LoadPubKeys(address common.Address) ([]common.PubKey, error) {
+func LoadAddresses(mainAddress common.Address) ([]common.Address, error) {
 	prefix := common.PubKeyBytesMerkleTrieDBPrefix[:]
-	key := append(prefix, address.GetBytes()...)
+	key := append(prefix, mainAddress.GetBytes()...)
 	pkbytes, err := (*GlobalMerkleTree.DB).Get(key)
 	if err != nil {
 		return nil, err
 	}
-	ret := []common.PubKey{}
-	b := pkbytes[:]
-	var pkb []byte
-	for len(b) > 0 {
-		pkb, b, err = common.BytesWithLenToBytes(b[:])
+	ret := []common.Address{}
+	for i := 0; i < len(pkbytes)/common.AddressLength; i++ {
+		a := common.Address{}
+		err = a.Init(pkbytes[common.AddressLength*i : common.AddressLength*(i+1)])
 		if err != nil {
 			return nil, err
 		}
-		pk := common.PubKey{}
-		err = pk.Init(pkb[:])
-		if err != nil {
-			return nil, err
-		}
-		ret = append(ret, pk)
-		if len(b) <= 0 {
-			break
-		}
+		ret = append(ret, a)
 	}
 	return ret, nil
 }
 
-func LoadHashMerkleTreeByAddress(address common.Address) ([]byte, error) {
+func LoadHashMerkleTreeByAddress(mainAddress common.Address) ([]byte, error) {
 	prefix := common.PubKeyRootHashMerkleTreeDBPrefix[:]
-	key := append(prefix, address.GetBytes()...)
+	key := append(prefix, mainAddress.GetBytes()...)
 	hash, err := (*GlobalMerkleTree.DB).Get(key)
 	if err != nil {
 		return nil, err
@@ -193,16 +188,17 @@ func LoadHashMerkleTreeByAddress(address common.Address) ([]byte, error) {
 func (t *MerkleTree) Destroy() {
 	if t != nil {
 		t.Root = nil
-		t.TxPK = nil
+		t.Addresses = nil
+		t.MainAddress = common.Address{}
 		t.DB = nil
 	}
 }
 
-func LoadTreeWithoutPK(address common.Address) (*MerkleTree, error) {
+func LoadTreeWithoutAddresses(mainAddress common.Address) (*MerkleTree, error) {
 
 	tree := new(MerkleTree)
 	prefix := common.PubKeyMerkleTrieDBPrefix[:]
-	key := append(prefix, address.GetBytes()...)
+	key := append(prefix, mainAddress.GetBytes()...)
 	treeb, err := (*GlobalMerkleTree.DB).Get(key)
 	if err != nil {
 		return &MerkleTree{}, err
@@ -215,7 +211,7 @@ func LoadTreeWithoutPK(address common.Address) (*MerkleTree, error) {
 	tree.Root = merkleNodes
 
 	prefix = common.PubKeyRootHashMerkleTreeDBPrefix[:]
-	key = append(prefix, address.GetBytes()...)
+	key = append(prefix, mainAddress.GetBytes()...)
 	rootHash, err := (*GlobalMerkleTree.DB).Get(key)
 	if err != nil {
 		return &MerkleTree{}, err
@@ -225,17 +221,17 @@ func LoadTreeWithoutPK(address common.Address) (*MerkleTree, error) {
 	return tree, nil
 }
 
-func FindPubKeyForAddress(pk common.PubKey, address common.Address) (int64, error) {
+func FindAddressForMainAddress(mainAddress common.Address, address common.Address) (int64, error) {
 
-	tree, err := LoadTreeWithoutPK(address)
+	tree, err := LoadTreeWithoutAddresses(mainAddress)
 	if err != nil {
 		return -1, err
 	}
 	if len(tree.Root) == 0 {
 		return -1, fmt.Errorf("no merkle tree root hash")
 	}
-	left, hl := tree.Root[0].containsPK(0, pk.GetBytes())
-	right, hr := tree.Root[1].containsPK(0, pk.GetBytes())
+	left, hl := tree.Root[0].containsAddress(0, address.GetBytes())
+	right, hr := tree.Root[1].containsAddress(0, address.GetBytes())
 	if left {
 		return hl, nil
 	}
@@ -262,8 +258,8 @@ func LastIndexStoredInMerleTrie() (int64, error) {
 	return i - 1, nil
 }
 
-func RemoveMerkleTrieFromDB(address common.Address) error {
-	hb := address.GetBytes()
+func RemoveMerkleTrieFromDB(mainAddress common.Address) error {
+	hb := mainAddress.GetBytes()
 	prefix := append(common.PubKeyRootHashMerkleTreeDBPrefix[:], hb...)
 	err := (*GlobalMerkleTree.DB).Delete(prefix)
 	if err != nil {

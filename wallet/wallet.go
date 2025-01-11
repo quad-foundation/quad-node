@@ -106,7 +106,11 @@ func GenerateNewWallet(walletNumber uint8, password string) (*Wallet, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = w.PublicKey.Init(pubKey)
+	mainAddress, err := common.PubKeyToAddress(pubKey)
+	if err != nil {
+		return nil, err
+	}
+	err = w.PublicKey.Init(pubKey, mainAddress)
 	if err != nil {
 		return nil, err
 	}

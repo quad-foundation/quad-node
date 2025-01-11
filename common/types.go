@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/quad-foundation/quad-node/crypto/blake2b"
-	"github.com/quad-foundation/quad-node/pubkeys"
 	"log"
 )
 
@@ -47,7 +46,10 @@ func GetSigName() string {
 }
 
 func (a PubKey) GetLength() int {
-	return PubKeyLength
+	if PubKeyLength == PubKeyLength2 {
+		log.Fatal("pubkey length in bytes cannot be equal")
+	}
+	return len(a.ByteValue)
 }
 
 func (p PrivKey) GetLength() int {
@@ -92,60 +94,12 @@ func BytesToAddress(b []byte) (Address, error) {
 	return a, nil
 }
 
-func AddPubKeyToAddress(pk PubKey, address Address) error {
-	keys, err := pubkeys.LoadPubKeys(address)
-	if err != nil {
-		return err
-	}
-	keys = append(keys, pk)
-	tree, err := pubkeys.BuildMerkleTree(address, keys, pubkeys.GlobalMerkleTree.DB)
-	if err != nil {
-		return err
-	}
-	for _, p := range keys {
-		if !tree.IsPubKeyInTree(p) {
-			return fmt.Errorf("pubkey patricia trie fails to add pubkey")
-		}
-	}
-	err = tree.StoreTree(address)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func CreateAddressFromFirstPubKey(p PubKey) (Address, error) {
-	address, err := PubKeyToAddress(p)
-	if err != nil {
-		return Address{}, err
-	}
-	keys, err := pubkeys.LoadPubKeys(address)
-	if err != nil {
-		return Address{}, err
-	}
-	if len(keys) > 0 {
-		return Address{}, fmt.Errorf("there are just generated address")
-	}
-	tree, err := pubkeys.BuildMerkleTree(address, []PubKey{p}, pubkeys.GlobalMerkleTree.DB)
-	if err != nil {
-		return Address{}, err
-	}
-	if !tree.IsPubKeyInTree(p) {
-		return Address{}, fmt.Errorf("pubkey patricia trie fails to initialize")
-	}
-	err = tree.StoreTree(address)
-	if err != nil {
-		return Address{}, err
-	}
-	return address, nil
-}
-
-func PubKeyToAddress(p PubKey) (Address, error) {
+func PubKeyToAddress(pb []byte) (Address, error) {
 	hashBlake2b, err := blake2b.New160(nil)
 	if err != nil {
 		return Address{}, err
 	}
-	hashBlake2b.Write(p.GetBytes())
+	hashBlake2b.Write(pb[:])
 	return BytesToAddress(hashBlake2b.Sum(nil))
 }
 
@@ -158,20 +112,28 @@ func (a *Address) GetHex() string {
 }
 
 type PubKey struct {
-	ByteValue []byte  `json:"byte_value"`
-	Address   Address `json:"address"`
+	ByteValue   []byte  `json:"byte_value"`
+	Address     Address `json:"address"`
+	MainAddress Address `json:"mainAddress"`
+	Primary     bool    `json:"primary"`
 }
 
-func (pk *PubKey) Init(b []byte) error {
-	if len(b) != pk.GetLength() {
-		return fmt.Errorf("error Pubkey initialization with wrong length, should be %v", pk.GetLength())
+func (pk *PubKey) Init(b []byte, mainAddress Address) error {
+	if len(b) != PubKeyLength && len(b) != PubKeyLength2 {
+		return fmt.Errorf("error Pubkey initialization with wrong length, should be %v, %v", PubKeyLength, PubKeyLength2)
+	}
+	if len(b) == PubKeyLength {
+		pk.Primary = true
+	} else {
+		pk.Primary = false
 	}
 	pk.ByteValue = b[:]
-	addr, err := PubKeyToAddress(*pk)
+	addr, err := PubKeyToAddress(b[:])
 	if err != nil {
 		return err
 	}
 	pk.Address = addr
+	pk.MainAddress = mainAddress
 	return nil
 }
 
@@ -181,6 +143,10 @@ func (pk PubKey) GetBytes() []byte {
 
 func (pk PubKey) GetHex() string {
 	return hex.EncodeToString(pk.GetBytes())
+}
+
+func (pk PubKey) GetMainAddress() Address {
+	return pk.MainAddress
 }
 
 func (pk PubKey) GetAddress() Address {
