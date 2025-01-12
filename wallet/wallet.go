@@ -258,14 +258,33 @@ func (w *Wallet) Store() error {
 	(*w2).EncryptedSecretKey = make([]byte, len(se))
 	copy((*w2).EncryptedSecretKey, se)
 
-	se2, err := w.encrypt(w.secretKey2.GetBytes())
+	//wm, err := json.Marshal(&w2)
+	//if err != nil {
+	//	log.Println(err)
+	//	return err
+	//}
+	//prefix := common.WalletDBPrefix
+	//prefix[1] = w.WalletNumber
+	// Put a key-value pair into the database
+	//err = walletDB.Put(prefix[:], wm, nil)
+	//if err != nil {
+	//	return err
+	//}
+
+	walletDB2, err := leveldb.OpenFile(w.HomePath2, nil)
+	if err != nil {
+		return err
+	}
+	defer walletDB2.Close()
+
+	se, err = w.encrypt(w2.secretKey2.GetBytes())
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 
-	(*w2).EncryptedSecretKey2 = make([]byte, len(se2))
-	copy((*w2).EncryptedSecretKey2, se2)
+	(*w2).EncryptedSecretKey2 = make([]byte, len(se))
+	copy((*w2).EncryptedSecretKey2, se)
 
 	wm, err := json.Marshal(&w2)
 	if err != nil {
@@ -274,8 +293,13 @@ func (w *Wallet) Store() error {
 	}
 	prefix := common.WalletDBPrefix
 	prefix[1] = w.WalletNumber
-	// Put a key-value pair into the database
+
 	err = walletDB.Put(prefix[:], wm, nil)
+	if err != nil {
+		return err
+	}
+	// Put a key-value pair into the database
+	err = walletDB2.Put(prefix[:], wm, nil)
 	if err != nil {
 		return err
 	}
@@ -322,12 +346,31 @@ func Load(walletNumber uint8, password string) (*Wallet, error) {
 	}
 	(*w).signer = signer
 
-	ds2, err := w.decrypt(w.EncryptedSecretKey2)
+	walletDB2, err := leveldb.OpenFile(w.HomePath2, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer walletDB2.Close()
+
+	prefix = common.WalletDBPrefix
+	prefix[1] = walletNumber
+	value, err = walletDB2.Get(prefix[:], nil)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(value, w)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
-	err = w.secretKey2.Init(ds2[:common.PrivateKeyLength2], w.Address2)
+	w.SetPassword(password)
+	ds, err = w.decrypt(w.EncryptedSecretKey2)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	err = w.secretKey2.Init(ds[:common.PrivateKeyLength2], w.Address2)
 	if err != nil {
 		return nil, err
 	}
@@ -385,7 +428,7 @@ func (w *Wallet) Sign(data []byte, primary bool) (*common.Signature, error) {
 			if err != nil {
 				return nil, err
 			}
-
+			signature = append([]byte{0}, signature...)
 			sig := &common.Signature{}
 			err = sig.Init(signature, w.Address)
 			if err != nil {
@@ -397,7 +440,7 @@ func (w *Wallet) Sign(data []byte, primary bool) (*common.Signature, error) {
 			if err != nil {
 				return nil, err
 			}
-
+			signature2 = append([]byte{1}, signature2...)
 			sig := &common.Signature{}
 			err = sig.Init(signature2, w.Address2)
 			if err != nil {
@@ -412,7 +455,9 @@ func (w *Wallet) Sign(data []byte, primary bool) (*common.Signature, error) {
 func Verify(msg []byte, sig []byte, pubkey []byte) bool {
 	var verifier oqs.Signature
 	var err error
-	if common.IsValid && common.IsPaused == false {
+	primary := sig[0] == 0
+	sig = sig[1:]
+	if primary && common.IsValid && common.IsPaused == false {
 		err = verifier.Init(common.GetSigName(), nil)
 		if err != nil {
 			return false
@@ -425,7 +470,7 @@ func Verify(msg []byte, sig []byte, pubkey []byte) bool {
 			return isVerified
 		}
 	}
-	if common.IsValid2 && common.IsPaused2 == false {
+	if !primary && common.IsValid2 && common.IsPaused2 == false {
 		err = verifier.Init(common.GetSigName2(), nil)
 		if err != nil {
 			return false

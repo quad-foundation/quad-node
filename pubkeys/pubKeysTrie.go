@@ -165,7 +165,7 @@ func (tree *MerkleTree) StoreTree(address common.Address) error {
 	}
 	ret := []byte{}
 	for _, a := range tree.Addresses {
-		ret = append(ret, a.GetBytes()...)
+		ret = append(ret, a.GetBytesWithPrimary()...)
 	}
 	prefix = common.PubKeyBytesMerkleTrieDBPrefix[:]
 	key = append(prefix, address.GetBytes()...)
@@ -183,10 +183,11 @@ func LoadAddresses(mainAddress common.Address) ([]common.Address, error) {
 	if err != nil {
 		return nil, err
 	}
+	len_addr_pr := common.AddressLength + 1
 	ret := []common.Address{}
-	for i := 0; i < len(pkbytes)/common.AddressLength; i++ {
+	for i := 0; i < len(pkbytes)/len_addr_pr; i++ {
 		a := common.Address{}
-		err = a.Init(pkbytes[common.AddressLength*i : common.AddressLength*(i+1)])
+		err = a.Init(pkbytes[len_addr_pr*i : len_addr_pr*(i+1)])
 		if err != nil {
 			return nil, err
 		}

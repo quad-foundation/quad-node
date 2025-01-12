@@ -72,7 +72,7 @@ func (tx *Transaction) GetSenderAddress() common.Address {
 
 func (tx *Transaction) GetFromBytes(b []byte) (Transaction, []byte, error) {
 
-	if len(b) < 56+common.SignatureLength {
+	if len(b) < 56+common.SignatureLength+1 && len(b) < 56+common.SignatureLength2+1 {
 		return Transaction{}, nil, fmt.Errorf("Not enough bytes for transaction unmarshal")
 	}
 	tp := TxParam{}

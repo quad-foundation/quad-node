@@ -114,7 +114,7 @@ func (bh *BaseHeader) Verify() bool {
 	if err != nil {
 		return false
 	}
-	a := bh.OperatorAccount.GetBytesWithPrimary()
+	a := bh.OperatorAccount.GetBytes()
 	pk, err := memDatabase.MainDB.Get(append(common.PubKeyDBPrefix[:], a...))
 	if err != nil {
 		return false
@@ -137,7 +137,7 @@ func (bh *BaseHeader) Sign(primary bool) (common.Signature, []byte, error) {
 }
 
 func (bh *BaseHeader) GetFromBytes(b []byte) ([]byte, error) {
-	if len(b) < 117+common.SignatureLength {
+	if len(b) < 117+common.SignatureLength && len(b) < 117+common.SignatureLength2 {
 		return nil, fmt.Errorf("not enough bytes to decode BaseHeader")
 	}
 	//log.Println("block decompile len bytes ", len(b))
@@ -150,12 +150,12 @@ func (bh *BaseHeader) GetFromBytes(b []byte) ([]byte, error) {
 		return nil, err
 	}
 	bh.DelegatedAccount = address
-	opAddress, err := common.BytesToAddress(b[64:84])
+	opAddress, err := common.BytesToAddress(b[64:85])
 	if err != nil {
 		return nil, err
 	}
 	bh.OperatorAccount = opAddress
-	bh.RootMerkleTree = common.GetHashFromBytes(b[84:117])
+	bh.RootMerkleTree = common.GetHashFromBytes(b[85:117])
 
 	msgb, b, err := common.BytesWithLenToBytes(b[117:])
 	if err != nil {

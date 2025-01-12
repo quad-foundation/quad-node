@@ -175,7 +175,7 @@ func ShowStakingPage() *widgets.QTabWidget {
 		}
 		par := transactionsDefinition.TxParam{
 			ChainID:     ChainID,
-			Sender:      MainWallet.Address,
+			Sender:      MainWallet.MainAddress,
 			SendingTime: common.GetCurrentTimeStampInSecond(),
 			Nonce:       int16(rand.Intn(0xffff)),
 		}

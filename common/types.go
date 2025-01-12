@@ -111,9 +111,9 @@ func PubKeyToAddress(pb []byte, primary bool) (Address, error) {
 		return Address{}, err
 	}
 	hashBlake2b.Write(pb[:])
-	fb := []byte{'0'}
+	fb := []byte{0}
 	if !primary {
-		fb = []byte{'1'}
+		fb = []byte{1}
 	}
 	return BytesToAddress(append(fb, hashBlake2b.Sum(nil)...))
 }
@@ -123,9 +123,9 @@ func (a *Address) GetBytes() []byte {
 }
 
 func (a *Address) GetBytesWithPrimary() []byte {
-	fb := []byte{'0'}
+	fb := []byte{0}
 	if !a.Primary {
-		fb = []byte{'1'}
+		fb = []byte{1}
 	}
 	return append(fb, a.ByteValue[:]...)
 }
@@ -216,11 +216,16 @@ type Signature struct {
 }
 
 func (s *Signature) Init(b []byte, address Address) error {
-	primary := address.Primary
-	if primary && len(b) > SignatureLength {
+	var primary bool
+	if b[0] == 0 {
+		primary = true
+	} else {
+		primary = false
+	}
+	if primary && len(b) > SignatureLength+1 {
 		return fmt.Errorf("error Signature initialization with wrong length, should be %v", SignatureLength)
 	}
-	if !primary && len(b) > SignatureLength2 {
+	if !primary && len(b) > SignatureLength2+1 {
 		return fmt.Errorf("error Signature 2 initialization with wrong length, should be %v", SignatureLength2)
 	}
 	s.ByteValue = b[:]
@@ -230,7 +235,7 @@ func (s *Signature) Init(b []byte, address Address) error {
 }
 
 func (s Signature) GetBytes() []byte {
-	return s.ByteValue
+	return s.ByteValue[:]
 }
 
 func (s Signature) GetHex() string {
@@ -318,7 +323,7 @@ func EmptyHash() Hash {
 
 func EmptyAddress() Address {
 	a := Address{}
-	tmp := make([]byte, a.GetLength())
+	tmp := make([]byte, AddressLength+1)
 	err := a.Init(tmp)
 	if err != nil {
 		return Address{}
@@ -328,7 +333,7 @@ func EmptyAddress() Address {
 
 func EmptySignature() Signature {
 	s := Signature{}
-	tmp := make([]byte, s.GetLength())
+	tmp := make([]byte, SignatureLength+1)
 	s.Init(tmp, EmptyAddress())
 	return s
 }

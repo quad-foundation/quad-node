@@ -17,7 +17,7 @@ type TxParam struct {
 func (tp TxParam) GetBytes() []byte {
 
 	b := common.GetByteInt16(tp.ChainID)
-	b = append(b, tp.Sender.GetBytes()...)
+	b = append(b, tp.Sender.GetBytesWithPrimary()...)
 	b = append(b, common.GetByteInt64(tp.SendingTime)...)
 	b = append(b, common.GetByteInt16(tp.Nonce)...)
 	return b
@@ -25,17 +25,17 @@ func (tp TxParam) GetBytes() []byte {
 
 func (tp TxParam) GetFromBytes(b []byte) (TxParam, []byte, error) {
 	var err error
-	if len(b) < 32 {
+	if len(b) < 33 {
 		return TxParam{}, []byte{}, fmt.Errorf("not enough bytes in TxParam unmarshaling")
 	}
 	tp.ChainID = common.GetInt16FromByte(b[:2])
-	tp.Sender, err = common.BytesToAddress(b[2:22])
+	tp.Sender, err = common.BytesToAddress(b[2:23])
 	if err != nil {
 		return TxParam{}, []byte{}, err
 	}
-	tp.SendingTime = common.GetInt64FromByte(b[22:30])
-	tp.Nonce = common.GetInt16FromByte(b[30:32])
-	return tp, b[32:], nil
+	tp.SendingTime = common.GetInt64FromByte(b[23:31])
+	tp.Nonce = common.GetInt16FromByte(b[31:33])
+	return tp, b[33:], nil
 }
 
 func (tp TxParam) GetString() string {

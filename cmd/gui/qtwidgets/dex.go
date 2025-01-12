@@ -273,7 +273,7 @@ func ShowDexPage() *widgets.QTabWidget {
 			coinAddr := common.Address{}
 			coinAddr.Init(common.Hex2Bytes(coin[0]))
 			sender := common.Address{}
-			sender.Init(MainWallet.Address.GetBytes())
+			sender.Init(append([]byte{0}, MainWallet.MainAddress.GetBytes()...))
 			MakeTransaction(sender, coinAddr, primaryChb.IsChecked())
 		}
 	})
@@ -308,7 +308,7 @@ func ShowDexPage() *widgets.QTabWidget {
 			coinAddr := common.Address{}
 			coinAddr.Init(common.Hex2Bytes(coin[0]))
 			sender := common.Address{}
-			sender.Init(MainWallet.Address.GetBytes())
+			sender.Init(append([]byte{0}, MainWallet.MainAddress.GetBytes()...))
 			MakeTrade(sender, coinAddr, true, primaryChb.IsChecked())
 		}
 
@@ -326,7 +326,7 @@ func ShowDexPage() *widgets.QTabWidget {
 			coinAddr := common.Address{}
 			coinAddr.Init(common.Hex2Bytes(coin[0]))
 			sender := common.Address{}
-			sender.Init(MainWallet.Address.GetBytes())
+			sender.Init(append([]byte{0}, MainWallet.MainAddress.GetBytes()...))
 			MakeTrade(sender, coinAddr, false, primaryChb.IsChecked())
 		}
 	})

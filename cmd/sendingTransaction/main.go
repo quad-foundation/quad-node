@@ -35,10 +35,10 @@ func main() {
 
 func SampleTransaction(w *wallet.Wallet) transactionsDefinition.Transaction {
 
-	sender := w.Address
+	sender := w.MainAddress
 	recv := common.Address{}
 	br := rand.RandomBytes(20)
-	err := recv.Init(br)
+	err := recv.Init(append([]byte{0}, br...))
 	if err != nil {
 		return transactionsDefinition.Transaction{}
 	}
@@ -47,7 +47,7 @@ func SampleTransaction(w *wallet.Wallet) transactionsDefinition.Transaction {
 		Recipient: recv,
 		Amount:    int64(rand2.Intn(1000000000)),
 		OptData:   nil,
-		Pubkey:    common.PubKey{}, // w.PublicKey, //
+		Pubkey:    w.PublicKey2, // common.PubKey{}, //
 	}
 	txParam := transactionsDefinition.TxParam{
 		ChainID:     common.GetChainID(),
@@ -79,7 +79,7 @@ func SampleTransaction(w *wallet.Wallet) transactionsDefinition.Transaction {
 	if err != nil {
 		log.Println("calc hash error", err)
 	}
-	err = t.Sign(w, br[0] < 5)
+	err = t.Sign(w, w.PublicKey2.Primary)
 	if err != nil {
 		log.Println("Signing error", err)
 	}
@@ -99,7 +99,7 @@ func sendTransactions(w *wallet.Wallet) {
 	count := int64(0)
 	start := common.GetCurrentTimeStampInSecond()
 
-	for range time.Tick(time.Microsecond * 10000) {
+	for range time.Tick(time.Microsecond * 1000000) {
 		var txs []transactionsDefinition.Transaction
 		for i := 0; i < batchSize; i++ {
 			tx := SampleTransaction(w)
