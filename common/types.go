@@ -223,10 +223,10 @@ func (s *Signature) Init(b []byte, address Address) error {
 		primary = false
 	}
 	if primary && len(b) > SignatureLength+1 {
-		return fmt.Errorf("error Signature initialization with wrong length, should be %v", SignatureLength)
+		return fmt.Errorf("error Signature initialization with wrong length, should be %v %v", SignatureLength, len(b))
 	}
 	if !primary && len(b) > SignatureLength2+1 {
-		return fmt.Errorf("error Signature 2 initialization with wrong length, should be %v", SignatureLength2)
+		return fmt.Errorf("error Signature 2 initialization with wrong length, should be %v %v", SignatureLength2, len(b))
 	}
 	s.ByteValue = b[:]
 	s.Address = address
