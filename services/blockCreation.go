@@ -84,7 +84,7 @@ func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 		Signature:        common.Signature{},
 		SignatureMessage: sendingTimeMessage,
 	}
-	sign, signatureBlockHeaderMessage, err := bh.Sign()
+	sign, signatureBlockHeaderMessage, err := bh.Sign(common.GetNodeSignPrimary())
 	if err != nil {
 		return blocks.Block{}, err
 	}

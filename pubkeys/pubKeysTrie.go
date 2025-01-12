@@ -85,9 +85,19 @@ func NewMerkleNode(left, right *MerkleNode, data []byte) (*MerkleNode, error) {
 }
 
 func (t *MerkleTree) IsAddressInTree(a common.Address) bool {
-	left, _ := t.Root[0].containsAddress(0, a.GetBytes())
-	right, _ := t.Root[1].containsAddress(0, a.GetBytes())
-	return left || right
+	hash, err := common.CalcHashToByte(a.GetBytes())
+	if err != nil {
+		return false
+	}
+	left, _ := t.Root[0].containsAddress(0, hash)
+	if left {
+		return true
+	}
+	var right bool
+	if len(t.Root) > 1 {
+		right, _ = t.Root[1].containsAddress(0, hash)
+	}
+	return right
 }
 
 func (n *MerkleNode) containsAddress(index int64, hash []byte) (bool, int64) {
@@ -99,10 +109,17 @@ func (n *MerkleNode) containsAddress(index int64, hash []byte) (bool, int64) {
 		return true, index - 1
 	}
 
-	left, _ := n.Left.containsAddress(index, hash)
+	left, indexLeft := n.Left.containsAddress(index, hash)
 	right, indexRight := n.Right.containsAddress(index, hash)
 	contrains := left || right
-	return contrains, indexRight
+	ind := index - 1
+	if left {
+		ind = indexLeft
+	}
+	if right {
+		ind = indexRight
+	}
+	return contrains, ind
 }
 
 func (t *MerkleTree) GetRootHash() []byte {
@@ -114,7 +131,10 @@ func (t *MerkleTree) GetRootHash() []byte {
 
 func BuildMerkleTree(mainAddress common.Address, addresses []common.Address, db *memDatabase.AnyBlockchainDB) (*MerkleTree, error) {
 
-	merkleNodes, _ := NewMerkleTree(addresses)
+	merkleNodes, err := NewMerkleTree(addresses)
+	if err != nil {
+		return nil, err
+	}
 	tree := new(MerkleTree)
 	tree.Root = merkleNodes
 	tree.DB = db

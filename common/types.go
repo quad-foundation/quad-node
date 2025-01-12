@@ -57,7 +57,7 @@ func (a PubKey) GetLength() int {
 }
 
 func (p PrivKey) GetLength() int {
-	return PrivateKeyLength
+	return len(p.ByteValue)
 }
 
 func (s Signature) GetLength() int {
@@ -78,11 +78,18 @@ func (a ShortHash) GetLength() int {
 
 type Address struct {
 	ByteValue [AddressLength]byte `json:"byte_value"`
+	Primary   bool                `json:"primary"`
 }
 
 func (a *Address) Init(b []byte) error {
-	if len(b) != a.GetLength() {
-		return fmt.Errorf("error Address initialization with wrong length, should be %v", a.GetLength())
+	if len(b) != AddressLength && len(b) != AddressLength+1 {
+		return fmt.Errorf("error Address initialization with wrong length, should be %v", AddressLength)
+	}
+	if len(b) == AddressLength+1 {
+		a.Primary = b[0] == 0
+		b = b[1:]
+	} else {
+		a.Primary = true
 	}
 	copy(a.ByteValue[:], b[:])
 	return nil
@@ -98,21 +105,33 @@ func BytesToAddress(b []byte) (Address, error) {
 	return a, nil
 }
 
-func PubKeyToAddress(pb []byte) (Address, error) {
+func PubKeyToAddress(pb []byte, primary bool) (Address, error) {
 	hashBlake2b, err := blake2b.New160(nil)
 	if err != nil {
 		return Address{}, err
 	}
 	hashBlake2b.Write(pb[:])
-	return BytesToAddress(hashBlake2b.Sum(nil))
+	fb := []byte{'0'}
+	if !primary {
+		fb = []byte{'1'}
+	}
+	return BytesToAddress(append(fb, hashBlake2b.Sum(nil)...))
 }
 
 func (a *Address) GetBytes() []byte {
 	return a.ByteValue[:]
 }
 
+func (a *Address) GetBytesWithPrimary() []byte {
+	fb := []byte{'0'}
+	if !a.Primary {
+		fb = []byte{'1'}
+	}
+	return append(fb, a.ByteValue[:]...)
+}
+
 func (a *Address) GetHex() string {
-	return hex.EncodeToString(a.GetBytes())
+	return hex.EncodeToString(a.ByteValue[:])
 }
 
 type PubKey struct {
@@ -132,7 +151,7 @@ func (pk *PubKey) Init(b []byte, mainAddress Address) error {
 		pk.Primary = false
 	}
 	pk.ByteValue = b[:]
-	addr, err := PubKeyToAddress(b[:])
+	addr, err := PubKeyToAddress(b[:], pk.Primary)
 	if err != nil {
 		return err
 	}
@@ -160,11 +179,18 @@ func (pk PubKey) GetAddress() Address {
 type PrivKey struct {
 	ByteValue []byte  `json:"byte_value"`
 	Address   Address `json:"address"`
+	Primary   bool    `json:"primary"`
 }
 
 func (pk *PrivKey) Init(b []byte, address Address) error {
-	if len(b) != pk.GetLength() {
+
+	if len(b) != PrivateKeyLength && len(b) != PrivateKeyLength2 {
 		return fmt.Errorf("error Private key initialization with wrong length, should be %v", pk.GetLength())
+	}
+	if len(b) == PrivateKeyLength {
+		pk.Primary = true
+	} else {
+		pk.Primary = false
 	}
 	pk.ByteValue = b[:]
 	pk.Address = address
@@ -186,14 +212,20 @@ func (pk PrivKey) GetAddress() Address {
 type Signature struct {
 	ByteValue []byte  `json:"byte_value"`
 	Address   Address `json:"address"`
+	Primary   bool    `json:"primary"`
 }
 
 func (s *Signature) Init(b []byte, address Address) error {
-	if len(b) > SignatureLength {
-		return fmt.Errorf("error Signature initialization with wrong length, should be %v", s.GetLength())
+	primary := address.Primary
+	if primary && len(b) > SignatureLength {
+		return fmt.Errorf("error Signature initialization with wrong length, should be %v", SignatureLength)
+	}
+	if !primary && len(b) > SignatureLength2 {
+		return fmt.Errorf("error Signature 2 initialization with wrong length, should be %v", SignatureLength2)
 	}
 	s.ByteValue = b[:]
 	s.Address = address
+	s.Primary = primary
 	return nil
 }
 

@@ -79,7 +79,7 @@ func SampleTransaction(w *wallet.Wallet) transactionsDefinition.Transaction {
 	if err != nil {
 		log.Println("calc hash error", err)
 	}
-	err = t.Sign(w)
+	err = t.Sign(w, br[0] < 5)
 	if err != nil {
 		log.Println("Signing error", err)
 	}

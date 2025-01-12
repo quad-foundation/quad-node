@@ -65,6 +65,7 @@ var (
 )
 
 var chainID = int16(23)
+var nodeSignPrimary = true
 var delegatedAccount Address
 var rewardPercentage float64
 var ShiftToPastInReset int64
@@ -76,6 +77,26 @@ func GetChainID() int16 {
 
 func SetChainID(chainid int16) {
 	chainID = chainid
+}
+
+func SetNodeSignPrimary(primary bool) {
+	nodeSignPrimary = primary
+}
+
+func GetNodeSignPrimary() bool {
+	if nodeSignPrimary && IsValid && (IsPaused == false) {
+		return true
+	}
+	if (nodeSignPrimary == false) && IsValid2 && (IsPaused2 == false) {
+		return false
+	}
+	if IsValid && (IsPaused == false) {
+		return true
+	}
+	if IsValid2 && (IsPaused2 == false) {
+		return false
+	}
+	return true
 }
 
 func GetDelegatedAccount() Address {

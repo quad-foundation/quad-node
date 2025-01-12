@@ -10,7 +10,7 @@ func AddPubKeyToAddress(pk common.PubKey, mainAddress common.Address) error {
 	if err != nil {
 		return err
 	}
-	address, err := common.PubKeyToAddress(pk.GetBytes())
+	address, err := common.PubKeyToAddress(pk.GetBytes(), pk.Primary)
 	if err != nil {
 		return err
 	}
@@ -32,7 +32,7 @@ func AddPubKeyToAddress(pk common.PubKey, mainAddress common.Address) error {
 }
 
 func CreateAddressFromFirstPubKey(p common.PubKey) (common.Address, error) {
-	address, err := common.PubKeyToAddress(p.GetBytes())
+	address, err := common.PubKeyToAddress(p.GetBytes(), p.Primary)
 	if err != nil {
 		return common.Address{}, err
 	}

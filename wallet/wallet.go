@@ -74,6 +74,7 @@ func (w *Wallet) ShowInfo() string {
 	s += fmt.Sprintln("Length of private key 2:", w.GetSecretKey2().GetLength())
 	s += fmt.Sprintln("MainAddress:", w.MainAddress.GetHex())
 	s += fmt.Sprintln("Wallet location", w.HomePath)
+	s += fmt.Sprintln("Wallet location 2", w.HomePath2)
 	s += fmt.Sprintln("Wallet Number", w.WalletNumber)
 	fmt.Println(s)
 	return s
@@ -125,7 +126,7 @@ func GenerateNewWallet(walletNumber uint8, password string) (*Wallet, error) {
 	if err != nil {
 		return nil, err
 	}
-	mainAddress, err := common.PubKeyToAddress(pubKey)
+	mainAddress, err := common.PubKeyToAddress(pubKey, true)
 	if err != nil {
 		return nil, err
 	}
@@ -134,6 +135,7 @@ func GenerateNewWallet(walletNumber uint8, password string) (*Wallet, error) {
 		return nil, err
 	}
 	(*w).Address = w.PublicKey.GetAddress()
+	(*w).MainAddress = (*w).Address
 	err = w.secretKey.Init(signer.ExportSecretKey(), w.Address)
 	if err != nil {
 		return nil, err
@@ -309,7 +311,7 @@ func Load(walletNumber uint8, password string) (*Wallet, error) {
 		log.Println(err)
 		return nil, err
 	}
-	err = w.secretKey.Init(ds[:w.secretKey.GetLength()], w.Address)
+	err = w.secretKey.Init(ds[:common.PrivateKeyLength], w.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +327,7 @@ func Load(walletNumber uint8, password string) (*Wallet, error) {
 		log.Println(err)
 		return nil, err
 	}
-	err = w.secretKey2.Init(ds2[:w.secretKey.GetLength()], w.Address2)
+	err = w.secretKey2.Init(ds2[:common.PrivateKeyLength2], w.Address2)
 	if err != nil {
 		return nil, err
 	}

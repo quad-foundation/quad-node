@@ -46,6 +46,8 @@ func (md TxData) GetBytes() ([]byte, error) {
 	b = append(b, common.GetByteInt64(md.Amount)...)
 	opt := common.BytesToLenAndBytes(md.OptData)
 	b = append(b, opt...)
+	adb := md.Pubkey.Address.GetBytes()
+	b = append(b, adb...)
 	pk := common.BytesToLenAndBytes(md.Pubkey.GetBytes())
 	b = append(b, pk...)
 	return b, nil
@@ -55,22 +57,27 @@ func (TxData) GetFromBytes(data []byte) (TxData, []byte, error) {
 	md := TxData{}
 	address, err := common.BytesToAddress(data[:common.AddressLength])
 	if err != nil {
-		return TxData{}, []byte{}, err
+		return TxData{}, nil, err
 	}
 	md.Recipient = address
 	amountBytes := data[common.AddressLength : common.AddressLength+8]
 	md.Amount = common.GetInt64FromByte(amountBytes)
 	opt, left, err := common.BytesWithLenToBytes(data[common.AddressLength+8:])
 	if err != nil {
-		return TxData{}, []byte{}, err
+		return TxData{}, nil, err
 	}
 	md.OptData = opt
-
-	pk, left, err := common.BytesWithLenToBytes(left)
+	adb := left[:common.AddressLength]
+	mainAddress := common.Address{}
+	err = mainAddress.Init(adb[:])
 	if err != nil {
-		return TxData{}, []byte{}, err
+		return TxData{}, nil, err
 	}
-	err = md.Pubkey.Init(pk)
+	pk, left, err := common.BytesWithLenToBytes(left[common.AddressLength:])
+	if err != nil {
+		return TxData{}, nil, err
+	}
+	err = md.Pubkey.Init(pk, mainAddress)
 	if err != nil && len(pk) > 0 {
 		return TxData{}, nil, err
 	}

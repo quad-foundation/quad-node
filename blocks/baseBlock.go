@@ -81,7 +81,7 @@ func (b *BaseHeader) GetBytesWithoutSignature() []byte {
 	rb = append(rb, common.GetByteInt32(b.Difficulty)...)
 	rb = append(rb, common.GetByteInt64(b.Height)...)
 	rb = append(rb, b.DelegatedAccount.GetBytes()...)
-	rb = append(rb, b.OperatorAccount.GetBytes()...)
+	rb = append(rb, b.OperatorAccount.GetBytesWithPrimary()...)
 	rb = append(rb, b.RootMerkleTree.GetBytes()...)
 	rb = append(rb, common.BytesToLenAndBytes(b.Encryption1)...)
 	rb = append(rb, common.BytesToLenAndBytes(b.Encryption2)...)
@@ -93,7 +93,7 @@ func (b *BaseHeader) GetBytes() []byte {
 	rb = append(rb, common.GetByteInt32(b.Difficulty)...)
 	rb = append(rb, common.GetByteInt64(b.Height)...)
 	rb = append(rb, b.DelegatedAccount.GetBytes()...)
-	rb = append(rb, b.OperatorAccount.GetBytes()...)
+	rb = append(rb, b.OperatorAccount.GetBytesWithPrimary()...)
 	rb = append(rb, b.RootMerkleTree.GetBytes()...)
 
 	rb = append(rb, common.BytesToLenAndBytes(b.Encryption1)...)
@@ -114,7 +114,7 @@ func (bh *BaseHeader) Verify() bool {
 	if err != nil {
 		return false
 	}
-	a := bh.OperatorAccount.GetBytes()
+	a := bh.OperatorAccount.GetBytesWithPrimary()
 	pk, err := memDatabase.MainDB.Get(append(common.PubKeyDBPrefix[:], a...))
 	if err != nil {
 		return false
@@ -122,14 +122,14 @@ func (bh *BaseHeader) Verify() bool {
 	return wallet.Verify(calcHash, bh.Signature.GetBytes(), pk)
 }
 
-func (bh *BaseHeader) Sign() (common.Signature, []byte, error) {
+func (bh *BaseHeader) Sign(primary bool) (common.Signature, []byte, error) {
 	signatureBlockHeaderMessage := bh.GetBytesWithoutSignature()
 	calcHash, err := common.CalcHashToByte(signatureBlockHeaderMessage)
 	if err != nil {
 		return common.Signature{}, nil, err
 	}
 	w := wallet.GetActiveWallet()
-	sign, err := w.Sign(calcHash)
+	sign, err := w.Sign(calcHash, primary)
 	if err != nil {
 		return common.Signature{}, nil, err
 	}
@@ -137,7 +137,7 @@ func (bh *BaseHeader) Sign() (common.Signature, []byte, error) {
 }
 
 func (bh *BaseHeader) GetFromBytes(b []byte) ([]byte, error) {
-	if len(b) < 116+common.SignatureLength {
+	if len(b) < 117+common.SignatureLength {
 		return nil, fmt.Errorf("not enough bytes to decode BaseHeader")
 	}
 	//log.Println("block decompile len bytes ", len(b))
@@ -155,9 +155,9 @@ func (bh *BaseHeader) GetFromBytes(b []byte) ([]byte, error) {
 		return nil, err
 	}
 	bh.OperatorAccount = opAddress
-	bh.RootMerkleTree = common.GetHashFromBytes(b[84:116])
+	bh.RootMerkleTree = common.GetHashFromBytes(b[84:117])
 
-	msgb, b, err := common.BytesWithLenToBytes(b[116:])
+	msgb, b, err := common.BytesWithLenToBytes(b[117:])
 	if err != nil {
 		return nil, err
 	}

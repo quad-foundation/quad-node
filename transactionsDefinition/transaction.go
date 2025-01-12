@@ -241,9 +241,9 @@ func (tx *Transaction) Verify() bool {
 	return wallet.Verify(b, signature.GetBytes(), pk)
 }
 
-func (tx *Transaction) Sign(w *wallet.Wallet) error {
+func (tx *Transaction) Sign(w *wallet.Wallet, primary bool) error {
 	b := tx.GetHash()
-	sign, err := w.Sign(b.GetBytes())
+	sign, err := w.Sign(b.GetBytes(), primary)
 	if err != nil {
 		return err
 	}

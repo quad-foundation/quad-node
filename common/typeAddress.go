@@ -18,6 +18,7 @@ func (a *Address) SetBytes(b []byte) {
 // If b is larger than len(h), b will be cropped from the left.
 func BytesToVMAddress(b []byte) Address {
 	var a Address
+	//TODO set true unsure
 	a.SetBytes(b)
 	return a
 }
@@ -60,6 +61,7 @@ func (a *Address) Scan(src interface{}) error {
 	if len(srcB) != AddressLength {
 		return fmt.Errorf("can't scan []byte of len %d into Address, want %d", len(srcB), AddressLength)
 	}
+	//TODO set true unsure
 	err := a.Init(srcB)
 	return err
 }
