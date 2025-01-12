@@ -6,6 +6,7 @@ import (
 	"github.com/quad-foundation/quad-node/account"
 	"github.com/quad-foundation/quad-node/common"
 	memDatabase "github.com/quad-foundation/quad-node/database"
+	"github.com/quad-foundation/quad-node/pubkeys"
 	"github.com/quad-foundation/quad-node/wallet"
 	"log"
 	"strconv"
@@ -229,16 +230,30 @@ func (tx *Transaction) Verify() bool {
 		log.Println("check transaction hash fails")
 		return false
 	}
-	a := tx.GetSenderAddress()
-	pk := tx.TxData.GetPubKey().GetBytes()
-	if len(pk) == 0 {
-		pk, err = (*memDatabase.MainDB).Get(append(common.PubKeyDBPrefix[:], a.GetBytes()...))
+	signature := tx.GetSignature()
+	primary := signature.GetBytes()[0] == 0
+
+	pk := tx.TxData.GetPubKey()
+	pkb := pk.GetBytes()
+	if len(pkb) == 0 {
+		addresses, err := pubkeys.LoadAddresses(tx.GetSenderAddress())
 		if err != nil {
 			return false
 		}
+		if len(addresses) > 0 {
+			for i := len(addresses) - 1; i >= 0; i-- {
+				addr := addresses[i]
+				if addr.Primary == primary {
+					pkb, err = (*memDatabase.MainDB).Get(append(common.PubKeyDBPrefix[:], addr.GetBytes()...))
+					if err != nil {
+						return false
+					}
+					break
+				}
+			}
+		}
 	}
-	signature := tx.GetSignature()
-	return wallet.Verify(b, signature.GetBytes(), pk)
+	return wallet.Verify(b, signature.GetBytes(), pkb)
 }
 
 func (tx *Transaction) Sign(w *wallet.Wallet, primary bool) error {

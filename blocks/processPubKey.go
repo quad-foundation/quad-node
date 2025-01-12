@@ -7,7 +7,6 @@ import (
 	memDatabase "github.com/quad-foundation/quad-node/database"
 	"github.com/quad-foundation/quad-node/pubkeys"
 	"github.com/quad-foundation/quad-node/transactionsDefinition"
-	"log"
 )
 
 func StoreAddress(mainAddress common.Address, address common.Address) error {
@@ -64,7 +63,7 @@ func StorePubKeyInPatriciaTrie(pk common.PubKey) error {
 		}
 	}
 	if exist {
-		log.Println(" address from pub key is just stored in mainaddress of patricia trie")
+		//log.Println(" address from pub key is just stored in mainaddress of patricia trie")
 		return nil
 	}
 

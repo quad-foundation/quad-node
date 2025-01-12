@@ -72,8 +72,8 @@ func (b *BaseHeader) GetString() string {
 
 // GetString returns a string representation of BaseBlock.
 func (b *BaseBlock) GetString() string {
-	return fmt.Sprintf("Header: {%s}\nBlockHeaderHash: %s\nBlockTimeStamp: %d\nRewardPercentage: %d\nSupply: %d\nPriceOracle: %d\nRandOracle: %d\nPriceOracleData: %s\nRandOracleData: %s",
-		b.BaseHeader.GetString(), b.BlockHeaderHash.GetHex(), b.BlockTimeStamp, b.RewardPercentage, b.Supply, b.PriceOracle, b.RandOracle, string(b.PriceOracleData), string(b.RandOracleData))
+	return fmt.Sprintf("Header: {%s}\nBlockHeaderHash: %s\nBlockTimeStamp: %d\nRewardPercentage: %d\nSupply: %d\nPriceOracle: %d\nRandOracle: %d\n",
+		b.BaseHeader.GetString(), b.BlockHeaderHash.GetHex(), b.BlockTimeStamp, b.RewardPercentage, b.Supply, b.PriceOracle, b.RandOracle)
 }
 
 func (b *BaseHeader) GetBytesWithoutSignature() []byte {
