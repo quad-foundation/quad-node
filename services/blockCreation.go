@@ -31,6 +31,10 @@ func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 	merkleTrie *transactionsPool.MerkleTree,
 	txs []common.Hash) (blocks.Block, error) {
 
+	encryption1 := []byte{}
+	encryption2 := []byte{}
+	b := []byte{}
+	var err error
 	myWallet := wallet.GetActiveWallet()
 	heightTransaction := nonceTx[0].GetHeight()
 	//totalFee := int64(0)
@@ -46,6 +50,14 @@ func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 		}
 		if heightTransaction != heightLastBlocktransaction+1 {
 			return blocks.Block{}, fmt.Errorf("last block height and nonce height do not match")
+		}
+		encryption1, b, err = common.BytesWithLenToBytes(at.GetData().GetOptData()[56:])
+		if err != nil {
+			return blocks.Block{}, err
+		}
+		encryption2, b, err = common.BytesWithLenToBytes(b[:])
+		if err != nil {
+			return blocks.Block{}, err
 		}
 		//totalFee += at.GasUsage * at.GasPrice
 	}
@@ -67,10 +79,12 @@ func CreateBlockFromNonceMessage(nonceTx []transactionsDefinition.Transaction,
 		DelegatedAccount: common.GetDelegatedAccount(),
 		OperatorAccount:  myWallet.Address,
 		RootMerkleTree:   rootMerkleTrie,
+		Encryption1:      encryption1,
+		Encryption2:      encryption2,
 		Signature:        common.Signature{},
 		SignatureMessage: sendingTimeMessage,
 	}
-	sign, signatureBlockHeaderMessage, err := bh.Sign()
+	sign, signatureBlockHeaderMessage, err := bh.Sign(common.GetNodeSignPrimary())
 	if err != nil {
 		return blocks.Block{}, err
 	}

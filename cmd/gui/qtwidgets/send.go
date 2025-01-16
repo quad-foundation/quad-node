@@ -45,7 +45,10 @@ func ShowSendPage() *widgets.QTabWidget {
 	pubkeyInclude := widgets.NewQCheckBox(nil)
 	pubkeyInclude.SetText("Public key include in transaction")
 	widget.Layout().AddWidget(pubkeyInclude)
-
+	primaryChb := widgets.NewQCheckBox(nil)
+	primaryChb.SetText("Use primary encryption")
+	primaryChb.SetChecked(true)
+	widget.Layout().AddWidget(primaryChb)
 	// connect the clicked signal
 	// and add it to the central widgets layout
 	button := widgets.NewQPushButton2("Send", nil)
@@ -115,8 +118,13 @@ func ShowSendPage() *widgets.QTabWidget {
 
 		pk := common.PubKey{}
 		if pubkeyInclude.IsChecked() {
-			pk = MainWallet.PublicKey
+			if primaryChb.IsChecked() {
+				pk = MainWallet.PublicKey
+			} else {
+				pk = MainWallet.PublicKey2
+			}
 		}
+
 		txd := transactionsDefinition.TxData{
 			Recipient: ar,
 			Amount:    am,
@@ -125,7 +133,7 @@ func ShowSendPage() *widgets.QTabWidget {
 		}
 		par := transactionsDefinition.TxParam{
 			ChainID:     ChainID,
-			Sender:      MainWallet.Address,
+			Sender:      MainWallet.MainAddress,
 			SendingTime: common.GetCurrentTimeStampInSecond(),
 			Nonce:       int16(rand.Intn(0xffff)),
 		}
@@ -156,7 +164,7 @@ func ShowSendPage() *widgets.QTabWidget {
 			info = &v
 			return
 		}
-		err = tx.Sign(MainWallet)
+		err = tx.Sign(MainWallet, primary)
 		if err != nil {
 			v = fmt.Sprint(err)
 			info = &v

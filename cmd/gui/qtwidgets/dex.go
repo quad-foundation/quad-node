@@ -37,6 +37,7 @@ var buyButton *widgets.QPushButton
 var sellButton *widgets.QPushButton
 var coinAddr = common.Address{}
 var tradeButton *widgets.QRadioButton
+var primary bool
 
 //var PriceTokenSeries *charts.QLineSeries
 
@@ -49,7 +50,10 @@ func ShowDexPage() *widgets.QTabWidget {
 	// and make it the central widget of the window
 	widget := widgets.NewQTabWidget(nil)
 	widget.SetLayout(widgets.NewQVBoxLayout())
-
+	primaryChb := widgets.NewQCheckBox(nil)
+	primaryChb.SetText("Use primary encryption")
+	primaryChb.SetChecked(true)
+	widget.Layout().AddWidget(primaryChb)
 	//ChartView = charts.NewQChartView(nil)
 	//
 	//ChartView.SetRenderHint(gui.QPainter__Antialiasing, true)
@@ -269,8 +273,8 @@ func ShowDexPage() *widgets.QTabWidget {
 			coinAddr := common.Address{}
 			coinAddr.Init(common.Hex2Bytes(coin[0]))
 			sender := common.Address{}
-			sender.Init(MainWallet.Address.GetBytes())
-			MakeTransaction(sender, coinAddr)
+			sender.Init(append([]byte{0}, MainWallet.MainAddress.GetBytes()...))
+			MakeTransaction(sender, coinAddr, primaryChb.IsChecked())
 		}
 	})
 	widget.Layout().AddWidget(poolTokensButton)
@@ -304,8 +308,8 @@ func ShowDexPage() *widgets.QTabWidget {
 			coinAddr := common.Address{}
 			coinAddr.Init(common.Hex2Bytes(coin[0]))
 			sender := common.Address{}
-			sender.Init(MainWallet.Address.GetBytes())
-			MakeTrade(sender, coinAddr, true)
+			sender.Init(append([]byte{0}, MainWallet.MainAddress.GetBytes()...))
+			MakeTrade(sender, coinAddr, true, primaryChb.IsChecked())
 		}
 
 	})
@@ -322,8 +326,8 @@ func ShowDexPage() *widgets.QTabWidget {
 			coinAddr := common.Address{}
 			coinAddr.Init(common.Hex2Bytes(coin[0]))
 			sender := common.Address{}
-			sender.Init(MainWallet.Address.GetBytes())
-			MakeTrade(sender, coinAddr, false)
+			sender.Init(append([]byte{0}, MainWallet.MainAddress.GetBytes()...))
+			MakeTrade(sender, coinAddr, false, primaryChb.IsChecked())
 		}
 	})
 	layout.AddWidget(buyButton, 1, 0)
@@ -489,7 +493,7 @@ func GetAllTokensAccountInfo(a common.Address, symbolAddr common.Address) string
 	return txt
 }
 
-func MakeTransaction(sender, coinAddr common.Address) {
+func MakeTransaction(sender, coinAddr common.Address, primary bool) {
 	//balance := GetBalance(sender, coinAddr)
 	//myAcc, _ := GetAccount(sender)
 	ti, ok := TokenList[coinAddr.GetHex()]
@@ -579,7 +583,7 @@ func MakeTransaction(sender, coinAddr common.Address) {
 			info = &v
 			return
 		}
-		err = tx.Sign(MainWallet)
+		err = tx.Sign(MainWallet, primary)
 		if err != nil {
 			v = fmt.Sprint(err)
 			info = &v
@@ -600,7 +604,7 @@ func MakeTransaction(sender, coinAddr common.Address) {
 	}
 }
 
-func MakeTrade(sender, coinAddr common.Address, isBuy bool) {
+func MakeTrade(sender, coinAddr common.Address, isBuy bool, primary bool) {
 	balance := GetBalance(sender, coinAddr)
 	ti, ok := TokenList[coinAddr.GetHex()]
 	if ok {
@@ -680,7 +684,7 @@ func MakeTrade(sender, coinAddr common.Address, isBuy bool) {
 			info = &v
 			return
 		}
-		err = tx.Sign(MainWallet)
+		err = tx.Sign(MainWallet, primary)
 		if err != nil {
 			v = fmt.Sprint(err)
 			info = &v

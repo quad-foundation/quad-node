@@ -50,6 +50,12 @@ func ShowStakingPage() *widgets.QTabWidget {
 		//operator.SetEnabled(false)
 	})
 	stakeButton.SetChecked(true)
+
+	primaryChb := widgets.NewQCheckBox(nil)
+	primaryChb.SetText("Use primary encryption")
+	primaryChb.SetChecked(true)
+	widget.Layout().AddWidget(primaryChb)
+
 	// create a line edit
 	// with a custom placeholder text
 	// and add it to the central widgets layout
@@ -154,7 +160,11 @@ func ShowStakingPage() *widgets.QTabWidget {
 		}
 		pk := common.PubKey{}
 		if pubkeyInclude.IsChecked() {
-			pk = MainWallet.PublicKey
+			if primaryChb.IsChecked() {
+				pk = MainWallet.PublicKey
+			} else {
+				pk = MainWallet.PublicKey2
+			}
 		}
 
 		txd := transactionsDefinition.TxData{
@@ -165,7 +175,7 @@ func ShowStakingPage() *widgets.QTabWidget {
 		}
 		par := transactionsDefinition.TxParam{
 			ChainID:     ChainID,
-			Sender:      MainWallet.Address,
+			Sender:      MainWallet.MainAddress,
 			SendingTime: common.GetCurrentTimeStampInSecond(),
 			Nonce:       int16(rand.Intn(0xffff)),
 		}
@@ -195,7 +205,7 @@ func ShowStakingPage() *widgets.QTabWidget {
 			info = &v
 			return
 		}
-		err = tx.Sign(MainWallet)
+		err = tx.Sign(MainWallet, primaryChb.IsChecked())
 		if err != nil {
 			v = fmt.Sprint(err)
 			info = &v

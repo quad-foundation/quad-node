@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/quad-foundation/quad-node/blocks"
 	"github.com/quad-foundation/quad-node/common"
+	"github.com/quad-foundation/quad-node/crypto/oqs"
 	"github.com/quad-foundation/quad-node/message"
 	"github.com/quad-foundation/quad-node/services"
 	"github.com/quad-foundation/quad-node/tcpip"
@@ -42,11 +43,18 @@ func generateNonceMsg(topic [2]byte) (message.TransactionsMessage, error) {
 	optData := common.GetByteInt64(h)
 	optData = append(optData, lastBlockHash...)
 
-	//Price oracle currently is random: 0.9 - 1.1 QAD/USD
+	//TODO Price oracle currently is random: 0.9 - 1.1 QAD/USD
 	priceOracle := int64(rand.Intn(10000000) - 5000000 + 100000000)
 	randOracle := rand.Int63()
 	optData = append(optData, common.GetByteInt64(priceOracle)...)
 	optData = append(optData, common.GetByteInt64(randOracle)...)
+
+	be2, _ := oqs.GenerateBytesFromParams(common.SigName2, common.PubKeyLength2, common.PrivateKeyLength2, common.SignatureLength2, true, false)
+	// Encryption1 and Encryption2 when changed than needs to add bytes
+	encryption1 := common.BytesToLenAndBytes([]byte{})
+	encryption2 := common.BytesToLenAndBytes(be2)
+	optData = append(optData, encryption1...)
+	optData = append(optData, encryption2...)
 
 	dataTx := transactionsDefinition.TxData{
 		Recipient: common.GetDelegatedAccount(), // will be delegated account temporary
@@ -68,7 +76,7 @@ func generateNonceMsg(topic [2]byte) (message.TransactionsMessage, error) {
 		return message.TransactionsMessage{}, err
 	}
 
-	err = (&nonceTransaction).Sign(wallet.GetActiveWallet())
+	err = (&nonceTransaction).Sign(wallet.GetActiveWallet(), common.GetNodeSignPrimary())
 	if err != nil {
 		return message.TransactionsMessage{}, err
 	}

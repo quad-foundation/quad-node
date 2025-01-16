@@ -14,30 +14,50 @@ const (
 	ShortHashLength int = 8
 )
 
-//const (
-//	PubKeyLength     int    = 264608
-//	PrivateKeyLength int    = 64
-//	SignatureLength  int    = 164
-//	sigName          string = "Rainbow-III-Compressed"
-//)
-
-const (
-	PubKeyLength     int    = 897
-	PrivateKeyLength int    = 1281
-	SignatureLength  int    = 666
-	sigName          string = "Falcon-512"
+var (
+	PubKeyLength     = 897
+	PrivateKeyLength = 1281
+	SignatureLength  = 666
+	SigName          = "Falcon-512"
+	IsValid          = true
+	IsPaused         = false
 )
 
+var (
+	PubKeyLength2     = 1793
+	PrivateKeyLength2 = 2305
+	SignatureLength2  = 1462
+	SigName2          = "Falcon-1024"
+	IsValid2          = true
+	IsPaused2         = false
+)
+
+//var (
+//	PubKeyLength2     = 264608
+//	PrivateKeyLength2 = 64
+//	SignatureLength2  = 164
+//	SigName2          = "Rainbow-III-Compressed"
+//	IsValid2          = true
+//	IsPaused2         = false
+//)
+
 func GetSigName() string {
-	return sigName
+	return SigName
+}
+
+func GetSigName2() string {
+	return SigName2
 }
 
 func (a PubKey) GetLength() int {
-	return PubKeyLength
+	if PubKeyLength == PubKeyLength2 {
+		log.Fatal("pubkey length in bytes cannot be equal")
+	}
+	return len(a.ByteValue)
 }
 
 func (p PrivKey) GetLength() int {
-	return PrivateKeyLength
+	return len(p.ByteValue)
 }
 
 func (s Signature) GetLength() int {
@@ -58,11 +78,18 @@ func (a ShortHash) GetLength() int {
 
 type Address struct {
 	ByteValue [AddressLength]byte `json:"byte_value"`
+	Primary   bool                `json:"primary"`
 }
 
 func (a *Address) Init(b []byte) error {
-	if len(b) != a.GetLength() {
-		return fmt.Errorf("error Address initialization with wrong length, should be %v", a.GetLength())
+	if len(b) != AddressLength && len(b) != AddressLength+1 {
+		return fmt.Errorf("error Address initialization with wrong length, should be %v", AddressLength)
+	}
+	if len(b) == AddressLength+1 {
+		a.Primary = b[0] == 0
+		b = b[1:]
+	} else {
+		a.Primary = true
 	}
 	copy(a.ByteValue[:], b[:])
 	return nil
@@ -78,38 +105,58 @@ func BytesToAddress(b []byte) (Address, error) {
 	return a, nil
 }
 
-func PubKeyToAddress(p PubKey) (Address, error) {
+func PubKeyToAddress(pb []byte, primary bool) (Address, error) {
 	hashBlake2b, err := blake2b.New160(nil)
 	if err != nil {
 		return Address{}, err
 	}
-	hashBlake2b.Write(p.GetBytes())
-	return BytesToAddress(hashBlake2b.Sum(nil))
+	hashBlake2b.Write(pb[:])
+	fb := []byte{0}
+	if !primary {
+		fb = []byte{1}
+	}
+	return BytesToAddress(append(fb, hashBlake2b.Sum(nil)...))
 }
 
 func (a *Address) GetBytes() []byte {
 	return a.ByteValue[:]
 }
 
+func (a *Address) GetBytesWithPrimary() []byte {
+	fb := []byte{0}
+	if !a.Primary {
+		fb = []byte{1}
+	}
+	return append(fb, a.ByteValue[:]...)
+}
+
 func (a *Address) GetHex() string {
-	return hex.EncodeToString(a.GetBytes())
+	return hex.EncodeToString(a.ByteValue[:])
 }
 
 type PubKey struct {
-	ByteValue []byte  `json:"byte_value"`
-	Address   Address `json:"address"`
+	ByteValue   []byte  `json:"byte_value"`
+	Address     Address `json:"address"`
+	MainAddress Address `json:"mainAddress"`
+	Primary     bool    `json:"primary"`
 }
 
-func (pk *PubKey) Init(b []byte) error {
-	if len(b) != pk.GetLength() {
-		return fmt.Errorf("error Pubkey initialization with wrong length, should be %v", pk.GetLength())
+func (pk *PubKey) Init(b []byte, mainAddress Address) error {
+	if len(b) != PubKeyLength && len(b) != PubKeyLength2 {
+		return fmt.Errorf("error Pubkey initialization with wrong length, should be %v, %v", PubKeyLength, PubKeyLength2)
+	}
+	if len(b) == PubKeyLength {
+		pk.Primary = true
+	} else {
+		pk.Primary = false
 	}
 	pk.ByteValue = b[:]
-	addr, err := PubKeyToAddress(*pk)
+	addr, err := PubKeyToAddress(b[:], pk.Primary)
 	if err != nil {
 		return err
 	}
 	pk.Address = addr
+	pk.MainAddress = mainAddress
 	return nil
 }
 
@@ -121,6 +168,10 @@ func (pk PubKey) GetHex() string {
 	return hex.EncodeToString(pk.GetBytes())
 }
 
+func (pk PubKey) GetMainAddress() Address {
+	return pk.MainAddress
+}
+
 func (pk PubKey) GetAddress() Address {
 	return pk.Address
 }
@@ -128,11 +179,18 @@ func (pk PubKey) GetAddress() Address {
 type PrivKey struct {
 	ByteValue []byte  `json:"byte_value"`
 	Address   Address `json:"address"`
+	Primary   bool    `json:"primary"`
 }
 
 func (pk *PrivKey) Init(b []byte, address Address) error {
-	if len(b) != pk.GetLength() {
+
+	if len(b) != PrivateKeyLength && len(b) != PrivateKeyLength2 {
 		return fmt.Errorf("error Private key initialization with wrong length, should be %v", pk.GetLength())
+	}
+	if len(b) == PrivateKeyLength {
+		pk.Primary = true
+	} else {
+		pk.Primary = false
 	}
 	pk.ByteValue = b[:]
 	pk.Address = address
@@ -154,19 +212,30 @@ func (pk PrivKey) GetAddress() Address {
 type Signature struct {
 	ByteValue []byte  `json:"byte_value"`
 	Address   Address `json:"address"`
+	Primary   bool    `json:"primary"`
 }
 
 func (s *Signature) Init(b []byte, address Address) error {
-	if len(b) > SignatureLength {
-		return fmt.Errorf("error Signature initialization with wrong length, should be %v", s.GetLength())
+	var primary bool
+	if b[0] == 0 {
+		primary = true
+	} else {
+		primary = false
+	}
+	if primary && len(b) > SignatureLength+1 {
+		return fmt.Errorf("error Signature initialization with wrong length, should be %v %v", SignatureLength, len(b))
+	}
+	if !primary && len(b) > SignatureLength2+1 {
+		return fmt.Errorf("error Signature 2 initialization with wrong length, should be %v %v", SignatureLength2, len(b))
 	}
 	s.ByteValue = b[:]
 	s.Address = address
+	s.Primary = primary
 	return nil
 }
 
 func (s Signature) GetBytes() []byte {
-	return s.ByteValue
+	return s.ByteValue[:]
 }
 
 func (s Signature) GetHex() string {
@@ -254,7 +323,7 @@ func EmptyHash() Hash {
 
 func EmptyAddress() Address {
 	a := Address{}
-	tmp := make([]byte, a.GetLength())
+	tmp := make([]byte, AddressLength+1)
 	err := a.Init(tmp)
 	if err != nil {
 		return Address{}
@@ -264,7 +333,7 @@ func EmptyAddress() Address {
 
 func EmptySignature() Signature {
 	s := Signature{}
-	tmp := make([]byte, s.GetLength())
+	tmp := make([]byte, SignatureLength+1)
 	s.Init(tmp, EmptyAddress())
 	return s
 }

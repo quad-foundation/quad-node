@@ -164,10 +164,11 @@ func ShowDetailsPage() *widgets.QTabWidget {
 
 	UpdateTextButton := widgets.NewQPushButton2("Get details", nil)
 	UpdateTextButton.ConnectClicked(func(bool) {
-		codeData.SetText(GetDetails(hash.Text()))
+		codeData.SetPlainText(GetDetails(hash.Text()))
 	})
 	widget.Layout().AddWidget(UpdateTextButton)
 	codeData = widgets.NewQTextEdit(nil)
+	//codeData.SetAcceptRichText(true)
 	widget.Layout().AddWidget(codeData)
 
 	return widget

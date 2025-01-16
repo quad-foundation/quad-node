@@ -189,6 +189,7 @@ func (c *ecrecover) Run(input []byte) ([]byte, error) {
 	//	return nil, nil
 	//}
 	addr := common.Address{}
+	//TODO set true unsure
 	err := addr.Init(input[:32])
 	if err != nil {
 		return nil, nil

@@ -1,7 +1,9 @@
 package common
 
 import (
+	"fmt"
 	"github.com/joho/godotenv"
+	"github.com/quad-foundation/quad-node/crypto/oqs"
 	"log"
 	"os"
 	"strconv"
@@ -27,7 +29,8 @@ var (
 	MinStakingForNode         int64   = 100000000000000
 	MinStakingUser            int64   = 100000000000 // should be 100000000000
 	MinDistributedAmount      int64   = 100000000
-	OraclesHeightDistance     int64   = 6 // one minute on average
+	OraclesHeightDistance     int64   = 6  // one minute on average
+	VotingHeightDistance      int64   = 60 // ten minute on average
 	DefaultWalletHomePath             = "~/.quad/db/wallet/"
 	DefaultBlockchainHomePath         = "~/.quad/db/blockchain/"
 )
@@ -39,6 +42,9 @@ var (
 	BlockHeaderDBPrefix                = [2]byte{'H', 'B'}
 	WalletDBPrefix                     = [2]byte{'W', '0'}
 	PubKeyDBPrefix                     = [2]byte{'P', 'K'}
+	PubKeyMerkleTrieDBPrefix           = [2]byte{'M', 'K'}
+	PubKeyRootHashMerkleTreeDBPrefix   = [2]byte{'R', 'K'}
+	PubKeyBytesMerkleTrieDBPrefix      = [2]byte{'B', 'K'}
 	BlockByHeightDBPrefix              = [2]byte{'B', 'H'}
 	TransactionsHashesByHeightDBPrefix = [2]byte{'R', 'H'}
 	MerkleTreeDBPrefix                 = [2]byte{'M', 'M'}
@@ -59,6 +65,7 @@ var (
 )
 
 var chainID = int16(23)
+var nodeSignPrimary = true
 var delegatedAccount Address
 var rewardPercentage float64
 var ShiftToPastInReset int64
@@ -72,13 +79,53 @@ func SetChainID(chainid int16) {
 	chainID = chainid
 }
 
+func SetNodeSignPrimary(primary bool) {
+	nodeSignPrimary = primary
+}
+
+func GetNodeSignPrimary() bool {
+	if nodeSignPrimary && IsValid && (IsPaused == false) {
+		return true
+	}
+	if (nodeSignPrimary == false) && IsValid2 && (IsPaused2 == false) {
+		return false
+	}
+	if IsValid && (IsPaused == false) {
+		return true
+	}
+	if IsValid2 && (IsPaused2 == false) {
+		return false
+	}
+	return true
+}
+
 func GetDelegatedAccount() Address {
 	return delegatedAccount
 }
+
 func GetRewardPercentage() float64 {
 	return rewardPercentage
 }
 func init() {
+	enc1 := oqs.NewConfigEnc1()
+	fmt.Print(enc1.ToString())
+	enc2 := oqs.NewConfigEnc2()
+	fmt.Print(enc2.ToString())
+
+	PubKeyLength = enc1.PubKeyLength
+	PrivateKeyLength = enc1.PrivateKeyLength
+	SignatureLength = enc1.SignatureLength
+	SigName = enc1.SigName
+	IsValid = enc1.IsValid
+	IsPaused = enc1.IsPaused
+
+	PubKeyLength2 = enc2.PubKeyLength
+	PrivateKeyLength2 = enc2.PrivateKeyLength
+	SignatureLength2 = enc2.SignatureLength
+	SigName2 = enc2.SigName
+	IsValid2 = enc2.IsValid
+	IsPaused2 = enc2.IsPaused
+
 	//log.SetOutput(io.Discard)
 	ShiftToPastInReset = 1
 	homePath, err := os.UserHomeDir()

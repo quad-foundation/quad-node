@@ -43,8 +43,12 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 	if err != nil {
 		log.Fatal("cannot decode address from string in genesis block")
 	}
+	addressOp1, err := common.PubKeyToAddress(pubKeyOpBytes[:], true)
+	if err != nil {
+		log.Fatalf("cannot retrieve operator address from pub key in genesis block %v", err)
+	}
 	pubKeyOp1 := common.PubKey{}
-	err = pubKeyOp1.Init(pubKeyOpBytes)
+	err = pubKeyOp1.Init(pubKeyOpBytes, addressOp1)
 	if err != nil {
 		log.Fatalf("cannot initialize operator pub key in genesis block %v", err)
 	}
@@ -52,9 +56,9 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 	if err != nil {
 		log.Fatal("cannot store genesis operator pubkey", err)
 	}
-	addressOp1, err := common.PubKeyToAddress(pubKeyOp1)
+	err = blocks.StorePubKeyInPatriciaTrie(pubKeyOp1)
 	if err != nil {
-		log.Fatalf("cannot retrieve operator address from pub key in genesis block %v", err)
+		log.Fatal("cannot store genesis pubkey in patricia trie", err)
 	}
 	accDel1 := account.Accounts.AllAccounts[addressOp1.ByteValue]
 	accDel1.Balance = initSupplyWithoutStaked
@@ -142,18 +146,18 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 	}
 	signatureBlockHeaderMessage := bh.GetBytesWithoutSignature()
 	bh.SignatureMessage = signatureBlockHeaderMessage
-	_, err = common.CalcHashToByte(signatureBlockHeaderMessage)
+	hashb, err := common.CalcHashToByte(signatureBlockHeaderMessage)
 	if err != nil {
 		log.Fatalf("cannot calculate hash of genesis block header %v", err)
 	}
 
-	//myWallet := wallet.GetActiveWallet()
-	//sign, err := myWallet.Sign(hashb)
-	//if err != nil {
-	//	log.Fatalf("cannot sign genesis block header %v", err)
-	//}
-	//bh.Signature = *sign
-	//log.Println("Block Signature:", bh.Signature.GetHex())
+	myWallet := wallet.GetActiveWallet()
+	sign, err := myWallet.Sign(hashb, true)
+	if err != nil {
+		log.Fatalf("cannot sign genesis block header %v", err)
+	}
+	bh.Signature = *sign
+	log.Println("Block Signature:", bh.Signature.GetHex())
 
 	signature, err := common.GetSignatureFromString(genesis.Signature, addressOp1)
 	if err != nil {
@@ -166,7 +170,7 @@ func CreateBlockFromGenesis(genesis Genesis) blocks.Block {
 		log.Fatalf("cannot calculate hash of genesis block header %v", err)
 	}
 	if bh.Verify() == false {
-		log.Fatal("Block Header signature fails to verify")
+		log.Fatal("Block Header signature in genesis block fails to verify")
 	}
 	bb := blocks.BaseBlock{
 		BaseHeader:       bh,
@@ -196,7 +200,7 @@ func GenesisTransaction(sender common.Address, recipient common.Address, amount 
 		log.Fatal(err)
 	}
 	pk := common.PubKey{}
-	err = pk.Init(pkb)
+	err = pk.Init(pkb[:], recipient)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -237,12 +241,13 @@ func GenesisTransaction(sender common.Address, recipient common.Address, amount 
 	}
 	t.Signature = signature
 
-	//myWallet := wallet.GetActiveWallet()
-	//err = t.Sign(myWallet)
-	//if err != nil {
-	//	log.Fatal("Signing error", err)
-	//}
-	//println(t.Signature.GetHex())
+	myWallet := wallet.GetActiveWallet()
+	log.Println(myWallet.PublicKey.GetHex())
+	err = t.Sign(myWallet, true)
+	if err != nil {
+		log.Fatal("Signing error", err)
+	}
+	println(t.Signature.GetHex())
 
 	if t.Verify() == false {
 		log.Fatal("genesis transaction cannot be verified")
@@ -302,7 +307,7 @@ func Load(path string) (Genesis, error) {
 	}
 
 	mainWallet := wallet.GetActiveWallet()
-	fmt.Println(mainWallet.Address.GetHex())
+	fmt.Println(mainWallet.MainAddress.GetHex())
 
 	del1 := common.GetDelegatedAccountAddress(1)
 	delegatedAccount := common.GetDelegatedAccount()
